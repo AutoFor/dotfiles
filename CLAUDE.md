@@ -1,5 +1,30 @@
 # Global Rules for Claude Code
 
+## Windows環境での実行ルール
+
+### 🔴 重要: 実行ファイルとコマンドの使い方
+
+#### 絶対に守るべきルール
+* **Windows環境では `.\bin\Debug\` のようなパスは使用禁止**
+* **実行ファイルを直接実行しようとしない**
+* **必ず `dotnet run` コマンドを使用すること**
+
+#### 正しい実行方法
+```bash
+# ✅ 正しい: dotnet runを使用
+dotnet run -- skip
+dotnet run -- launch
+dotnet run -- activate
+
+# ❌ 間違い: 実行ファイルを直接実行
+.\bin\Debug\net8.0\spotifyAutoPlayer.exe skip  # 絶対に使わない！
+```
+
+#### なぜこのルールが必要か
+* Bashシェルはバックスラッシュ `\` を正しく認識できない
+* パス全体が1つの長いコマンド名として解釈されてエラーになる
+* `dotnet run` は環境に関係なく確実に動作する
+
 ## コーディング中のルール
 
 ### コメントの必須ルール
