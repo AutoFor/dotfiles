@@ -28,8 +28,8 @@
 ```
 1. 「✅ タスク完了を検出。完了手順を実行します」と宣言
 2. TODOリストがある場合は、すべて完了済みか確認
-3. git status → git commit 実行
-4. TODOアーカイブ作成（TODOリストがあった場合）
+3. git status → git add -A → git commit 実行（TODOアーカイブも含めて1回のコミット）
+4. TODOアーカイブ作成（TODOリストがあった場合、コミット前に作成）
 5. Windows通知送信
 ```
 
@@ -61,11 +61,10 @@ TODO必要性判断（3ステップ以上なら必須）
 🛑 ブレークポイントで停止
 ↓
 完了手順チェックリスト実行:
-□ git status 実行
-□ git add -A 実行
-□ git commit 実行
 □ TODOアーカイブ作成（必要な場合）
-□ アーカイブをgit commit
+□ git status 実行
+□ git add -A 実行（TODOアーカイブも含む）
+□ git commit 実行（すべての変更を1回でコミット）
 □ Windows通知送信
 ↓
 完了
@@ -144,23 +143,18 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 ### 保存先とフォーマット
 - 保存先: `docs/todo-archive.md`
+- 書き込み方法: **既存のTODOリストセクションがある場合は追記（Append）**
+  - 新規作成時: `## TODOリスト` セクションを作成
+  - 既存ファイルがある場合: 既存の `## TODOリスト` セクションの末尾に追記
+  - タイムスタンプを付けて区別
 - 内容:
 ```markdown
-# TODO完了レポート: [タスク名]
-
-## 完了日時
-YYYY-MM-DD HH:MM
-
 ## TODOリスト
+
+### [YYYY-MM-DD HH:mm] タスク名
 - [x] 完了項目1 → commit: xxx
 - [x] 完了項目2 → commit: yyy
 - [x] 完了項目3 → commit: zzz
-
-## 実施内容詳細
-[詳細説明]
-
-## 結果
-✅ [成果の要約]
 ```
 
 ## Windows通知ルール
@@ -231,15 +225,13 @@ powershell -Command "& 'C:\Users\SeiyaKawashima\.claude\windows-notify.ps1' -Tit
 
 ### タスク完了時の最短手順
 ```bash
-# 1. Gitコミット
-git status
-git add -A
-git commit -m "タスク内容"
+# 1. TODOアーカイブ作成（必要な場合）
+# docs/todo-archive.mdに追記
 
-# 2. TODOアーカイブ（必要な場合）
-# docs/todo-archive/にファイル作成
-git add docs/
-git commit -m "[TODO完了] タスク名"
+# 2. Gitコミット（すべての変更を含む）
+git status
+git add -A  # TODOアーカイブも含めてすべて追加
+git commit -m "タスク内容"
 
 # 3. Windows通知
 powershell -Command "& 'C:\Users\SeiyaKawashima\.claude\windows-notify.ps1' -Title '[OK] Claude Code' -Message 'タスク完了'"
