@@ -28,9 +28,10 @@
 ```
 1. 「✅ タスク完了を検出。完了手順を実行します」と宣言
 2. TODOリストがある場合は、すべて完了済みか確認
-3. git status → git add -A → git commit 実行（TODOアーカイブも含めて1回のコミット）
-4. TODOアーカイブ作成（TODOリストがあった場合、コミット前に作成）
-5. Windows通知送信
+3. 仕様書とREADME.mdの作成/更新
+4. TODOアーカイブ作成（TODOリストがあった場合）
+5. git status → git add -A → git commit 実行（すべての変更を1回のコミット）
+6. Windows通知送信
 ```
 
 ## ⚡ タスク実行フロー（必須）
@@ -61,9 +62,11 @@ TODO必要性判断（3ステップ以上なら必須）
 🛑 ブレークポイントで停止
 ↓
 完了手順チェックリスト実行:
+□ 仕様書作成/更新（docs/specification.md）
+□ README.md作成/更新
 □ TODOアーカイブ作成（必要な場合）
 □ git status 実行
-□ git add -A 実行（TODOアーカイブも含む）
+□ git add -A 実行（ドキュメント・TODOアーカイブも含む）
 □ git commit 実行（すべての変更を1回でコミット）
 □ Windows通知送信
 ↓
@@ -112,6 +115,23 @@ public class Example {
     }
 }
 ```
+
+### ドキュメント作成の必須ルール
+**コーディング完了後、必ず以下のドキュメントを作成すること：**
+
+1. **仕様書 (`docs/specification.md`)**
+   - システムの概要と目的
+   - 主要機能の詳細説明
+   - クラス構成と責務
+   - 処理フローの説明
+   - 使用している技術・ライブラリの説明
+
+2. **README.md**
+   - プロジェクトの概要
+   - インストール方法
+   - 使用方法（コマンド例を含む）
+   - 必要な環境・依存関係
+   - トラブルシューティング
 
 ## Git コミットルール
 
@@ -225,15 +245,21 @@ powershell -Command "& 'C:\Users\SeiyaKawashima\.claude\windows-notify.ps1' -Tit
 
 ### タスク完了時の最短手順
 ```bash
-# 1. TODOアーカイブ作成（必要な場合）
+# 1. 仕様書作成/更新
+# docs/specification.mdを作成または更新
+
+# 2. README.md作成/更新
+# プロジェクトルートのREADME.mdを作成または更新
+
+# 3. TODOアーカイブ作成（必要な場合）
 # docs/todo-archive.mdに追記
 
-# 2. Gitコミット（すべての変更を含む）
+# 4. Gitコミット（すべての変更を含む）
 git status
-git add -A  # TODOアーカイブも含めてすべて追加
+git add -A  # ドキュメント・TODOアーカイブも含めてすべて追加
 git commit -m "タスク内容"
 
-# 3. Windows通知
+# 5. Windows通知
 powershell -Command "& 'C:\Users\SeiyaKawashima\.claude\windows-notify.ps1' -Title '[OK] Claude Code' -Message 'タスク完了'"
 ```
 
