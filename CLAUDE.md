@@ -44,7 +44,23 @@ TODO必要性判断（3ステップ以上なら必須）
 ↓
 必要ならTodoWriteツール実行
 ↓
+C#開発の場合: CSharp\DebugLogger.csを新規プロジェクトにコピー
+↓
 タスク実行開始
+```
+
+### C#開発時の初期設定
+**新規C#プロジェクトを開始する場合は必ず以下を実行：**
+1. `C:\Users\SeiyaKawashima\.claude\CSharp\DebugLogger.cs`をプロジェクトにコピー
+2. namespaceをプロジェクトに合わせて変更
+3. プロジェクトのメインクラスにロガーを組み込む
+
+```csharp
+// 使用例
+DebugLogger logger = DebugLogger.Instance;
+logger.Info("処理開始");
+logger.Debug("デバッグ情報");
+logger.Error("エラー発生", exception);
 ```
 
 ### Phase 2: タスク実行中
