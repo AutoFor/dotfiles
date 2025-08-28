@@ -51,9 +51,15 @@ C#開発の場合: CSharp\DebugLogger.csを新規プロジェクトにコピー
 
 ### C#開発時の初期設定
 **新規C#プロジェクトを開始する場合は必ず以下を実行：**
-1. `C:\Users\SeiyaKawashima\.claude\CSharp\DebugLogger.cs`をプロジェクトにコピー
-2. namespaceをプロジェクトに合わせて変更
-3. プロジェクトのメインクラスにロガーを組み込む
+
+1. **DebugLogger.csの自動コピー判定**
+   - プロジェクト内に`DebugLogger.cs`が存在するか確認
+   - 存在しない場合：`C:\Users\SeiyaKawashima\.claude\CSharp\DebugLogger.cs`を自動コピー
+   - 存在する場合：スキップ（既存ファイルを保持）
+
+2. **コピー後の処理（新規コピーの場合のみ）**
+   - namespaceをプロジェクトに合わせて変更
+   - プロジェクトのメインクラスにロガーを組み込む
 
 ```csharp
 // 使用例
@@ -61,6 +67,16 @@ DebugLogger logger = DebugLogger.Instance;
 logger.Info("処理開始");
 logger.Debug("デバッグ情報");
 logger.Error("エラー発生", exception);
+```
+
+```bash
+# 自動判定コマンド例（C#プロジェクトルートで実行）
+if (!(Test-Path "DebugLogger.cs")) { 
+    Copy-Item "C:\Users\SeiyaKawashima\.claude\CSharp\DebugLogger.cs" -Destination "."
+    Write-Host "DebugLogger.csをコピーしました"
+} else {
+    Write-Host "DebugLogger.csは既に存在します（スキップ）"
+}
 ```
 
 ### Phase 2: タスク実行中
