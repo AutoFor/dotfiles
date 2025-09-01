@@ -137,20 +137,9 @@ if ($isMainBranch) {
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $branchName = "temp/${timestamp}"
     
-    git checkout -b $branchName
-    Write-Host "✅ 一時ブランチ作成: $branchName" -ForegroundColor Green
+    git checkout -b $branchName 2>$null
 }
 
 # コミット実行（ボディ付き）
 $commitFullMessage = "$commitMessage`n`n$commitBody"
-git commit -m $commitFullMessage
-
-# 結果表示
-Write-Host "" -ForegroundColor Cyan
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "✅ コミット完了" -ForegroundColor Green
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
-Write-Host "📝 メッセージ: $commitMessage" -ForegroundColor Yellow
-Write-Host "🌿 ブランチ: $(git branch --show-current)" -ForegroundColor Blue
-Write-Host "📊 変更: $($changedFiles.Count)ファイル" -ForegroundColor Magenta
-Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
+git commit -m $commitFullMessage 2>$null
