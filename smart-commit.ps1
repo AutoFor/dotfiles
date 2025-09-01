@@ -92,7 +92,6 @@ function Get-CommitDescription {
 # メイン処理
 $status = git status --porcelain
 if (-not $status) {
-    Write-Host "変更なし"
     exit 0
 }
 
