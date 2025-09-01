@@ -1,0 +1,28 @@
+{
+  "feedbackSurveyState": {
+    "lastShownTime": 1754001021832
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"$status = git status --porcelain 2>$null; if ($status) { & 'C:\\Users\\SeiyaKawashima\\.claude\\agent-commit.ps1'; Write-Host ''; Write-Host '⚡ 変更を検出しました。上記のプロンプトをClaude Codeに貼り付けてインテリジェントなコミットを実行してください' -ForegroundColor Yellow } else { & 'C:\\Users\\SeiyaKawashima\\.claude\\windows-notify.ps1' -Title '[Claude Code] 応答完了' -Message 'アシスタントの応答が完了しました' -Sound 'Default' }\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "(シンプルコミット|simple|auto)",
+        "hooks": [
+          {
+            "type": "command", 
+            "command": "powershell -Command \"& 'C:\\Users\\SeiyaKawashima\\.claude\\smart-commit.ps1'\""
+          }
+        ]
+      }
+    ]
+  }
+}
