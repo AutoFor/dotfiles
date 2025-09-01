@@ -117,8 +117,8 @@ $commitScope = Get-CommitScope -files $changedFiles
 # 説明を生成
 $commitDescription = Get-CommitDescription -type $commitType -files $changedFiles -diff $diff
 
-# コミットメッセージ組み立て
-$commitMessage = "${commitType}${commitScope}: ${commitDescription}"
+# コミットメッセージは常に"temp"
+$commitMessage = "temp"
 
 # メインブランチの場合は一時ブランチ作成
 if ($isMainBranch) {
