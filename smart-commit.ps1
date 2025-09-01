@@ -117,8 +117,20 @@ $commitScope = Get-CommitScope -files $changedFiles
 # 説明を生成
 $commitDescription = Get-CommitDescription -type $commitType -files $changedFiles -diff $diff
 
-# コミットメッセージは常に"temp"
-$commitMessage = "temp"
+# 後で変換しやすいようにファイル情報を含める
+$firstFile = if ($changedFiles.Count -gt 0) { 
+    [System.IO.Path]::GetFileNameWithoutExtension($changedFiles[0]) 
+} else { 
+    "changes" 
+}
+$commitMessage = "temp: $firstFile"
+
+# 詳細情報をコミットボディとして保存（後でAgentが分析できる）
+$commitBody = @"
+Files: $($changedFiles -join ', ')
+Type-hint: $commitType
+Scope-hint: $commitScope
+"@
 
 # メインブランチの場合は一時ブランチ作成
 if ($isMainBranch) {
@@ -129,8 +141,9 @@ if ($isMainBranch) {
     Write-Host "✅ 一時ブランチ作成: $branchName" -ForegroundColor Green
 }
 
-# コミット実行
-git commit -m $commitMessage
+# コミット実行（ボディ付き）
+$commitFullMessage = "$commitMessage`n`n$commitBody"
+git commit -m $commitFullMessage
 
 # 結果表示
 Write-Host "" -ForegroundColor Cyan
