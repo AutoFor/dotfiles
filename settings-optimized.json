@@ -1,0 +1,39 @@
+{
+  "feedbackSurveyState": {
+    "lastShownTime": 1754001021832
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"& 'C:\\Users\\SeiyaKawashima\\.claude\\windows-notify.ps1' -Title '[Claude Code] 応答完了' -Message 'アシスタントの応答が完了しました' -Sound 'Default'\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "(Edit|Write|MultiEdit)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"git add -A 2>$null; if ($?) { Write-Host '✅ 変更をステージング' -ForegroundColor Green }\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "(完了|done|commit|コミット)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -Command \"& 'C:\\Users\\SeiyaKawashima\\.claude\\smart-commit.ps1'\""
+          }
+        ]
+      }
+    ]
+  }
+}
