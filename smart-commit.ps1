@@ -120,19 +120,13 @@ $commitDescription = Get-CommitDescription -type $commitType -files $changedFile
 # コミットメッセージ組み立て
 $commitMessage = "${commitType}${commitScope}: ${commitDescription}"
 
-# メインブランチの場合は新ブランチ作成
+# メインブランチの場合は一時ブランチ作成
 if ($isMainBranch) {
     $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $branchName = "${commitType}/${timestamp}"
-    
-    # より詳細なブランチ名
-    if ($changedFiles.Count -eq 1) {
-        $fileName = [System.IO.Path]::GetFileNameWithoutExtension($changedFiles[0]) -replace '[^a-zA-Z0-9]', '-'
-        $branchName = "${commitType}/${fileName}-${timestamp}"
-    }
+    $branchName = "temp/${timestamp}"
     
     git checkout -b $branchName
-    Write-Host "✅ ブランチ作成: $branchName" -ForegroundColor Green
+    Write-Host "✅ 一時ブランチ作成: $branchName" -ForegroundColor Green
 }
 
 # コミット実行
