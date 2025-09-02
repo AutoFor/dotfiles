@@ -91,20 +91,14 @@ if (-not $NoBranch -and -not $Amend) {
     
     # Claude Codeでブランチ名生成
     $branchPrompt = @"
-以下のファイルの変更内容から適切なGitブランチ名を生成してください。
+ファイル: $($staged -split "`n" | Select-Object -First 1)
 
-変更されたファイル:
-$($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "- $_" } | Out-String)
+上記ファイルからブランチ名を生成。
+形式: type/name
+type選択: feat fix docs refactor test chore
 
-【重要な指示】
-- ブランチ名のみを1行で出力
-- 説明文、コメント、マークダウンは一切不要
-- コードブロック（```）は使用禁止
-- 形式: type/short-description
-- typeは: feat, fix, docs, refactor, test, chore から選択
-- 例: feat/add-auth, fix/login-bug, docs/update-readme
-
-ブランチ名1行のみ出力:
+出力は次の1行のみ:
+feat/example-name
 "@
 
     try {
