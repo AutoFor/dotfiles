@@ -170,6 +170,19 @@ try {
     # バックティックやコードブロックマーカーを除去
     $message = $message -replace '^```[a-z]*\r?\n?', ''
     $message = $message -replace '\r?\n?```$', ''
+    $message = $message -replace '^\s*適切な.*?[:：]\s*', ''
+    $message = $message -replace '^\s*以下.*?[:：]\s*', ''
+    $message = $message -replace '^\s*提案.*?[:：]\s*', ''
+    
+    # 複数行の場合は最初のコミットメッセージらしい行を抽出
+    $lines = $message -split "`n"
+    foreach ($line in $lines) {
+        if ($line -match '^\s*(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
+            $message = $line.Trim()
+            break
+        }
+    }
+    
     $message = $message.Trim()
     
 } catch {
