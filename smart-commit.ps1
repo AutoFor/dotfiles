@@ -121,30 +121,35 @@ $($diff | Select-Object -First 100 | Out-String)
     
     Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
     
-    # ブランチ作成の確認
-    Write-Host "${YELLOW}Create new branch? (Y/n/custom name): ${RESET}" -NoNewline
-    $response = $null
-    $response = Read-Host
+    # バックグラウンド実行のため、自動的にブランチを作成
+    Write-Host "${BLUE}Creating branch automatically...${RESET}"
     
-    if ($null -eq $response) { $response = "" }
+    $branchName = $suggestedBranch
     
-    # レスポンスの処理
-    if ($response.ToLower() -eq "n") {
-        Write-Host "${CYAN}ℹ️  Continuing on current branch: $currentBranch${RESET}"
+    # ブランチ作成とチェックアウト
+    $createResult = git checkout -b $branchName 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
     } else {
-        # カスタム名が入力された場合はそれを使用、Yまたは空の場合は提案されたブランチ名を使用
-        $branchName = if ($response -and $response.ToLower() -ne "y") { 
-            $response 
-        } else { 
-            $suggestedBranch 
-        }
-        
-        # ブランチ作成とチェックアウト
-        $createResult = git checkout -b $branchName 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
+        # ブランチが既に存在する場合は番号を付けて再試行
+        if ($createResult -match "already exists") {
+            $counter = 2
+            while ($counter -le 10) {
+                $newBranchName = "${branchName}-${counter}"
+                $createResult = git checkout -b $newBranchName 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "${GREEN}✅ Created and switched to branch: $newBranchName${RESET}"
+                    break
+                }
+                $counter++
+            }
+            if ($counter -gt 10) {
+                Write-Host "${RED}❌ Failed to create branch after multiple attempts${RESET}"
+                Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+            }
         } else {
             Write-Host "${RED}❌ Failed to create branch: $branchName${RESET}"
+            Write-Host "${RED}   Error: $createResult${RESET}"
             Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
         }
     }
