@@ -95,14 +95,19 @@ if (-not $NoBranch -and -not $Amend) {
     
     # Claude Codeでブランチ名生成
     $branchPrompt = @"
-ファイル: $($staged -split "`n" | Select-Object -First 1)
+変更ファイル: $($staged -split "`n" | Select-Object -First 1)
 
-上記ファイルからブランチ名を生成。
-形式: type/name
-type選択: feat fix docs refactor test chore
+ブランチ名を次の形式で出力:
+<<<BRANCH>>>type/short-name<<<END>>>
 
-出力は次の1行のみ:
-feat/example-name
+重要なルール:
+- type: feat, fix, docs, refactor, test, chore から選択
+- 英語のみ使用（日本語禁止）
+- 使用可能文字: a-z, 0-9, -, / のみ
+- 例: <<<BRANCH>>>feat/add-user-auth<<<END>>>
+- 例: <<<BRANCH>>>fix/queue-handling<<<END>>>
+
+必ず<<<BRANCH>>>と<<<END>>>で囲み、英語のみで出力してください。
 "@
 
     try {
@@ -112,42 +117,32 @@ feat/example-name
         Write-Log "Raw Claude response: $suggestedBranch"
         $suggestedBranch = $suggestedBranch.Trim()
         
-        # 不要な文字やコードブロックを除去
-        $suggestedBranch = $suggestedBranch -replace '```[a-z]*', ''
-        $suggestedBranch = $suggestedBranch -replace '```', ''
-        
-        # 複数行から有効なブランチ名を探す
-        $lines = $suggestedBranch -split "`r?\n"
-        $validBranch = $null
-        
-        foreach ($line in $lines) {
-            $line = $line.Trim()
-            # feat/, fix/等で始まる行を探す
-            if ($line -match '^(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+$') {
-                $validBranch = $line
-                break
-            }
-        }
-        
-        if ($validBranch) {
-            $suggestedBranch = $validBranch
-        } else {
-            # 最初の非空白行を取得して整形
-            $firstLine = ($lines | Where-Object { $_.Trim() -ne "" })[0]
-            if ($firstLine) {
-                $firstLine = $firstLine.Trim()
-                # feat/等で始まっていない場合は追加
-                if ($firstLine -notmatch '^(feat|fix|docs|refactor|test|chore)/') {
-                    if ($firstLine -match '^[a-z0-9\-]+$') {
-                        $suggestedBranch = "feat/$firstLine"
-                    } else {
-                        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-                    }
-                } else {
-                    $suggestedBranch = $firstLine
-                }
+        # <<<BRANCH>>>...<<<END>>>タグからブランチ名を抽出
+        if ($suggestedBranch -match '<<<BRANCH>>>([^<]+)<<<END>>>') {
+            $extractedBranch = $matches[1].Trim()
+            Write-Log "Extracted branch name from tags: $extractedBranch"
+            
+            # ブランチ名の検証
+            if ($extractedBranch -match '^(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+$') {
+                $suggestedBranch = $extractedBranch
+                Write-Log "Valid branch name: $suggestedBranch"
             } else {
+                Write-Log "Invalid branch name format: $extractedBranch"
                 $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                Write-Log "Using fallback branch name: $suggestedBranch"
+            }
+        } else {
+            Write-Log "No <<<BRANCH>>> tags found in response"
+            Write-Log "Full response: $suggestedBranch"
+            
+            # タグが見つからない場合はパターンを直接探す
+            if ($suggestedBranch -match '(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+') {
+                $suggestedBranch = $matches[0]
+                Write-Log "Found branch pattern without tags: $suggestedBranch"
+            } else {
+                Write-Log "No valid branch pattern found"
+                $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                Write-Log "Using fallback branch name: $suggestedBranch"
             }
         }
         
