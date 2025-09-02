@@ -47,13 +47,17 @@ Write-Host "${YELLOW}📝 Log file: $logFile${RESET}"
 # Gitリポジトリの確認
 if (-not (Test-Path .git)) {
     Write-Host "${RED}❌ Error: Not a git repository${RESET}"
-    exit 1
+    Write-Log "ERROR: Not a git repository"
+    Write-Log "Smart Commit failed - not a git repository"
+    exit 0  # Hook用に0で終了
 }
 
 # 変更の確認
 $status = git status --porcelain
 if ([string]::IsNullOrWhiteSpace($status)) {
     Write-Host "${YELLOW}⚠️  No changes to commit${RESET}"
+    Write-Log "No changes to commit - exiting gracefully"
+    Write-Log "Smart Commit completed (no changes)"
     exit 0
 }
 
@@ -337,7 +341,10 @@ try {
 } catch {
     Write-Host "${RED}❌ Failed to generate commit message with Claude${RESET}"
     Write-Host "${RED}   Error: $_${RESET}"
-    exit 1
+    Write-Log "ERROR: Failed to generate commit message with Claude"
+    Write-Log "ERROR details: $_"
+    Write-Log "Smart Commit failed - Claude error"
+    exit 0  # Hook用に0で終了
 }
 
 # 生成されたメッセージの表示
@@ -370,16 +377,23 @@ if ($LASTEXITCODE -eq 0) {
         
         if ($LASTEXITCODE -eq 0) {
             Write-Host "${GREEN}✅ Push successful!${RESET}"
+            Write-Log "Push successful"
         } else {
             Write-Host "${RED}❌ Push failed:${RESET}"
             Write-Host $pushResult
-            exit 1
+            Write-Log "ERROR: Push failed"
+            Write-Log "Push error: $pushResult"
+            Write-Log "Smart Commit completed with push error"
+            exit 0  # Hook用に0で終了
         }
     }
 } else {
     Write-Host "${RED}❌ Commit failed:${RESET}"
     Write-Host $commitResult
-    exit 1
+    Write-Log "ERROR: Commit failed"
+    Write-Log "Commit error: $commitResult"
+    Write-Log "Smart Commit failed - commit error"
+    exit 0  # Hook用に0で終了
 }
 
 # 成功メッセージは既に表示済みなので、追加の通知は不要
