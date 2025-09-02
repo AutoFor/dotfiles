@@ -185,11 +185,12 @@ $prompt = @"
 
 要件:
 1. Conventional Commitsフォーマット（feat:, fix:, docs:等で開始）
-2. 日本語で記述
+2. 必ず日本語で記述（説明部分を日本語にする。例: feat: 新機能を追加）
 3. 1行目は50文字以内
 4. コミットメッセージのみ出力（説明文は不要）
 5. feat:やfix:で始まるメッセージを直接出力
 6. バッククォートや```は使用しない
+7. 英語は使用禁止（feat:などのprefixは除く）
 
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
@@ -197,7 +198,7 @@ $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 差分（最初の300行）:
 $($diff | Select-Object -First 300 | Out-String)
 
-コミットメッセージ:
+日本語のコミットメッセージ:
 "@
 
 # タイプが指定されている場合はプロンプトに追加
