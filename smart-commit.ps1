@@ -55,10 +55,16 @@ $diff = git diff --cached
 # 現在のブランチ確認
 $currentBranch = git branch --show-current
 $isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
+$isProtectedBranch = ($isMainBranch -or $currentBranch -eq 'develop' -or $currentBranch -eq 'staging' -or $currentBranch -eq 'production')
 
-# mainブランチの場合の処理
-if ($isMainBranch -and -not $NoBranch -and -not $Amend) {
-    Write-Host "`n${YELLOW}⚠️  You are on the main branch.${RESET}"
+# ブランチ作成の処理（-NoBranchと-Amend以外の場合は常に提案）
+if (-not $NoBranch -and -not $Amend) {
+    if ($isProtectedBranch) {
+        Write-Host "`n${YELLOW}⚠️  You are on a protected branch: ${currentBranch}${RESET}"
+    } else {
+        Write-Host "`n${CYAN}ℹ️  Current branch: ${currentBranch}${RESET}"
+    }
+    
     Write-Host "${BLUE}Analyzing changes to generate branch name...${RESET}"
     
     # Claude Codeでブランチ名生成
