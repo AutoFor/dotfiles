@@ -282,3 +282,6 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 # 成功メッセージは既に表示済みなので、追加の通知は不要
+
+# スクリプト終了時に環境変数をクリア
+$env:SMART_COMMIT_RUNNING = $null
