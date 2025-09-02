@@ -314,4 +314,4 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
-Write-Host "`n${GREEN}${BOLD}🎉 Done!${RESET}"
+# 成功メッセージは既に表示済みなので、追加の通知は不要
