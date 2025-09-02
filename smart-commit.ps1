@@ -86,44 +86,43 @@ $($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } |
         $suggestedBranch = $branchPrompt | claude 2>&1 | Out-String
         $suggestedBranch = $suggestedBranch.Trim()
         
-        # デバッグ出力（後で削除）
-        Write-Host "${YELLOW}Debug - Raw output: [$suggestedBranch]${RESET}"
+        # 不要な文字やコードブロックを除去
+        $suggestedBranch = $suggestedBranch -replace '```[a-z]*', ''
+        $suggestedBranch = $suggestedBranch -replace '```', ''
         
-        # 不要な文字を除去
-        $suggestedBranch = $suggestedBranch -replace '^```[a-z]*\r?\n?', ''
-        $suggestedBranch = $suggestedBranch -replace '\r?\n?```$', ''
-        $suggestedBranch = $suggestedBranch -replace '^\s*ブランチ名.*?[:：]\s*', ''
-        $suggestedBranch = $suggestedBranch -replace '^\s*Branch.*?[:：]\s*', ''
-        
-        # 複数行の場合は最初の有効な行を抽出
+        # 複数行から有効なブランチ名を探す
         $lines = $suggestedBranch -split "`r?\n"
-        $foundValidBranch = $false
+        $validBranch = $null
+        
         foreach ($line in $lines) {
             $line = $line.Trim()
-            # prefix/name形式の行を探す
+            # feat/, fix/等で始まる行を探す
             if ($line -match '^(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+$') {
-                $suggestedBranch = $line
-                $foundValidBranch = $true
+                $validBranch = $line
                 break
             }
         }
         
-        # 有効なブランチ名が見つからない場合、最初の行を処理
-        if (-not $foundValidBranch) {
-            $firstLine = ($lines | Where-Object { $_ -and $_.Trim() })[0]
+        if ($validBranch) {
+            $suggestedBranch = $validBranch
+        } else {
+            # 最初の非空白行を取得して整形
+            $firstLine = ($lines | Where-Object { $_.Trim() -ne "" })[0]
             if ($firstLine) {
-                # 余計な文字を削除して整形
-                $suggestedBranch = $firstLine -replace '[^a-zA-Z0-9\-/]', ''
-                $suggestedBranch = $suggestedBranch -replace '\-+', '-'
-                $suggestedBranch = $suggestedBranch -replace '^-|-$', ''
+                $firstLine = $firstLine.Trim()
+                # feat/等で始まっていない場合は追加
+                if ($firstLine -notmatch '^(feat|fix|docs|refactor|test|chore)/') {
+                    if ($firstLine -match '^[a-z0-9\-]+$') {
+                        $suggestedBranch = "feat/$firstLine"
+                    } else {
+                        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+                    }
+                } else {
+                    $suggestedBranch = $firstLine
+                }
+            } else {
+                $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             }
-        }
-        
-        # 最終的な検証
-        if ([string]::IsNullOrWhiteSpace($suggestedBranch) -or 
-            $suggestedBranch.Length -lt 5 -or 
-            $suggestedBranch -notmatch '^(feat|fix|docs|refactor|test|chore)/') {
-            $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
         }
         
     } catch {
