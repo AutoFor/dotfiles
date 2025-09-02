@@ -121,8 +121,14 @@ $stats = git diff --cached --stat
 $insertions = 0
 $deletions = 0
 if ($stats) {
-    if ($stats -match "(\d+) insertion") { $insertions = $matches[1] }
-    if ($stats -match "(\d+) deletion") { $deletions = $matches[1] }
+    $matches = $null
+    if ($stats -match "(\d+) insertion") { 
+        $insertions = $matches[1]
+    }
+    $matches = $null
+    if ($stats -match "(\d+) deletion") { 
+        $deletions = $matches[1]
+    }
 }
 
 Write-Host "${GREEN}  ✓ ${fileCount} file(s) changed, +${insertions}/-${deletions} lines${RESET}"
@@ -196,9 +202,11 @@ Write-Host "${CYAN}$message${RESET}"
 
 # 確認プロンプト
 Write-Host "`n${YELLOW}Proceed with this commit message? (Y/n/e[dit]/r[egenerate]): ${RESET}" -NoNewline
+$response = $null
 $response = Read-Host
 
 # レスポンスの処理
+if ($null -eq $response) { $response = "" }
 switch ($response.ToLower()) {
     "n" {
         Write-Host "${RED}❌ Commit cancelled${RESET}"
