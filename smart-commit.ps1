@@ -86,7 +86,20 @@ $($diff | Select-Object -First 100 | Out-String)
         # 不要な文字を除去
         $suggestedBranch = $suggestedBranch -replace '^```[a-z]*\r?\n?', ''
         $suggestedBranch = $suggestedBranch -replace '\r?\n?```$', ''
-        $suggestedBranch = $suggestedBranch -replace '[^\w\-/]', ''
+        
+        # 複数行の場合は最初の適切な行を抽出
+        $lines = $suggestedBranch -split "`n"
+        foreach ($line in $lines) {
+            $line = $line.Trim()
+            if ($line -match '^(feat|fix|docs|refactor|test|chore)/[\w\-]+$') {
+                $suggestedBranch = $line
+                break
+            }
+        }
+        
+        # 安全なブランチ名に変換（スペースをハイフンに、特殊文字を除去）
+        $suggestedBranch = $suggestedBranch -replace '\s+', '-'
+        $suggestedBranch = $suggestedBranch -replace '[^a-zA-Z0-9\-/]', ''
         $suggestedBranch = $suggestedBranch.Trim()
         
         if ([string]::IsNullOrWhiteSpace($suggestedBranch)) {
