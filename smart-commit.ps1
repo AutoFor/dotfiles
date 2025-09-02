@@ -37,6 +37,30 @@ if ([string]::IsNullOrWhiteSpace($status)) {
     exit 0
 }
 
+# 現在のブランチ確認
+$currentBranch = git branch --show-current
+$isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
+
+# mainブランチの場合の処理
+if ($isMainBranch -and -not $NoBranch -and -not $Amend) {
+    Write-Host "`n${YELLOW}⚠️  You are on the main branch.${RESET}"
+    Write-Host "${BLUE}Creating a new feature branch...${RESET}"
+    
+    # ブランチ名の生成（日付とタイムスタンプ）
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $branchName = "feature/$timestamp"
+    
+    Write-Host "${YELLOW}Branch name (Enter to use: $branchName): ${RESET}" -NoNewline
+    $customBranch = Read-Host
+    if ($customBranch) {
+        $branchName = $customBranch
+    }
+    
+    # ブランチ作成とチェックアウト
+    git checkout -b $branchName 2>&1 | Out-Null
+    Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
+}
+
 # 変更内容の表示
 Write-Host "`n${BLUE}📝 Current changes:${RESET}"
 git status --short
