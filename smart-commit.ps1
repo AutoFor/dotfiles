@@ -78,6 +78,7 @@ if (-not $NoBranch -and -not $Amend) {
 4. 変更の本質を表す名前
 5. ブランチ名のみ出力（説明不要）
 
+現在のブランチ: $currentBranch
 変更ファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 
