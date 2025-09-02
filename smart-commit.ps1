@@ -5,8 +5,7 @@ param(
     [switch]$Push,              # コミット後に自動プッシュ
     [switch]$NoVerify,          # pre-commitフックをスキップ
     [switch]$Amend,             # 直前のコミットを修正
-    [string]$Type = "auto",     # コミットタイプ (feat/fix/docs/style/refactor/test/chore/auto)
-    [switch]$NoBranch           # ブランチ作成をスキップ
+    [string]$Type = "auto"      # コミットタイプ (feat/fix/docs/style/refactor/test/chore/auto)
 )
 
 # ログファイルのパス設定
@@ -65,7 +64,7 @@ if ([string]::IsNullOrWhiteSpace($status)) {
 Write-Host "`n${BLUE}📝 Current changes:${RESET}"
 git status --short
 
-# ステージング確認（ブランチ名生成のために先にステージング）
+# ステージング確認
 $staged = git diff --cached --name-only
 if ([string]::IsNullOrWhiteSpace($staged)) {
     Write-Host "`n${YELLOW}⚠️  No staged changes. Staging all changes...${RESET}"
@@ -73,189 +72,11 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
     $staged = git diff --cached --name-only
 }
 
-# 差分の取得（ブランチ名生成用）
+# 差分の取得
 $diff = git diff --cached
 
-# 現在のブランチ確認
-$currentBranch = git branch --show-current
-Write-Log "Current branch: $currentBranch"
-$isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
-$isProtectedBranch = ($isMainBranch -or $currentBranch -eq 'develop' -or $currentBranch -eq 'staging' -or $currentBranch -eq 'production')
-Write-Log "Is protected branch: $isProtectedBranch"
-
-# ブランチ作成の処理（-NoBranchと-Amend以外の場合は常に提案）
-if (-not $NoBranch -and -not $Amend) {
-    if ($isProtectedBranch) {
-        Write-Host "`n${YELLOW}⚠️  You are on a protected branch: ${currentBranch}${RESET}"
-    } else {
-        Write-Host "`n${CYAN}ℹ️  Current branch: ${currentBranch}${RESET}"
-    }
-    
-    Write-Host "${BLUE}Analyzing changes to generate branch name...${RESET}"
-    
-    # Claude Codeでブランチ名生成
-    $branchPrompt = @"
-変更ファイル: $($staged -split "`n" | Select-Object -First 1)
-
-ブランチ名を次の形式で出力:
-<<<BRANCH>>>type/short-name<<<END>>>
-
-重要なルール:
-- type: feat, fix, docs, refactor, test, chore から選択
-- 英語のみ使用（日本語禁止）
-- 使用可能文字: a-z, 0-9, -, / のみ
-- 例: <<<BRANCH>>>feat/add-user-auth<<<END>>>
-- 例: <<<BRANCH>>>fix/queue-handling<<<END>>>
-
-必ず<<<BRANCH>>>と<<<END>>>で囲み、英語のみで出力してください。
-"@
-
-    try {
-        Write-Log "Generating branch name with Claude..."
-        Write-Log "Branch prompt: $branchPrompt"
-        $suggestedBranch = $branchPrompt | claude 2>&1 | Out-String
-        Write-Log "Raw Claude response: $suggestedBranch"
-        $suggestedBranch = $suggestedBranch.Trim()
-        
-        # <<<BRANCH>>>...<<<END>>>タグからブランチ名を抽出
-        if ($suggestedBranch -match '<<<BRANCH>>>([^<]+)<<<END>>>') {
-            $extractedBranch = $matches[1].Trim()
-            Write-Log "Extracted branch name from tags: $extractedBranch"
-            
-            # ブランチ名の検証
-            if ($extractedBranch -match '^(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+$') {
-                $suggestedBranch = $extractedBranch
-                Write-Log "Valid branch name: $suggestedBranch"
-            } else {
-                Write-Log "Invalid branch name format: $extractedBranch"
-                $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-                Write-Log "Using fallback branch name: $suggestedBranch"
-            }
-        } else {
-            Write-Log "No <<<BRANCH>>> tags found in response"
-            Write-Log "Full response: $suggestedBranch"
-            
-            # タグが見つからない場合はパターンを直接探す
-            if ($suggestedBranch -match '(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+') {
-                $suggestedBranch = $matches[0]
-                Write-Log "Found branch pattern without tags: $suggestedBranch"
-            } else {
-                Write-Log "No valid branch pattern found"
-                $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-                Write-Log "Using fallback branch name: $suggestedBranch"
-            }
-        }
-        
-    } catch {
-        Write-Host "${RED}Error generating branch name: $_${RESET}"
-        Write-Log "ERROR generating branch name: $_"
-        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
-        Write-Log "Using fallback branch name: $suggestedBranch"
-    }
-    
-    Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
-    Write-Log "Final suggested branch: $suggestedBranch"
-    
-    # バックグラウンド実行のため、自動的にブランチを作成
-    Write-Host "${BLUE}Creating branch automatically...${RESET}"
-    
-    $branchName = $suggestedBranch
-    Write-Log "Attempting to create branch: $branchName"
-    
-    # ブランチ作成とチェックアウト
-    Write-Log "========== BRANCH CREATION ATTEMPT =========="
-    Write-Log "Target branch name: $branchName"
-    Write-Log "Current branch: $currentBranch"
-    Write-Log "Current directory: $(Get-Location)"
-    
-    # 既存ブランチの一覧を取得してログに記録
-    $allBranches = git branch -a 2>&1
-    Write-Log "All branches before creation:"
-    Write-Log $allBranches
-    
-    # ブランチ作成実行
-    Write-Log "Executing: git checkout -b '$branchName'"
-    $createResult = git checkout -b $branchName 2>&1
-    $exitCode = $LASTEXITCODE
-    Write-Log "Git checkout -b exit code: $exitCode"
-    Write-Log "Git checkout -b output: $createResult"
-    
-    if ($exitCode -eq 0) {
-        Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
-        Write-Log "SUCCESS: Created and switched to branch: $branchName"
-    } else {
-        Write-Log "FAILED: Branch creation failed with exit code $exitCode"
-        
-        # エラーの詳細分析
-        if ($createResult -match "already exists") {
-            Write-Host "${YELLOW}⚠️  Branch already exists: $branchName${RESET}"
-            Write-Log "REASON: Branch '$branchName' already exists"
-            Write-Host "${BLUE}Switching to existing branch...${RESET}"
-            
-            # 既存ブランチへの切り替え試行
-            Write-Log "Attempting to switch to existing branch..."
-            Write-Log "Executing: git checkout '$branchName'"
-            $checkoutResult = git checkout $branchName 2>&1
-            $checkoutExitCode = $LASTEXITCODE
-            Write-Log "Git checkout exit code: $checkoutExitCode"
-            Write-Log "Git checkout output: $checkoutResult"
-            
-            if ($checkoutExitCode -eq 0) {
-                Write-Host "${GREEN}✅ Switched to existing branch: $branchName${RESET}"
-                Write-Log "SUCCESS: Switched to existing branch: $branchName"
-            } else {
-                Write-Host "${RED}❌ Failed to switch to branch: $branchName${RESET}"
-                Write-Host "${RED}   Error: $checkoutResult${RESET}"
-                Write-Log "ERROR: Failed to switch to existing branch"
-                Write-Log "CHECKOUT ERROR: $checkoutResult"
-                
-                # 追加の診断情報
-                $gitStatus = git status 2>&1
-                Write-Log "Git status at error:"
-                Write-Log $gitStatus
-                
-                Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-                Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
-            }
-        } elseif ($createResult -match "invalid") {
-            Write-Log "REASON: Invalid branch name '$branchName'"
-            Write-Log "Branch name validation failed - may contain invalid characters"
-            Write-Host "${RED}❌ Invalid branch name: $branchName${RESET}"
-            Write-Host "${RED}   Error: $createResult${RESET}"
-            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
-        } elseif ($createResult -match "permission") {
-            Write-Log "REASON: Permission denied"
-            Write-Log "Check file/directory permissions in the repository"
-            Write-Host "${RED}❌ Permission denied when creating branch${RESET}"
-            Write-Host "${RED}   Error: $createResult${RESET}"
-            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
-        } else {
-            Write-Log "REASON: Unknown error"
-            Write-Host "${RED}❌ Failed to create branch: $branchName${RESET}"
-            Write-Host "${RED}   Error: $createResult${RESET}"
-            Write-Log "FULL ERROR OUTPUT: $createResult"
-            
-            # 追加の診断情報
-            $gitStatus = git status 2>&1
-            Write-Log "Git status at error:"
-            Write-Log $gitStatus
-            
-            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
-        }
-    }
-    Write-Log "========== END BRANCH CREATION ATTEMPT =========="
-}
-
-# 差分の再取得（既に取得済みの場合はスキップ）
-if (-not $diff) {
-    Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
-    $diff = git diff --cached
-} else {
-    Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
-}
+# 変更の分析
+Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
 
 # ファイル数と変更行数の取得
 $fileCount = ($staged -split "`n" | Where-Object { $_ }).Count
