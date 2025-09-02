@@ -72,23 +72,14 @@ if (-not $NoBranch -and -not $Amend) {
     
     # Claude Codeでブランチ名生成
     $branchPrompt = @"
-Gitブランチ名を1行で生成してください。
+以下の変更からGitブランチ名を生成:
 
-要件:
-1. feat/, fix/, docs/, refactor/, test/, chore/のいずれかで開始
-2. 続けて英語のkebab-case（例: add-user-auth）
-3. 全体で20-30文字程度
-4. 1行のブランチ名のみ出力
-5. 説明や装飾は一切不要
-6. バッククォートや```は使用しない
+$($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } | Out-String)
 
-変更ファイル:
-$($staged -split "`n" | Select-Object -First 5 | ForEach-Object { "- $_" } | Out-String)
+次の形式で1行のみ出力: feat/short-name
+例: feat/add-auth, fix/user-bug, docs/update-readme
 
-差分の一部（最初の50行）:
-$($diff | Select-Object -First 50 | Out-String)
-
-ブランチ名（1行のみ）:
+ブランチ名:
 "@
 
     try {
