@@ -109,6 +109,9 @@ $prompt = @"
    - test: テスト
    - chore: その他
 
+変更されたファイル:
+$($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
+
 差分:
 ``````
 $diff
