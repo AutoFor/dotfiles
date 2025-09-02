@@ -117,14 +117,34 @@ $($diff | Select-Object -First 100 | Out-String)
     }
     
     Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
-    Write-Host "${YELLOW}Branch name (Enter to accept, or type custom name): ${RESET}" -NoNewline
-    $customBranch = Read-Host
     
-    $branchName = if ($customBranch) { $customBranch } else { $suggestedBranch }
+    # ブランチ作成の確認
+    Write-Host "${YELLOW}Create new branch? (Y/n/custom name): ${RESET}" -NoNewline
+    $response = $null
+    $response = Read-Host
     
-    # ブランチ作成とチェックアウト
-    git checkout -b $branchName 2>&1 | Out-Null
-    Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
+    if ($null -eq $response) { $response = "" }
+    
+    # レスポンスの処理
+    if ($response.ToLower() -eq "n") {
+        Write-Host "${CYAN}ℹ️  Continuing on current branch: $currentBranch${RESET}"
+    } else {
+        # カスタム名が入力された場合はそれを使用、Yまたは空の場合は提案されたブランチ名を使用
+        $branchName = if ($response -and $response.ToLower() -ne "y") { 
+            $response 
+        } else { 
+            $suggestedBranch 
+        }
+        
+        # ブランチ作成とチェックアウト
+        $createResult = git checkout -b $branchName 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
+        } else {
+            Write-Host "${RED}❌ Failed to create branch: $branchName${RESET}"
+            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+        }
+    }
 }
 
 # 差分の再取得（既に取得済みの場合はスキップ）
