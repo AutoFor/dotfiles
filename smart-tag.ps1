@@ -9,6 +9,20 @@ param(
     [switch]$Json                  # JSON形式で出力
 )
 
+# ログファイルのパス設定
+$logDir = "$env:USERPROFILE\.claude\logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$logFile = Join-Path $logDir "smart-tag-$(Get-Date -Format 'yyyyMMdd').log"
+
+# ログ出力関数
+function Write-Log {
+    param($Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp - $Message" | Out-File -FilePath $logFile -Append
+}
+
 # ANSIカラーコード
 $ESC = [char]27
 $RED = "$ESC[31m"
@@ -19,6 +33,9 @@ $MAGENTA = "$ESC[35m"
 $CYAN = "$ESC[36m"
 $RESET = "$ESC[0m"
 $BOLD = "$ESC[1m"
+
+# スクリプト開始ログ
+Write-Log "Smart Tag started - Action: $Action, Tag: $Tag, Global: $Global, Json: $Json"
 
 # タグファイルのパス設定
 $globalTagFile = "$env:USERPROFILE\.claude\tags\global-tags.json"
