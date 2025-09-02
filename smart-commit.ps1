@@ -164,47 +164,90 @@ $($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } |
     Write-Log "Attempting to create branch: $branchName"
     
     # ブランチ作成とチェックアウト
-    Write-Log "Executing: git checkout -b $branchName"
+    Write-Log "========== BRANCH CREATION ATTEMPT =========="
+    Write-Log "Target branch name: $branchName"
+    Write-Log "Current branch: $currentBranch"
+    Write-Log "Current directory: $(Get-Location)"
+    
+    # 既存ブランチの一覧を取得してログに記録
+    $allBranches = git branch -a 2>&1
+    Write-Log "All branches before creation:"
+    Write-Log $allBranches
+    
+    # ブランチ作成実行
+    Write-Log "Executing: git checkout -b '$branchName'"
     $createResult = git checkout -b $branchName 2>&1
     $exitCode = $LASTEXITCODE
     Write-Log "Git checkout -b exit code: $exitCode"
-    Write-Log "Git checkout -b result: $createResult"
+    Write-Log "Git checkout -b output: $createResult"
     
     if ($exitCode -eq 0) {
         Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
-        Write-Log "Successfully created and switched to branch: $branchName"
+        Write-Log "SUCCESS: Created and switched to branch: $branchName"
     } else {
-        # ブランチが既に存在する場合はそのブランチにチェックアウト
+        Write-Log "FAILED: Branch creation failed with exit code $exitCode"
+        
+        # エラーの詳細分析
         if ($createResult -match "already exists") {
             Write-Host "${YELLOW}⚠️  Branch already exists: $branchName${RESET}"
-            Write-Log "Branch already exists: $branchName"
+            Write-Log "REASON: Branch '$branchName' already exists"
             Write-Host "${BLUE}Switching to existing branch...${RESET}"
-            Write-Log "Executing: git checkout $branchName"
+            
+            # 既存ブランチへの切り替え試行
+            Write-Log "Attempting to switch to existing branch..."
+            Write-Log "Executing: git checkout '$branchName'"
             $checkoutResult = git checkout $branchName 2>&1
             $checkoutExitCode = $LASTEXITCODE
             Write-Log "Git checkout exit code: $checkoutExitCode"
-            Write-Log "Git checkout result: $checkoutResult"
+            Write-Log "Git checkout output: $checkoutResult"
             
             if ($checkoutExitCode -eq 0) {
                 Write-Host "${GREEN}✅ Switched to existing branch: $branchName${RESET}"
-                Write-Log "Successfully switched to existing branch: $branchName"
+                Write-Log "SUCCESS: Switched to existing branch: $branchName"
             } else {
                 Write-Host "${RED}❌ Failed to switch to branch: $branchName${RESET}"
                 Write-Host "${RED}   Error: $checkoutResult${RESET}"
-                Write-Log "ERROR: Failed to switch to branch: $branchName"
-                Write-Log "ERROR details: $checkoutResult"
+                Write-Log "ERROR: Failed to switch to existing branch"
+                Write-Log "CHECKOUT ERROR: $checkoutResult"
+                
+                # 追加の診断情報
+                $gitStatus = git status 2>&1
+                Write-Log "Git status at error:"
+                Write-Log $gitStatus
+                
                 Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-                Write-Log "Continuing on current branch: $currentBranch"
+                Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
             }
+        } elseif ($createResult -match "invalid") {
+            Write-Log "REASON: Invalid branch name '$branchName'"
+            Write-Log "Branch name validation failed - may contain invalid characters"
+            Write-Host "${RED}❌ Invalid branch name: $branchName${RESET}"
+            Write-Host "${RED}   Error: $createResult${RESET}"
+            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
+        } elseif ($createResult -match "permission") {
+            Write-Log "REASON: Permission denied"
+            Write-Log "Check file/directory permissions in the repository"
+            Write-Host "${RED}❌ Permission denied when creating branch${RESET}"
+            Write-Host "${RED}   Error: $createResult${RESET}"
+            Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
         } else {
+            Write-Log "REASON: Unknown error"
             Write-Host "${RED}❌ Failed to create branch: $branchName${RESET}"
             Write-Host "${RED}   Error: $createResult${RESET}"
-            Write-Log "ERROR: Failed to create branch: $branchName"
-            Write-Log "ERROR details: $createResult"
+            Write-Log "FULL ERROR OUTPUT: $createResult"
+            
+            # 追加の診断情報
+            $gitStatus = git status 2>&1
+            Write-Log "Git status at error:"
+            Write-Log $gitStatus
+            
             Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
-            Write-Log "Continuing on current branch: $currentBranch"
+            Write-Log "FALLBACK: Continuing on current branch: $currentBranch"
         }
     }
+    Write-Log "========== END BRANCH CREATION ATTEMPT =========="
 }
 
 # 差分の再取得（既に取得済みの場合はスキップ）
