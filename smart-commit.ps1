@@ -132,30 +132,24 @@ Write-Host "`n${BLUE}🤖 Generating commit message with Claude...${RESET}"
 
 # プロンプトの構築
 $prompt = @"
-以下のgit diffからコミットメッセージを生成してください。
+以下のgit diffからコミットメッセージを1行で生成してください。
 
 要件:
-1. Conventional Commitsフォーマットに従う
+1. Conventional Commitsフォーマット（feat:, fix:, docs:等で開始）
 2. 日本語で記述
-3. 1行目は50文字以内
-4. 型は以下から適切に選択:
-   - feat: 新機能
-   - fix: バグ修正
-   - docs: ドキュメント
-   - style: フォーマット修正
-   - refactor: リファクタリング
-   - test: テスト
-   - chore: その他
+3. 50文字以内
+4. 余計な説明や装飾は一切不要
+5. feat:やfix:で始まる1行のメッセージのみ出力
+6. バッククォートや```は使用しない
+7. 「以下の」「提案します」等の前置きは不要
 
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 
-差分:
-``````
-$diff
-``````
+差分（最初の200行）:
+$($diff | Select-Object -First 200 | Out-String)
 
-コミットメッセージのみを出力してください（説明不要）。
+1行のコミットメッセージのみ出力:
 "@
 
 # タイプが指定されている場合はプロンプトに追加
