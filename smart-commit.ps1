@@ -72,51 +72,72 @@ if (-not $NoBranch -and -not $Amend) {
     
     # Claude Codeでブランチ名生成
     $branchPrompt = @"
-以下の変更内容から適切なGitブランチ名を生成してください。
+Gitブランチ名を1行で生成してください。
 
 要件:
-1. 英語で記述（kebab-case）
-2. prefixは以下から選択: feat/, fix/, docs/, refactor/, test/, chore/
-3. 20-30文字程度
-4. 変更の本質を表す名前
-5. ブランチ名のみ出力（説明不要）
+1. feat/, fix/, docs/, refactor/, test/, chore/のいずれかで開始
+2. 続けて英語のkebab-case（例: add-user-auth）
+3. 全体で20-30文字程度
+4. 1行のブランチ名のみ出力
+5. 説明や装飾は一切不要
+6. バッククォートや```は使用しない
 
-現在のブランチ: $currentBranch
 変更ファイル:
-$($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
+$($staged -split "`n" | Select-Object -First 5 | ForEach-Object { "- $_" } | Out-String)
 
-差分の一部:
-$($diff | Select-Object -First 100 | Out-String)
+差分の一部（最初の50行）:
+$($diff | Select-Object -First 50 | Out-String)
+
+ブランチ名（1行のみ）:
 "@
 
     try {
         $suggestedBranch = $branchPrompt | claude 2>&1 | Out-String
         $suggestedBranch = $suggestedBranch.Trim()
         
+        # デバッグ出力（後で削除）
+        Write-Host "${YELLOW}Debug - Raw output: [$suggestedBranch]${RESET}"
+        
         # 不要な文字を除去
         $suggestedBranch = $suggestedBranch -replace '^```[a-z]*\r?\n?', ''
         $suggestedBranch = $suggestedBranch -replace '\r?\n?```$', ''
+        $suggestedBranch = $suggestedBranch -replace '^\s*ブランチ名.*?[:：]\s*', ''
+        $suggestedBranch = $suggestedBranch -replace '^\s*Branch.*?[:：]\s*', ''
         
-        # 複数行の場合は最初の適切な行を抽出
-        $lines = $suggestedBranch -split "`n"
+        # 複数行の場合は最初の有効な行を抽出
+        $lines = $suggestedBranch -split "`r?\n"
+        $foundValidBranch = $false
         foreach ($line in $lines) {
             $line = $line.Trim()
-            if ($line -match '^(feat|fix|docs|refactor|test|chore)/[\w\-]+$') {
+            # prefix/name形式の行を探す
+            if ($line -match '^(feat|fix|docs|refactor|test|chore)/[a-z0-9\-]+$') {
                 $suggestedBranch = $line
+                $foundValidBranch = $true
                 break
             }
         }
         
-        # 安全なブランチ名に変換（スペースをハイフンに、特殊文字を除去）
-        $suggestedBranch = $suggestedBranch -replace '\s+', '-'
-        $suggestedBranch = $suggestedBranch -replace '[^a-zA-Z0-9\-/]', ''
-        $suggestedBranch = $suggestedBranch.Trim()
-        
-        if ([string]::IsNullOrWhiteSpace($suggestedBranch)) {
-            $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd')"
+        # 有効なブランチ名が見つからない場合、最初の行を処理
+        if (-not $foundValidBranch) {
+            $firstLine = ($lines | Where-Object { $_ -and $_.Trim() })[0]
+            if ($firstLine) {
+                # 余計な文字を削除して整形
+                $suggestedBranch = $firstLine -replace '[^a-zA-Z0-9\-/]', ''
+                $suggestedBranch = $suggestedBranch -replace '\-+', '-'
+                $suggestedBranch = $suggestedBranch -replace '^-|-$', ''
+            }
         }
+        
+        # 最終的な検証
+        if ([string]::IsNullOrWhiteSpace($suggestedBranch) -or 
+            $suggestedBranch.Length -lt 5 -or 
+            $suggestedBranch -notmatch '^(feat|fix|docs|refactor|test|chore)/') {
+            $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        }
+        
     } catch {
-        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd')"
+        Write-Host "${RED}Error generating branch name: $_${RESET}"
+        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
     }
     
     Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
