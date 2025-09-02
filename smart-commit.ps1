@@ -9,6 +9,20 @@ param(
     [switch]$NoBranch           # ブランチ作成をスキップ
 )
 
+# ログファイルのパス設定
+$logDir = "$env:USERPROFILE\.claude\logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$logFile = Join-Path $logDir "smart-commit-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+
+# ログ出力関数
+function Write-Log {
+    param($Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp - $Message" | Out-File -FilePath $logFile -Append
+}
+
 # smart-commit実行中フラグを環境変数に設定（通知抑制用）
 $env:SMART_COMMIT_RUNNING = "true"
 
