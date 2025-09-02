@@ -142,20 +142,16 @@ $($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } |
     if ($LASTEXITCODE -eq 0) {
         Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
     } else {
-        # ブランチが既に存在する場合は番号を付けて再試行
+        # ブランチが既に存在する場合はそのブランチにチェックアウト
         if ($createResult -match "already exists") {
-            $counter = 2
-            while ($counter -le 10) {
-                $newBranchName = "${branchName}-${counter}"
-                $createResult = git checkout -b $newBranchName 2>&1
-                if ($LASTEXITCODE -eq 0) {
-                    Write-Host "${GREEN}✅ Created and switched to branch: $newBranchName${RESET}"
-                    break
-                }
-                $counter++
-            }
-            if ($counter -gt 10) {
-                Write-Host "${RED}❌ Failed to create branch after multiple attempts${RESET}"
+            Write-Host "${YELLOW}⚠️  Branch already exists: $branchName${RESET}"
+            Write-Host "${BLUE}Switching to existing branch...${RESET}"
+            $checkoutResult = git checkout $branchName 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "${GREEN}✅ Switched to existing branch: $branchName${RESET}"
+            } else {
+                Write-Host "${RED}❌ Failed to switch to branch: $branchName${RESET}"
+                Write-Host "${RED}   Error: $checkoutResult${RESET}"
                 Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
             }
         } else {
