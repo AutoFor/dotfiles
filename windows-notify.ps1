@@ -7,12 +7,9 @@ param(
     [string]$Sound = "Reminder"
 )
 
-# smart-commit.ps1実行中は通知をスキップ
+# smart-commit.ps1実行中はすべての通知をスキップ
 if ($env:SMART_COMMIT_RUNNING -eq "true") {
-    # 特定のメッセージタイプのみ許可（エラーや警告など重要な通知のみ）
-    if ($Title -notmatch "ERROR|WARNING|失敗|エラー") {
-        exit 0
-    }
+    exit 0
 }
 
 try {
