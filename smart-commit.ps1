@@ -240,43 +240,7 @@ try {
 Write-Host "`n${GREEN}✅ Generated commit message:${RESET}"
 Write-Host "${CYAN}$message${RESET}"
 
-# 確認プロンプト
-Write-Host "`n${YELLOW}Proceed with this commit message? (Y/n/e[dit]/r[egenerate]): ${RESET}" -NoNewline
-$response = $null
-$response = Read-Host
-
-# レスポンスの処理
-if ($null -eq $response) { $response = "" }
-switch ($response.ToLower()) {
-    "n" {
-        Write-Host "${RED}❌ Commit cancelled${RESET}"
-        exit 0
-    }
-    "e" {
-        # メッセージを一時ファイルに保存して編集
-        $tempFile = [System.IO.Path]::GetTempFileName()
-        $message | Out-File -FilePath $tempFile -Encoding UTF8
-        
-        # デフォルトエディタで開く
-        $editor = $env:EDITOR
-        if (-not $editor) { $editor = "notepad" }
-        Start-Process $editor -ArgumentList $tempFile -Wait
-        
-        # 編集されたメッセージを読み込み
-        $message = Get-Content $tempFile -Raw -Encoding UTF8
-        Remove-Item $tempFile
-        
-        Write-Host "${GREEN}✅ Using edited message${RESET}"
-    }
-    "r" {
-        Write-Host "${BLUE}🔄 Regenerating...${RESET}"
-        & $PSCommandPath @PSBoundParameters
-        exit $LASTEXITCODE
-    }
-    default {
-        # Y or Enter - proceed with commit
-    }
-}
+# バックグラウンド実行のため、確認プロンプトはスキップして自動コミット
 
 # コミットの実行
 Write-Host "`n${BLUE}📦 Committing changes...${RESET}"
