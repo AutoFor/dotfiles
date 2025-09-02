@@ -40,6 +40,9 @@ $BOLD = "$ESC[1m"
 # ヘッダー表示
 Write-Host "`n${CYAN}${BOLD}🤖 Smart Commit with Claude Code${RESET}" -NoNewline
 Write-Host ""
+Write-Log "Smart Commit started"
+Write-Log "Log file: $logFile"
+Write-Host "${YELLOW}📝 Log file: $logFile${RESET}"
 
 # Gitリポジトリの確認
 if (-not (Test-Path .git)) {
@@ -71,8 +74,10 @@ $diff = git diff --cached
 
 # 現在のブランチ確認
 $currentBranch = git branch --show-current
+Write-Log "Current branch: $currentBranch"
 $isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
 $isProtectedBranch = ($isMainBranch -or $currentBranch -eq 'develop' -or $currentBranch -eq 'staging' -or $currentBranch -eq 'production')
+Write-Log "Is protected branch: $isProtectedBranch"
 
 # ブランチ作成の処理（-NoBranchと-Amend以外の場合は常に提案）
 if (-not $NoBranch -and -not $Amend) {
@@ -97,7 +102,10 @@ $($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } |
 "@
 
     try {
+        Write-Log "Generating branch name with Claude..."
+        Write-Log "Branch prompt: $branchPrompt"
         $suggestedBranch = $branchPrompt | claude 2>&1 | Out-String
+        Write-Log "Raw Claude response: $suggestedBranch"
         $suggestedBranch = $suggestedBranch.Trim()
         
         # 不要な文字やコードブロックを除去
@@ -141,37 +149,60 @@ $($staged -split "`n" | Select-Object -First 3 | ForEach-Object { "File: $_" } |
         
     } catch {
         Write-Host "${RED}Error generating branch name: $_${RESET}"
+        Write-Log "ERROR generating branch name: $_"
         $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        Write-Log "Using fallback branch name: $suggestedBranch"
     }
     
     Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
+    Write-Log "Final suggested branch: $suggestedBranch"
     
     # バックグラウンド実行のため、自動的にブランチを作成
     Write-Host "${BLUE}Creating branch automatically...${RESET}"
     
     $branchName = $suggestedBranch
+    Write-Log "Attempting to create branch: $branchName"
     
     # ブランチ作成とチェックアウト
+    Write-Log "Executing: git checkout -b $branchName"
     $createResult = git checkout -b $branchName 2>&1
-    if ($LASTEXITCODE -eq 0) {
+    $exitCode = $LASTEXITCODE
+    Write-Log "Git checkout -b exit code: $exitCode"
+    Write-Log "Git checkout -b result: $createResult"
+    
+    if ($exitCode -eq 0) {
         Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
+        Write-Log "Successfully created and switched to branch: $branchName"
     } else {
         # ブランチが既に存在する場合はそのブランチにチェックアウト
         if ($createResult -match "already exists") {
             Write-Host "${YELLOW}⚠️  Branch already exists: $branchName${RESET}"
+            Write-Log "Branch already exists: $branchName"
             Write-Host "${BLUE}Switching to existing branch...${RESET}"
+            Write-Log "Executing: git checkout $branchName"
             $checkoutResult = git checkout $branchName 2>&1
-            if ($LASTEXITCODE -eq 0) {
+            $checkoutExitCode = $LASTEXITCODE
+            Write-Log "Git checkout exit code: $checkoutExitCode"
+            Write-Log "Git checkout result: $checkoutResult"
+            
+            if ($checkoutExitCode -eq 0) {
                 Write-Host "${GREEN}✅ Switched to existing branch: $branchName${RESET}"
+                Write-Log "Successfully switched to existing branch: $branchName"
             } else {
                 Write-Host "${RED}❌ Failed to switch to branch: $branchName${RESET}"
                 Write-Host "${RED}   Error: $checkoutResult${RESET}"
+                Write-Log "ERROR: Failed to switch to branch: $branchName"
+                Write-Log "ERROR details: $checkoutResult"
                 Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+                Write-Log "Continuing on current branch: $currentBranch"
             }
         } else {
             Write-Host "${RED}❌ Failed to create branch: $branchName${RESET}"
             Write-Host "${RED}   Error: $createResult${RESET}"
+            Write-Log "ERROR: Failed to create branch: $branchName"
+            Write-Log "ERROR details: $createResult"
             Write-Host "${YELLOW}Continuing on current branch: $currentBranch${RESET}"
+            Write-Log "Continuing on current branch: $currentBranch"
         }
     }
 }
@@ -312,3 +343,5 @@ if ($LASTEXITCODE -eq 0) {
 
 # スクリプト終了時に環境変数をクリア
 $env:SMART_COMMIT_RUNNING = $null
+Write-Log "Smart Commit completed"
+Write-Host "${YELLOW}📝 Log saved to: $logFile${RESET}"
