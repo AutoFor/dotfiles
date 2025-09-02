@@ -9,6 +9,9 @@ param(
     [switch]$NoBranch           # ブランチ作成をスキップ
 )
 
+# smart-commit実行中フラグを環境変数に設定（通知抑制用）
+$env:SMART_COMMIT_RUNNING = "true"
+
 # ANSIカラーコード
 $ESC = [char]27
 $RED = "$ESC[31m"
