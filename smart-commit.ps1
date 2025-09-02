@@ -37,6 +37,21 @@ if ([string]::IsNullOrWhiteSpace($status)) {
     exit 0
 }
 
+# 変更内容の表示
+Write-Host "`n${BLUE}📝 Current changes:${RESET}"
+git status --short
+
+# ステージング確認（ブランチ名生成のために先にステージング）
+$staged = git diff --cached --name-only
+if ([string]::IsNullOrWhiteSpace($staged)) {
+    Write-Host "`n${YELLOW}⚠️  No staged changes. Staging all changes...${RESET}"
+    git add -A
+    $staged = git diff --cached --name-only
+}
+
+# 差分の取得（ブランチ名生成用）
+$diff = git diff --cached
+
 # 現在のブランチ確認
 $currentBranch = git branch --show-current
 $isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
@@ -44,33 +59,52 @@ $isMainBranch = ($currentBranch -eq 'main' -or $currentBranch -eq 'master')
 # mainブランチの場合の処理
 if ($isMainBranch -and -not $NoBranch -and -not $Amend) {
     Write-Host "`n${YELLOW}⚠️  You are on the main branch.${RESET}"
-    Write-Host "${BLUE}Creating a new feature branch...${RESET}"
+    Write-Host "${BLUE}Analyzing changes to generate branch name...${RESET}"
     
-    # ブランチ名の生成（日付とタイムスタンプ）
-    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-    $branchName = "feature/$timestamp"
-    
-    Write-Host "${YELLOW}Branch name (Enter to use: $branchName): ${RESET}" -NoNewline
-    $customBranch = Read-Host
-    if ($customBranch) {
-        $branchName = $customBranch
+    # Claude Codeでブランチ名生成
+    $branchPrompt = @"
+以下の変更内容から適切なGitブランチ名を生成してください。
+
+要件:
+1. 英語で記述（kebab-case）
+2. prefixは以下から選択: feat/, fix/, docs/, refactor/, test/, chore/
+3. 20-30文字程度
+4. 変更の本質を表す名前
+5. ブランチ名のみ出力（説明不要）
+
+変更ファイル:
+$($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
+
+差分の一部:
+$($diff | Select-Object -First 100 | Out-String)
+"@
+
+    try {
+        $suggestedBranch = $branchPrompt | claude 2>&1 | Out-String
+        $suggestedBranch = $suggestedBranch.Trim()
+        
+        # 不要な文字を除去
+        $suggestedBranch = $suggestedBranch -replace '^```[a-z]*\r?\n?', ''
+        $suggestedBranch = $suggestedBranch -replace '\r?\n?```$', ''
+        $suggestedBranch = $suggestedBranch -replace '[^\w\-/]', ''
+        $suggestedBranch = $suggestedBranch.Trim()
+        
+        if ([string]::IsNullOrWhiteSpace($suggestedBranch)) {
+            $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd')"
+        }
+    } catch {
+        $suggestedBranch = "feature/update-$(Get-Date -Format 'yyyyMMdd')"
     }
+    
+    Write-Host "${GREEN}✅ Suggested branch: ${CYAN}$suggestedBranch${RESET}"
+    Write-Host "${YELLOW}Branch name (Enter to accept, or type custom name): ${RESET}" -NoNewline
+    $customBranch = Read-Host
+    
+    $branchName = if ($customBranch) { $customBranch } else { $suggestedBranch }
     
     # ブランチ作成とチェックアウト
     git checkout -b $branchName 2>&1 | Out-Null
     Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
-}
-
-# 変更内容の表示
-Write-Host "`n${BLUE}📝 Current changes:${RESET}"
-git status --short
-
-# ステージング確認
-$staged = git diff --cached --name-only
-if ([string]::IsNullOrWhiteSpace($staged)) {
-    Write-Host "`n${YELLOW}⚠️  No staged changes. Staging all changes...${RESET}"
-    git add -A
-    $staged = git diff --cached --name-only
 }
 
 # 差分の取得
