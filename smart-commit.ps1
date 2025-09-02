@@ -5,7 +5,8 @@ param(
     [switch]$Push,              # コミット後に自動プッシュ
     [switch]$NoVerify,          # pre-commitフックをスキップ
     [switch]$Amend,             # 直前のコミットを修正
-    [string]$Type = "auto"      # コミットタイプ (feat/fix/docs/style/refactor/test/chore/auto)
+    [string]$Type = "auto",     # コミットタイプ (feat/fix/docs/style/refactor/test/chore/auto)
+    [switch]$NoBranch           # ブランチ作成をスキップ
 )
 
 # ANSIカラーコード
