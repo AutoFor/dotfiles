@@ -57,8 +57,10 @@ $fileCount = ($staged -split "`n" | Where-Object { $_ }).Count
 $stats = git diff --cached --stat
 $insertions = 0
 $deletions = 0
-if ($stats -match "(\d+) insertion") { $insertions = $matches[1] }
-if ($stats -match "(\d+) deletion") { $deletions = $matches[1] }
+if ($stats) {
+    if ($stats -match "(\d+) insertion") { $insertions = $matches[1] }
+    if ($stats -match "(\d+) deletion") { $deletions = $matches[1] }
+}
 
 Write-Host "${GREEN}  ✓ ${fileCount} file(s) changed, +${insertions}/-${deletions} lines${RESET}"
 
