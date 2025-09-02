@@ -107,9 +107,13 @@ $($diff | Select-Object -First 100 | Out-String)
     Write-Host "${GREEN}✅ Created and switched to branch: $branchName${RESET}"
 }
 
-# 差分の取得
-Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
-$diff = git diff --cached
+# 差分の再取得（既に取得済みの場合はスキップ）
+if (-not $diff) {
+    Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
+    $diff = git diff --cached
+} else {
+    Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
+}
 
 # ファイル数と変更行数の取得
 $fileCount = ($staged -split "`n" | Where-Object { $_ }).Count
