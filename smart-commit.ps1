@@ -293,10 +293,7 @@ try {
         Write-Log "タイトルのみ使用（詳細なし）"
     }
     
-    Write-Log "最終タイトル: $title"
-    if ($detail) {
-        Write-Log "詳細あり ($(($detail -split "`n" | Measure-Object -Line).Lines)行)"
-    }
+    # ログには記録しない（冗長なため）
     
 } catch {
     Write-Host "${RED}❌ Failed to generate commit message with Claude${RESET}"
@@ -323,7 +320,6 @@ if ($detail) {
 }
 
 Write-Log "---------- コミットメッセージ生成完了 ----------"
-Write-Log "タイトル: $title"
 
 # バックグラウンド実行のため、確認プロンプトはスキップして自動コミット
 
@@ -343,7 +339,7 @@ if ($NoVerify) {
 Write-Log "コミット引数: $($commitArgs -join ' ')"
 
 # コミット実行
-Write-Log "実行中: git commit $($commitArgs -join ' ') -m [タイトル: $title]"
+Write-Log "実行中: git commit $($commitArgs -join ' ')"  # メッセージ内容はログに記録しない
 $commitResult = git commit $commitArgs -m $message 2>&1
 Write-Log "Git commit終了コード: $LASTEXITCODE"
 Write-Log "Git commit出力: $commitResult"
@@ -356,7 +352,6 @@ if ($LASTEXITCODE -eq 0) {
     $commitHash = git rev-parse --short HEAD
     Write-Host "${CYAN}   Commit: $commitHash${RESET}"
     Write-Log "コミットハッシュ: $commitHash"
-    Write-Log "使用されたタイトル: $title"
     
     # プッシュオプションが指定されている場合
     if ($Push) {
@@ -412,7 +407,7 @@ $env:SMART_COMMIT_RUNNING = $null
 Write-Log "---------- サマリー ----------"
 Write-Log "コミット成功: はい"
 Write-Log "コミットされたファイル数: $(($staged -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines))"
-Write-Log "コミットタイトル: $title"
+# コミットメッセージはログに記録しない
 Write-Log "コミットハッシュ: $commitHash"
 if ($Push) {
     Write-Log "プッシュステータス: $(if ($LASTEXITCODE -eq 0) { '成功' } else { '失敗' })"
