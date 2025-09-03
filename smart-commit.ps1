@@ -226,7 +226,8 @@ if ($Type -ne "auto") {
 try {
     Write-Log "Claudeにプロンプト送信中 (プロンプト長: $($prompt.Length) 文字)"
     
-    $message = $prompt | claude 2>&1 | Out-String
+    # Sonnetモデルを使用（高速・低コスト）
+    $message = $prompt | claude --model sonnet 2>&1 | Out-String
     Write-Log "Claudeからの応答受信 (長さ: $($message.Length) 文字)"
     Write-Log "生の応答: $message"
     
