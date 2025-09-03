@@ -40,7 +40,6 @@ $BOLD = "$ESC[1m"
 Write-Host "`n${CYAN}${BOLD}🤖 Smart Commit with Claude Code${RESET}" -NoNewline
 Write-Host ""
 Write-Log "========== SMART COMMIT STARTED =========="
-Write-Log "Log file: $logFile"
 Write-Log "Working directory: $(Get-Location)"
 Write-Log "Parameters: Push=$Push, NoVerify=$NoVerify, Amend=$Amend, Type=$Type"
 Write-Host "${YELLOW}📝 Log file: $logFile${RESET}"
@@ -164,7 +163,6 @@ if ($Type -ne "auto") {
 # Claude Codeを実行してメッセージ生成
 try {
     Write-Log "Sending prompt to Claude (prompt length: $($prompt.Length) characters)"
-    Write-Log "First 200 chars of prompt: $($prompt.Substring(0, [Math]::Min(200, $prompt.Length)))"
     
     $message = $prompt | claude 2>&1 | Out-String
     Write-Log "Raw Claude response received (length: $($message.Length) characters)"
