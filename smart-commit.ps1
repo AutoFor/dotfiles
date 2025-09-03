@@ -40,7 +40,7 @@ $BOLD = "$ESC[1m"
 Write-Host "`n${CYAN}${BOLD}🤖 Smart Commit with Claude Code${RESET}" -NoNewline
 Write-Host ""
 Write-Log "##################################################"
-Write-Log "######### スマートコミット開始 #########"
+Write-Log "          スマートコミット開始"
 Write-Log "##################################################"
 Write-Log "作業ディレクトリ: $(Get-Location)"
 Write-Log "パラメータ: Push=$Push, NoVerify=$NoVerify, Amend=$Amend, Type=$Type"
