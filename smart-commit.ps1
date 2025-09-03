@@ -422,7 +422,5 @@ Write-Log "コミットハッシュ: $commitHash"
 if ($Push) {
     Write-Log "プッシュステータス: $(if ($LASTEXITCODE -eq 0) { '成功' } else { '失敗' })"
 }
-Write-Log "--------------------------------------------------"
-Write-Log "          スマートコミット正常完了"
-Write-Log "--------------------------------------------------"
+Write-Log "---------- スマートコミット正常完了 ----------"
 Write-Host "${YELLOW}📝 Log saved to: $logFile${RESET}"
