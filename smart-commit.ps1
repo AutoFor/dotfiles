@@ -13,7 +13,7 @@ $logDir = "$env:USERPROFILE\.claude\logs"
 if (-not (Test-Path $logDir)) {
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
 }
-$logFile = Join-Path $logDir "smart-commit-$(Get-Date -Format 'yyyyMMdd-HHmmss').log"
+$logFile = Join-Path $logDir "smart-commit-$(Get-Date -Format 'yyyyMMdd').log"
 
 # ログ出力関数
 function Write-Log {
@@ -124,13 +124,20 @@ $prompt = @"
 以下のgit diffからコミットメッセージを生成してください。
 
 要件:
-1. Conventional Commitsフォーマット（feat:, fix:, docs:等で開始）
-2. 必ず日本語で記述（説明部分を日本語にする。例: feat: 新機能を追加）
-3. 1行目は50文字以内
-4. コミットメッセージのみ出力（説明文は不要）
-5. feat:やfix:で始まるメッセージを直接出力
-6. バッククォートや```は使用しない
-7. 英語は使用禁止（feat:などのprefixは除く）
+1. タイトルと詳細を別々に出力
+2. タイトルは<<<TITLE>>>と<<<END>>>で囲む
+3. 詳細は<<<DETAIL>>>と<<<END>>>で囲む
+4. タイトルはConventional Commits形式（feat:, fix:等）で1行50文字以内
+5. 詳細は日本語で、変更内容を箇条書きで説明
+6. コードブロック(```)は使用禁止
+
+出力形式:
+<<<TITLE>>>feat: 機能名<<<END>>>
+<<<DETAIL>>>
+- 変更点1の説明
+- 変更点2の説明
+- 変更点3の説明
+<<<END>>>
 
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
@@ -138,7 +145,7 @@ $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 差分（最初の300行）:
 $($diff | Select-Object -First 300 | Out-String)
 
-日本語のコミットメッセージ:
+コミットメッセージ:
 "@
 
 # タイプが指定されている場合はプロンプトに追加
@@ -163,33 +170,64 @@ try {
         throw "Claude returned empty message"
     }
     
-    # バックティックやコードブロックマーカーを除去
-    Write-Log "Cleaning up Claude response - removing code blocks and prefixes"
-    $originalMessage = $message
-    $message = $message -replace '^```[a-z]*\r?\n?', ''
-    $message = $message -replace '\r?\n?```$', ''
-    $message = $message -replace '^\s*適切な.*?[:：]\s*', ''
-    $message = $message -replace '^\s*以下.*?[:：]\s*', ''
-    $message = $message -replace '^\s*提案.*?[:：]\s*', ''
+    # タイトルと詳細の抽出
+    Write-Log "Extracting title and detail from Claude response"
     
-    if ($originalMessage -ne $message) {
-        Write-Log "Cleaned message: $message"
-    }
+    $title = ""
+    $detail = ""
     
-    # 複数行の場合は最初のコミットメッセージらしい行を抽出
-    $lines = $message -split "`n"
-    Write-Log "Response has $($lines.Count) line(s)"
-    
-    foreach ($line in $lines) {
-        if ($line -match '^\s*(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
-            Write-Log "Found valid commit message format at line: $line"
-            $message = $line.Trim()
-            break
+    # タイトルの抽出
+    if ($message -match '<<<TITLE>>>([^<]+)<<<END>>>') {
+        $title = $matches[1].Trim()
+        Write-Log "Extracted title: $title"
+        
+        # タイトルの検証
+        if ($title -notmatch '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
+            Write-Log "WARNING: Title doesn't follow Conventional Commits format"
+            # フォールバック: feat:を追加
+            $title = "feat: $title"
+            Write-Log "Added 'feat:' prefix to title: $title"
+        }
+    } else {
+        Write-Log "No <<<TITLE>>> tags found in response"
+        # フォールバック: 従来の方法で抽出
+        $lines = $message -split "`n"
+        foreach ($line in $lines) {
+            if ($line -match '^\s*(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
+                $title = $line.Trim()
+                Write-Log "Found title using fallback method: $title"
+                break
+            }
+        }
+        
+        if (-not $title) {
+            $title = "feat: コードの更新"
+            Write-Log "Using default title: $title"
         }
     }
     
-    $message = $message.Trim()
-    Write-Log "Final extracted message: $message"
+    # 詳細の抽出
+    if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>') {
+        $detail = $matches[1].Trim()
+        Write-Log "Extracted detail (length: $($detail.Length) chars)"
+        Write-Log "Detail content: $detail"
+    } else {
+        Write-Log "No <<<DETAIL>>> tags found - no detail message"
+    }
+    
+    # コミットメッセージの組み立て
+    if ($detail) {
+        # タイトルと詳細を結合
+        $message = "$title`n`n$detail"
+        Write-Log "Combined commit message with title and detail"
+    } else {
+        # タイトルのみ
+        $message = $title
+        Write-Log "Using title only (no detail provided)"
+    }
+    
+    Write-Log "Final commit message:"
+    Write-Log $message
     
 } catch {
     Write-Host "${RED}❌ Failed to generate commit message with Claude${RESET}"
@@ -203,9 +241,22 @@ try {
 
 # 生成されたメッセージの表示
 Write-Host "`n${GREEN}✅ Generated commit message:${RESET}"
-Write-Host "${CYAN}$message${RESET}"
+
+# タイトルと詳細を分けて表示
+if ($detail) {
+    Write-Host "${CYAN}Title: $title${RESET}"
+    Write-Host "${CYAN}Detail:${RESET}"
+    Write-Host "${CYAN}$detail${RESET}"
+} else {
+    Write-Host "${CYAN}$message${RESET}"
+}
+
 Write-Log "========== COMMIT MESSAGE GENERATED =========="
-Write-Log "Generated message: $message"
+Write-Log "Title: $title"
+if ($detail) {
+    Write-Log "Detail: $detail"
+}
+Write-Log "Full message: $message"
 
 # バックグラウンド実行のため、確認プロンプトはスキップして自動コミット
 
