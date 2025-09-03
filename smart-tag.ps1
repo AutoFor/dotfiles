@@ -35,7 +35,11 @@ $RESET = "$ESC[0m"
 $BOLD = "$ESC[1m"
 
 # スクリプト開始ログ
-Write-Log "Smart Tag started - Action: $Action, Tag: $Tag, Global: $Global, Json: $Json"
+Write-Log "##################################################"
+Write-Log "          スマートタグ開始"
+Write-Log "##################################################"
+Write-Log "作業ディレクトリ: $(Get-Location)"
+Write-Log "パラメータ: Action=$Action, Tag=$Tag, Global=$Global, Json=$Json"
 
 # タグファイルのパス設定
 $globalTagFile = "$env:USERPROFILE\.claude\tags\global-tags.json"
@@ -59,15 +63,15 @@ function Get-Tags {
     param([bool]$IsGlobal)
     
     $tagFile = if ($IsGlobal) { $globalTagFile } else { $localTagFile }
-    Write-Log "Loading tags from: $tagFile"
+    Write-Log "タグファイル読み込み中: $tagFile"
     
     if (Test-Path $tagFile) {
         try {
             $content = Get-Content $tagFile -Raw | ConvertFrom-Json
-            Write-Log "Tags loaded successfully from $tagFile"
+            Write-Log "タグファイル読み込み成功: $tagFile"
             return $content
         } catch {
-            Write-Log "ERROR: Failed to parse tag file: $_"
+            Write-Log "エラー: タグファイルの解析に失敗: $_"
             return @{
                 tags = @{}
                 current = $null
@@ -75,7 +79,7 @@ function Get-Tags {
             }
         }
     } else {
-        Write-Log "Tag file not found: $tagFile - Creating new tag structure"
+        Write-Log "タグファイルが見つかりません: $tagFile - 新規作成"
         return @{
             tags = @{}
             current = $null
@@ -96,9 +100,9 @@ function Save-Tags {
     
     try {
         $TagData | ConvertTo-Json -Depth 10 | Set-Content $tagFile -Encoding UTF8
-        Write-Log "Tags saved successfully to: $tagFile"
+        Write-Log "タグファイル保存成功: $tagFile"
     } catch {
-        Write-Log "ERROR: Failed to save tags to $tagFile - $_"
+        Write-Log "エラー: タグファイルの保存に失敗: $tagFile - $_"
     }
 }
 
@@ -115,11 +119,11 @@ if (-not $Json) {
 # メイン処理
 $tagData = Get-Tags -IsGlobal $Global
 
-Write-Log "Processing action: $Action"
+Write-Log "---------- アクション実行: $Action ----------"
 
 switch ($Action.ToLower()) {
     "list" {
-        Write-Log "Listing tags (Global: $Global, Json: $Json)"
+        Write-Log "タグ一覧表示 (グローバル: $Global, JSON出力: $Json)"
         if ($Json) {
             # JSON出力
             $output = @{
@@ -170,17 +174,18 @@ switch ($Action.ToLower()) {
     }
     
     "add" {
-        Write-Log "Adding tag: $Tag with description: $Description"
+        Write-Log "タグ追加: $Tag"
+        Write-Log "説明: $Description"
         
         if (-not $Tag) {
             Write-Host "${RED}Error: -Tag parameter is required${RESET}"
-            Write-Log "ERROR: Tag parameter missing"
+            Write-Log "エラー: タグパラメータが指定されていません"
             exit 1
         }
         
         if (-not $Description) {
             Write-Host "${RED}Error: -Description parameter is required${RESET}"
-            Write-Log "ERROR: Description parameter missing"
+            Write-Log "エラー: 説明パラメータが指定されていません"
             exit 1
         }
         
@@ -201,7 +206,7 @@ switch ($Action.ToLower()) {
         $tagData.current = $Tag
         
         Save-Tags -TagData $tagData -IsGlobal $Global
-        Write-Log "Tag '$Tag' added and activated successfully"
+        Write-Log "タグ '$Tag' を追加してアクティブ化しました"
         
         if ($Json) {
             @{ success = $true; message = "Tag added: $Tag" } | ConvertTo-Json
@@ -212,24 +217,24 @@ switch ($Action.ToLower()) {
     }
     
     "set" {
-        Write-Log "Setting active tag to: $Tag"
+        Write-Log "アクティブタグを設定: $Tag"
         
         if (-not $Tag) {
             Write-Host "${RED}Error: -Tag parameter is required${RESET}"
-            Write-Log "ERROR: Tag parameter missing for set action"
+            Write-Log "エラー: setアクションにタグパラメータが必要です"
             exit 1
         }
         
         if (-not $tagData.tags.ContainsKey($Tag)) {
             Write-Host "${RED}Error: Tag '$Tag' not found${RESET}"
             Write-Host "Available tags: $($tagData.tags.Keys -join ', ')"
-            Write-Log "ERROR: Tag '$Tag' not found. Available: $($tagData.tags.Keys -join ', ')"
+            Write-Log "エラー: タグ '$Tag' が見つかりません。利用可能: $($tagData.tags.Keys -join ', ')"
             exit 1
         }
         
         $tagData.current = $Tag
         Save-Tags -TagData $tagData -IsGlobal $Global
-        Write-Log "Active tag set to: $Tag"
+        Write-Log "アクティブタグを '$Tag' に設定しました"
         
         if ($Json) {
             @{ success = $true; message = "Active tag set to: $Tag" } | ConvertTo-Json
@@ -241,10 +246,10 @@ switch ($Action.ToLower()) {
     }
     
     "clear" {
-        Write-Log "Clearing active tag"
+        Write-Log "アクティブタグをクリア"
         $tagData.current = $null
         Save-Tags -TagData $tagData -IsGlobal $Global
-        Write-Log "Active tag cleared successfully"
+        Write-Log "アクティブタグをクリアしました"
         
         if ($Json) {
             @{ success = $true; message = "Active tag cleared" } | ConvertTo-Json
@@ -254,7 +259,7 @@ switch ($Action.ToLower()) {
     }
     
     "show" {
-        Write-Log "Showing current tag (Json: $Json)"
+        Write-Log "現在のタグを表示 (JSON出力: $Json)"
         
         if ($Json) {
             # Claude用の構造化データを出力
@@ -274,7 +279,7 @@ switch ($Action.ToLower()) {
                 }
             }
             
-            Write-Log "Outputting tag context as JSON for Claude: active_tag=$($output.active_tag)"
+            Write-Log "ClaudeへのJSON出力: アクティブタグ=$($output.active_tag)"
             $output | ConvertTo-Json -Depth 10
         } else {
             if ($tagData.current) {
@@ -297,18 +302,18 @@ switch ($Action.ToLower()) {
     }
     
     "goal" {
-        Write-Log "Adding goal to current tag: $Description"
+        Write-Log "現在のタグにゴール追加: $Description"
         
         # ゴールの追加（拡張機能）
         if (-not $Description) {
             Write-Host "${RED}Error: -Description parameter is required for goal${RESET}"
-            Write-Log "ERROR: Description parameter missing for goal"
+            Write-Log "エラー: ゴールに説明パラメータが必要です"
             exit 1
         }
         
         if (-not $tagData.current) {
             Write-Host "${RED}Error: No active tag. Set a tag first with 'smart-tag -Action set -Tag <name>'${RESET}"
-            Write-Log "ERROR: No active tag set for adding goal"
+            Write-Log "エラー: ゴール追加のためのアクティブタグが設定されていません"
             exit 1
         }
         
@@ -325,7 +330,7 @@ switch ($Action.ToLower()) {
         
         $currentTag.goals += $newGoal
         Save-Tags -TagData $tagData -IsGlobal $Global
-        Write-Log "Goal added successfully to tag '$($tagData.current)': $Description"
+        Write-Log "タグ '$($tagData.current)' にゴールを追加しました: $Description"
         
         if ($Json) {
             @{ success = $true; message = "Goal added to tag: $($tagData.current)" } | ConvertTo-Json
@@ -338,15 +343,20 @@ switch ($Action.ToLower()) {
     default {
         Write-Host "${RED}Error: Unknown action '$Action'${RESET}"
         Write-Host "Available actions: list, add, set, clear, show, goal"
-        Write-Log "ERROR: Unknown action '$Action'"
+        Write-Log "エラー: 不明なアクション '$Action'"
         exit 1
     }
 }
 
-Write-Log "Smart Tag completed successfully"
+Write-Log "---------- サマリー ----------"
+Write-Log "実行アクション: $Action"
+if ($tagData.current) {
+    Write-Log "現在のアクティブタグ: $($tagData.current)"
+}
+Write-Log "---------- スマートタグ正常完了 ----------"
 
 # PreToolUse用の出力（JSON形式の場合はすでに出力済み）
 if (-not $Json -and $tagData.current) {
     Write-Host "`n${BLUE}💡 Current context will be provided to Claude${RESET}"
-    Write-Log "Current context available for Claude: $($tagData.current)"
+    Write-Log "Claudeコンテキスト: アクティブタグ=$($tagData.current)"
 }
