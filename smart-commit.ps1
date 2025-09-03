@@ -87,10 +87,67 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
     $staged -split "`n" | ForEach-Object { if ($_) { Write-Log "  ステージング済み: $_" } }
 }
 
-# 差分の取得
+# 差分の取得とスマート抽出
 Write-Log "差分取得中 (git diff --cached)"
 $diff = git diff --cached
 Write-Log "差分サイズ: $($diff.Length) 文字"
+
+# スマート差分抽出処理
+Write-Log "重要な変更を抽出中..."
+
+# 1. 各ファイルの変更サマリーを取得
+$diffStat = git diff --cached --stat
+Write-Log "変更統計: $diffStat"
+
+# 2. 各ファイルの重要な部分を抽出
+$smartDiff = @()
+$smartDiff += "=== 変更サマリー ==="
+$smartDiff += $diffStat
+$smartDiff += ""
+
+# 3. 各ファイルの関数/クラス変更を抽出
+$stagedFiles = $staged -split "`n" | Where-Object { $_ }
+foreach ($file in $stagedFiles) {
+    if (-not $file) { continue }
+    
+    Write-Log "ファイルの重要変更を抽出: $file"
+    
+    # ファイル拡張子を確認
+    $ext = [System.IO.Path]::GetExtension($file)
+    
+    # プログラミング言語ファイルの場合、関数/クラス定義を抽出
+    if ($ext -match '\.(cs|js|ts|jsx|tsx|py|java|cpp|c|h|go|rs|php|rb|swift)$') {
+        # 追加/変更された関数/クラスを抽出
+        $fileDiff = git diff --cached -U0 -- $file 2>&1
+        
+        # 関数/クラス定義の変更を検出
+        $importantLines = $fileDiff -split "`n" | Where-Object {
+            $_ -match '^[+\-].*(function|class|interface|struct|def|public|private|protected|async|export|import|using|namespace|package)' -or
+            $_ -match '^@@.*@@'
+        }
+        
+        if ($importantLines) {
+            $smartDiff += "=== $file ==="
+            $smartDiff += $importantLines | Select-Object -First 30
+            $smartDiff += ""
+        }
+    }
+    # 設定ファイルの場合は全体を含める
+    elseif ($ext -match '\.(json|yml|yaml|toml|ini|config|xml)$') {
+        $fileDiff = git diff --cached -- $file 2>&1
+        $smartDiff += "=== $file (設定ファイル) ==="
+        $smartDiff += $fileDiff -split "`n" | Select-Object -First 50
+        $smartDiff += ""
+    }
+}
+
+# 4. 差分が大きすぎる場合は切り詰め
+$smartDiffText = $smartDiff -join "`n"
+if ($smartDiffText.Length -gt 3000) {
+    $smartDiffText = $smartDiffText.Substring(0, 3000) + "`n... (以下省略)"
+}
+
+Write-Log "スマート差分サイズ: $($smartDiffText.Length) 文字"
 
 # 変更の分析
 Write-Host "`n${BLUE}🔍 Analyzing changes...${RESET}"
@@ -149,8 +206,11 @@ $prompt = @"
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 
-差分（最初の500行）:
-$($diff | Select-Object -First 500 | Out-String)
+スマート差分（重要な変更のみ）:
+$smartDiffText
+
+完全な差分（最初の200行）:
+$($diff | Select-Object -First 200 | Out-String)
 
 コミットメッセージ:
 "@
