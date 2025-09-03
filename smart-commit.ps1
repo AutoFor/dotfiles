@@ -149,8 +149,8 @@ $prompt = @"
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
 
-差分（最初の300行）:
-$($diff | Select-Object -First 300 | Out-String)
+差分（最初の500行）:
+$($diff | Select-Object -First 500 | Out-String)
 
 コミットメッセージ:
 "@
