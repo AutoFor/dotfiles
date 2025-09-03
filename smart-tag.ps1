@@ -66,12 +66,29 @@ function Get-Tags {
     Write-Log "タグファイル読み込み中: $tagFile"
     
     if (Test-Path $tagFile) {
+        $fileSize = (Get-Item $tagFile).Length
+        Write-Log "ファイル存在確認: OK (サイズ: $fileSize bytes)"
+        
         try {
-            $content = Get-Content $tagFile -Raw | ConvertFrom-Json
+            $rawContent = Get-Content $tagFile -Raw
+            Write-Log "Raw JSON読み込み完了 (サイズ: $($rawContent.Length) 文字)"
+            
+            $content = $rawContent | ConvertFrom-Json
+            Write-Log "JSONパース成功: current='$($content.current)', tags数=$($content.tags.PSObject.Properties.Count)"
+            
+            # タグの詳細をログ出力
+            if ($content.tags) {
+                $tagNames = @($content.tags.PSObject.Properties.Name) -join ', '
+                Write-Log "読み込まれたタグ: [$tagNames]"
+            } else {
+                Write-Log "警告: tagsプロパティが存在しません"
+            }
+            
             Write-Log "タグファイル読み込み成功: $tagFile"
             return $content
         } catch {
             Write-Log "エラー: タグファイルの解析に失敗: $_"
+            Write-Log "エラー詳細: $($_.Exception.Message)"
             return @{
                 tags = @{}
                 current = $null
@@ -98,11 +115,28 @@ function Save-Tags {
     $tagFile = if ($IsGlobal) { $globalTagFile } else { $localTagFile }
     $TagData.updated = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
     
+    Write-Log "保存処理開始: ファイル='$tagFile', current='$($TagData.current)', tags数=$($TagData.tags.Count)"
+    
     try {
-        $TagData | ConvertTo-Json -Depth 10 | Set-Content $tagFile -Encoding UTF8
+        $jsonContent = $TagData | ConvertTo-Json -Depth 10
+        Write-Log "JSON変換完了 (サイズ: $($jsonContent.Length) 文字)"
+        
+        $jsonContent | Set-Content $tagFile -Encoding UTF8
+        Write-Log "ファイル書き込み完了: $tagFile"
+        
+        # 書き込み後の検証
+        if (Test-Path $tagFile) {
+            $fileSize = (Get-Item $tagFile).Length
+            Write-Log "ファイル検証: 存在=OK, サイズ=$fileSize bytes"
+        } else {
+            Write-Log "警告: 保存後にファイルが存在しません"
+        }
+        
         Write-Log "タグファイル保存成功: $tagFile"
     } catch {
         Write-Log "エラー: タグファイルの保存に失敗: $tagFile - $_"
+        Write-Log "エラー詳細: $($_.Exception.Message)"
+        Write-Log "スタックトレース: $($_.ScriptStackTrace)"
     }
 }
 
@@ -119,6 +153,7 @@ if (-not $Json) {
 # メイン処理
 $tagData = Get-Tags -IsGlobal $Global
 
+Write-Log "メイン処理開始: current='$($tagData.current)', tags数=$($tagData.tags.Count)"
 Write-Log "---------- アクション実行: $Action ----------"
 
 switch ($Action.ToLower()) {
@@ -196,17 +231,31 @@ switch ($Action.ToLower()) {
             goals = @()
         }
         
+        Write-Log "タグデータ構造確認 - tagsのnullチェック: $($tagData.tags -eq $null)"
         if ($tagData.tags -eq $null) {
+            Write-Log "タグデータがnullのため、新規作成"
             $tagData.tags = @{}
         }
         
+        Write-Log "タグ '$Tag' をデータ構造に追加中"
         $tagData.tags[$Tag] = $newTag
+        Write-Log "タグ追加後のタグ数: $($tagData.tags.Count)"
         
         # 自動的にアクティブに設定
+        Write-Log "アクティブタグを '$Tag' に設定中"
         $tagData.current = $Tag
+        Write-Log "アクティブタグ設定後: current='$($tagData.current)'"
         
+        Write-Log "保存前のデータ確認: current='$($tagData.current)', tags数=$($tagData.tags.Count)"
         Save-Tags -TagData $tagData -IsGlobal $Global
         Write-Log "タグ '$Tag' を追加してアクティブ化しました"
+        
+        # 保存後の確認
+        $verifyData = Get-Tags -IsGlobal $Global
+        Write-Log "保存後の検証: current='$($verifyData.current)', tags数=$($verifyData.tags.Count)"
+        if ($verifyData.current -ne $Tag) {
+            Write-Log "警告: 保存後のアクティブタグが一致しません (期待値='$Tag', 実際='$($verifyData.current)')"
+        }
         
         if ($Json) {
             @{ success = $true; message = "Tag added: $Tag" } | ConvertTo-Json
