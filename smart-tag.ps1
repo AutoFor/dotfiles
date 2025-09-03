@@ -2,9 +2,10 @@
 # 作業の目的・マイルストーンをタグとして管理するPowerShellスクリプト
 
 param(
-    [string]$Action = "list",     # list/add/set/clear/show
+    [string]$Action = "list",     # list/add/set/clear/show/auto
     [string]$Tag,                  # タグ名
     [string]$Description,          # タグの説明
+    [string]$UserPrompt,           # ユーザーのプロンプト（auto用）
     [switch]$Global,               # グローバルタグ（全プロジェクト共通）
     [switch]$Json                  # JSON形式で出力
 )
@@ -40,6 +41,9 @@ Write-Log "          スマートタグ開始"
 Write-Log "##################################################"
 Write-Log "作業ディレクトリ: $(Get-Location)"
 Write-Log "パラメータ: Action=$Action, Tag=$Tag, Global=$Global, Json=$Json"
+if ($UserPrompt) {
+    Write-Log "ユーザープロンプト: $($UserPrompt.Substring(0, [Math]::Min(100, $UserPrompt.Length)))..."
+}
 
 # タグファイルのパス設定
 $globalTagFile = "$env:USERPROFILE\.claude\tags\global-tags.json"
@@ -389,9 +393,143 @@ switch ($Action.ToLower()) {
         }
     }
     
+    "auto" {
+        Write-Log "自動タグ生成モード"
+        
+        if (-not $UserPrompt) {
+            Write-Log "警告: ユーザープロンプトが指定されていません"
+            if ($Json) {
+                @{ 
+                    mode = if ($Global) { "global" } else { "project" }
+                    active_tag = $tagData.current
+                    context = if ($tagData.current -and $tagData.tags.$($tagData.current)) {
+                        @{
+                            purpose = $tagData.tags.$($tagData.current).description
+                            created = $tagData.tags.$($tagData.current).created
+                        }
+                    } else { @{} }
+                } | ConvertTo-Json -Depth 10
+            }
+        } else {
+            Write-Log "ユーザープロンプトを解析中"
+            
+            # プロンプトから重要なキーワードを抽出
+            $keywords = @()
+            $purpose = ""
+            
+            # 実装系のキーワード
+            if ($UserPrompt -match "実装|implement|作成|create|追加|add|機能|feature") {
+                $keywords += "implementation"
+                $purpose = "機能実装"
+            }
+            # 修正系のキーワード
+            if ($UserPrompt -match "修正|fix|バグ|bug|エラー|error|問題|issue") {
+                $keywords += "bugfix"
+                $purpose = "バグ修正"
+            }
+            # リファクタリング系
+            if ($UserPrompt -match "リファクタリング|refactor|改善|improve|最適化|optimize") {
+                $keywords += "refactoring"
+                $purpose = "コード改善"
+            }
+            # ドキュメント系
+            if ($UserPrompt -match "ドキュメント|document|説明|readme|仕様") {
+                $keywords += "documentation"
+                $purpose = "ドキュメント作成"
+            }
+            # テスト系
+            if ($UserPrompt -match "テスト|test|検証|verify") {
+                $keywords += "testing"
+                $purpose = "テスト作成"
+            }
+            # 調査系
+            if ($UserPrompt -match "調査|investigate|確認|check|分析|analyze") {
+                $keywords += "investigation"
+                $purpose = "調査・分析"
+            }
+            
+            # 具体的な対象を抽出
+            $targetMatch = $UserPrompt -match "(\S+)(の|を|に|が)"
+            if ($targetMatch -and $Matches[1]) {
+                $target = $Matches[1]
+                Write-Log "対象検出: $target"
+            }
+            
+            # プロンプトの最初の20文字をタグ名に使用
+            $autoTagName = "task-$(Get-Date -Format 'HHmmss')"
+            
+            # プロンプトを要約して説明に使用（最大100文字）
+            $autoDescription = if ($UserPrompt.Length -gt 100) {
+                $UserPrompt.Substring(0, 97) + "..."
+            } else {
+                $UserPrompt
+            }
+            
+            # 目的が特定できた場合は優先
+            if ($purpose) {
+                $autoDescription = "[$purpose] $autoDescription"
+            }
+            
+            Write-Log "自動生成タグ: $autoTagName"
+            Write-Log "説明: $autoDescription"
+            Write-Log "検出キーワード: $($keywords -join ', ')"
+            
+            # 既存のアクティブタグがない場合のみ自動生成
+            if (-not $tagData.current) {
+                # 新しいタグを追加
+                $newTag = @{
+                    description = $autoDescription
+                    created = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+                    goals = @()
+                    auto_generated = $true
+                    keywords = $keywords
+                }
+                
+                if ($tagData.tags -eq $null) {
+                    $tagData.tags = @{}
+                }
+                
+                $tagData.tags[$autoTagName] = $newTag
+                $tagData.current = $autoTagName
+                
+                Save-Tags -TagData $tagData -IsGlobal $Global
+                Write-Log "自動タグ '$autoTagName' を生成してアクティブ化しました"
+            } else {
+                Write-Log "既存のアクティブタグ '$($tagData.current)' があるため、自動生成をスキップ"
+            }
+            
+            # JSON出力（Claude用）
+            if ($Json) {
+                $output = @{
+                    mode = if ($Global) { "global" } else { "project" }
+                    active_tag = $tagData.current
+                    context = @{}
+                    auto_analysis = @{
+                        detected_keywords = $keywords
+                        detected_purpose = $purpose
+                        user_prompt_summary = $autoDescription
+                    }
+                }
+                
+                if ($tagData.current -and $tagData.tags.$($tagData.current)) {
+                    $currentTag = $tagData.tags.$($tagData.current)
+                    $output.context = @{
+                        purpose = $currentTag.description
+                        created = $currentTag.created
+                        goals = $currentTag.goals
+                        auto_generated = $currentTag.auto_generated
+                    }
+                }
+                
+                Write-Log "ClaudeへのJSON出力（自動解析付き）"
+                $output | ConvertTo-Json -Depth 10
+            }
+        }
+    }
+    
     default {
         Write-Host "${RED}Error: Unknown action '$Action'${RESET}"
-        Write-Host "Available actions: list, add, set, clear, show, goal"
+        Write-Host "Available actions: list, add, set, clear, show, goal, auto"
         Write-Log "エラー: 不明なアクション '$Action'"
         exit 1
     }
