@@ -351,7 +351,6 @@ if ($LASTEXITCODE -eq 0) {
     # コミットハッシュの取得と表示
     $commitHash = git rev-parse --short HEAD
     Write-Host "${CYAN}   Commit: $commitHash${RESET}"
-    Write-Log "コミットハッシュ: $commitHash"
     
     # プッシュオプションが指定されている場合
     if ($Push) {
