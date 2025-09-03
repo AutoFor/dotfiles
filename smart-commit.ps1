@@ -62,9 +62,7 @@ Write-Log "Git status結果: $(if ([string]::IsNullOrWhiteSpace($status)) { '変
 if ([string]::IsNullOrWhiteSpace($status)) {
     Write-Host "${YELLOW}⚠️  No changes to commit${RESET}"
     Write-Log "変更が検出されませんでした - 正常終了"
-    Write-Log "--------------------------------------------------"
-Write-Log "          スマートコミット完了（変更なし）"
-Write-Log "--------------------------------------------------"
+    Write-Log "---------- スマートコミット完了（変更なし） ----------"
     exit 0
 }
 
