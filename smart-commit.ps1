@@ -127,17 +127,25 @@ $prompt = @"
 1. タイトルと詳細を別々に出力
 2. タイトルは<<<TITLE>>>と<<<END>>>で囲む
 3. 詳細は<<<DETAIL>>>と<<<END>>>で囲む
-4. タイトルはConventional Commits形式（feat:, fix:等）で1行50文字以内
+4. タイトルはConventional Commits形式（英語必須）
+   - 必ず英語のprefix（feat/fix/docs/style/refactor/test/chore）で開始
+   - 形式: "prefix: description"（例: feat: add user authentication）
+   - 1行50文字以内
 5. 詳細は日本語で、変更内容を箇条書きで説明
 6. コードブロック(```)は使用禁止
 
 出力形式:
-<<<TITLE>>>feat: 機能名<<<END>>>
+<<<TITLE>>>feat: add new feature<<<END>>>
 <<<DETAIL>>>
-- 変更点1の説明
-- 変更点2の説明
-- 変更点3の説明
+- 新機能の実装内容を日本語で説明
+- 変更点を日本語で箇条書き
+- 技術的な詳細も日本語で記載
 <<<END>>>
+
+重要:
+- タイトルのprefix部分（feat:等）は必ず英語
+- タイトルの説明部分も英語
+- 詳細説明は必ず日本語
 
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
