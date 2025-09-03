@@ -278,7 +278,6 @@ try {
     if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>') {
         $detail = $matches[1].Trim()
         Write-Log "抽出された詳細 (長さ: $($detail.Length) 文字)"
-        Write-Log "詳細内容: $detail"
     } else {
         Write-Log "<<<DETAIL>>>タグが見つかりません - 詳細メッセージなし"
     }
@@ -294,8 +293,10 @@ try {
         Write-Log "タイトルのみ使用（詳細なし）"
     }
     
-    Write-Log "最終コミットメッセージ:"
-    Write-Log $message
+    Write-Log "最終タイトル: $title"
+    if ($detail) {
+        Write-Log "詳細あり ($(($detail -split "`n" | Measure-Object -Line).Lines)行)"
+    }
     
 } catch {
     Write-Host "${RED}❌ Failed to generate commit message with Claude${RESET}"
@@ -323,10 +324,6 @@ if ($detail) {
 
 Write-Log "---------- コミットメッセージ生成完了 ----------"
 Write-Log "タイトル: $title"
-if ($detail) {
-    Write-Log "詳細: $detail"
-}
-Write-Log "完全なメッセージ: $message"
 
 # バックグラウンド実行のため、確認プロンプトはスキップして自動コミット
 
@@ -346,7 +343,7 @@ if ($NoVerify) {
 Write-Log "コミット引数: $($commitArgs -join ' ')"
 
 # コミット実行
-Write-Log "実行中: git commit $($commitArgs -join ' ') -m '$message'"
+Write-Log "実行中: git commit $($commitArgs -join ' ') -m [タイトル: $title]"
 $commitResult = git commit $commitArgs -m $message 2>&1
 Write-Log "Git commit終了コード: $LASTEXITCODE"
 Write-Log "Git commit出力: $commitResult"
@@ -359,7 +356,7 @@ if ($LASTEXITCODE -eq 0) {
     $commitHash = git rev-parse --short HEAD
     Write-Host "${CYAN}   Commit: $commitHash${RESET}"
     Write-Log "コミットハッシュ: $commitHash"
-    Write-Log "使用されたコミットメッセージ: $message"
+    Write-Log "使用されたタイトル: $title"
     
     # プッシュオプションが指定されている場合
     if ($Push) {
@@ -415,7 +412,7 @@ $env:SMART_COMMIT_RUNNING = $null
 Write-Log "---------- サマリー ----------"
 Write-Log "コミット成功: はい"
 Write-Log "コミットされたファイル数: $(($staged -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines))"
-Write-Log "コミットメッセージ: $message"
+Write-Log "コミットタイトル: $title"
 Write-Log "コミットハッシュ: $commitHash"
 if ($Push) {
     Write-Log "プッシュステータス: $(if ($LASTEXITCODE -eq 0) { '成功' } else { '失敗' })"
