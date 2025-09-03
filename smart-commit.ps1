@@ -39,7 +39,9 @@ $BOLD = "$ESC[1m"
 # ヘッダー表示
 Write-Host "`n${CYAN}${BOLD}🤖 Smart Commit with Claude Code${RESET}" -NoNewline
 Write-Host ""
-Write-Log "========== スマートコミット開始 =========="
+Write-Log "##################################################"
+Write-Log "######### スマートコミット開始 #########"
+Write-Log "##################################################"
 Write-Log "作業ディレクトリ: $(Get-Location)"
 Write-Log "パラメータ: Push=$Push, NoVerify=$NoVerify, Amend=$Amend, Type=$Type"
 Write-Host "${YELLOW}📝 Log file: $logFile${RESET}"
@@ -60,7 +62,9 @@ Write-Log "Git status結果: $(if ([string]::IsNullOrWhiteSpace($status)) { '変
 if ([string]::IsNullOrWhiteSpace($status)) {
     Write-Host "${YELLOW}⚠️  No changes to commit${RESET}"
     Write-Log "変更が検出されませんでした - 正常終了"
-    Write-Log "========== スマートコミット完了（変更なし） =========="
+    Write-Log "##################################################"
+Write-Log "######### スマートコミット完了（変更なし） #########"
+Write-Log "##################################################"
     exit 0
 }
 
@@ -172,7 +176,7 @@ Write-Host "${GREEN}  ✓ ${fileCount} file(s) changed, +${insertions}/-${deleti
 
 # Claude Codeでコミットメッセージ生成
 Write-Host "`n${BLUE}🤖 Generating commit message with Claude...${RESET}"
-Write-Log "========== Claudeメッセージ生成 =========="
+Write-Log "---------- Claudeメッセージ生成 ----------"
 Write-Log "Claudeへのプロンプト準備中"
 
 # プロンプトの構築
@@ -301,7 +305,9 @@ try {
     Write-Log "エラー: Claudeでコミットメッセージ生成に失敗"
     Write-Log "エラー詳細: $_"
     Write-Log "スタックトレース: $($_.Exception.StackTrace)"
-    Write-Log "========== スマートコミット失敗（Claudeエラー） =========="
+    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+Write-Log "!!!!! スマートコミット失敗（Claudeエラー） !!!!!"
+Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     exit 0  # Hook用に0で終了
 }
 
@@ -317,7 +323,7 @@ if ($detail) {
     Write-Host "${CYAN}$message${RESET}"
 }
 
-Write-Log "========== コミットメッセージ生成完了 =========="
+Write-Log "---------- コミットメッセージ生成完了 ----------"
 Write-Log "タイトル: $title"
 if ($detail) {
     Write-Log "詳細: $detail"
@@ -328,7 +334,7 @@ Write-Log "完全なメッセージ: $message"
 
 # コミットの実行
 Write-Host "`n${BLUE}📦 Committing changes...${RESET}"
-Write-Log "========== Gitコミット実行 =========="
+Write-Log "---------- Gitコミット実行 ----------"
 
 $commitArgs = @()
 if ($Amend) { 
@@ -360,7 +366,7 @@ if ($LASTEXITCODE -eq 0) {
     # プッシュオプションが指定されている場合
     if ($Push) {
         Write-Host "`n${BLUE}🚀 Pushing to remote...${RESET}"
-        Write-Log "========== Gitプッシュ =========="
+        Write-Log "---------- Gitプッシュ ----------"
         Write-Log "実行中: git push"
         $pushResult = git push 2>&1
         Write-Log "Git push終了コード: $LASTEXITCODE"
@@ -375,7 +381,9 @@ if ($LASTEXITCODE -eq 0) {
             Write-Host $pushResult
             Write-Log "エラー: プッシュ失敗"
             Write-Log "プッシュエラー詳細: $pushResult"
-            Write-Log "========== スマートコミット完了（プッシュエラー） =========="
+            Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+Write-Log "!!!!! スマートコミット完了（プッシュエラー） !!!!!"
+Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             exit 0  # Hook用に0で終了
         }
     }
@@ -394,7 +402,9 @@ if ($LASTEXITCODE -eq 0) {
         Write-Log "診断: Gitユーザー設定が必要です"
     }
     
-    Write-Log "========== スマートコミット失敗（コミットエラー） =========="
+    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+Write-Log "!!!!! スマートコミット失敗（コミットエラー） !!!!!"
+Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     exit 0  # Hook用に0で終了
 }
 
@@ -404,7 +414,7 @@ if ($LASTEXITCODE -eq 0) {
 $env:SMART_COMMIT_RUNNING = $null
 
 # 最終サマリー
-Write-Log "========== サマリー =========="
+Write-Log "---------- サマリー ----------"
 Write-Log "コミット成功: はい"
 Write-Log "コミットされたファイル数: $(($staged -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines))"
 Write-Log "コミットメッセージ: $message"
@@ -412,5 +422,7 @@ Write-Log "コミットハッシュ: $commitHash"
 if ($Push) {
     Write-Log "プッシュステータス: $(if ($LASTEXITCODE -eq 0) { '成功' } else { '失敗' })"
 }
-Write-Log "========== スマートコミット正常完了 ==========="
+Write-Log "##################################################"
+Write-Log "######### スマートコミット正常完了 #########"
+Write-Log "##################################################"
 Write-Host "${YELLOW}📝 Log saved to: $logFile${RESET}"
