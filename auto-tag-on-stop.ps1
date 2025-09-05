@@ -29,12 +29,10 @@ Write-Log "                  オートタグ開始"
 Write-Log "#################################################"
 Write-Log "作業ディレクトリ: $PSScriptRoot"
 
-# プロセスIDベースでプロンプトファイルを特定
+# 固定ファイル名でプロンプトファイルを特定
 $promptDir = "$PSScriptRoot\prompts"
-$pid = $PID
-$PromptFile = "$promptDir\prompt_$pid.txt"
+$PromptFile = "$promptDir\latest_prompt.txt"
 
-Write-Log "プロセスID: $pid"
 Write-Log "プロンプトファイル: $PromptFile"
 
 # プロンプトファイルを読み込み
