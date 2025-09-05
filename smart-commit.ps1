@@ -275,12 +275,12 @@ try {
         }
     }
     
-    # 詳細の抽出
-    if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>') {
+    # 詳細の抽出（両方の形式に対応）
+    if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>' -or $message -match '<<DETAIL>>([\s\S]+?)<<END>>') {
         $detail = $matches[1].Trim()
         Write-Log "抽出された詳細 (長さ: $($detail.Length) 文字)"
     } else {
-        Write-Log "<<<DETAIL>>>タグが見つかりません - 詳細メッセージなし"
+        Write-Log "詳細タグが見つかりません - 詳細メッセージなし"
     }
     
     # コミットメッセージの組み立て
