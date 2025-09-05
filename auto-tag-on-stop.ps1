@@ -1,10 +1,41 @@
 # auto-tag-on-stop.ps1
 # Stopフック時にプロンプトを読み込んでGitタグを生成
 
+# カラー定義
+$GREEN = "`e[32m"
+$YELLOW = "`e[33m"
+$RED = "`e[31m"
+$CYAN = "`e[36m"
+$MAGENTA = "`e[35m"
+$RESET = "`e[0m"
+
+# ログファイルの設定
+$logDir = Join-Path $PSScriptRoot "logs"
+if (-not (Test-Path $logDir)) {
+    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+}
+$logFile = Join-Path $logDir "auto-tag-$(Get-Date -Format 'yyyyMMdd').log"
+
+# ログ出力関数
+function Write-Log {
+    param($Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    "$timestamp - $Message" | Out-File -FilePath $logFile -Append -Encoding UTF8
+}
+
+# セッション開始ログ
+Write-Log "#################################################"
+Write-Log "                  オートタグ開始"
+Write-Log "#################################################"
+Write-Log "作業ディレクトリ: $PSScriptRoot"
+
 # プロセスIDベースでプロンプトファイルを特定
 $promptDir = "$PSScriptRoot\prompts"
 $pid = $PID
 $PromptFile = "$promptDir\prompt_$pid.txt"
+
+Write-Log "プロセスID: $pid"
+Write-Log "プロンプトファイル: $PromptFile"
 
 # プロンプトファイルを読み込み
 if (Test-Path $PromptFile) {
