@@ -1,0 +1,1 @@
+﻿{"session_id":"b6c0a371-e798-472a-b8a9-1d6cf7562e3f","transcript_path":"C:\\Users\\SeiyaKawashima\\.claude\\projects\\C--Users-SeiyaKawashima--claude\\b6c0a371-e798-472a-b8a9-1d6cf7562e3f.jsonl","cwd":"C:\\Users\\SeiyaKawashima\\.claude","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git status","description":"コミット完了確認"}}
