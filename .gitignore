@@ -15,6 +15,7 @@ projects/
 shell-snapshots/
 statsig/
 todos/
+prompts/
 
 # Windows
 Thumbs.db
