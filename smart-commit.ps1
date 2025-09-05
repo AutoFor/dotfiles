@@ -245,8 +245,8 @@ try {
     $title = ""
     $detail = ""
     
-    # タイトルの抽出
-    if ($message -match '<<<TITLE>>>([^<]+)<<<END>>>') {
+    # タイトルの抽出（両方の形式に対応）
+    if ($message -match '<<<TITLE>>>([^<]+)<<<END>>>' -or $message -match '<<TITLE>>([^<]+)<<END>>') {
         $title = $matches[1].Trim()
         Write-Log "抽出されたタイトル: $title"
         
