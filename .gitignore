@@ -16,6 +16,8 @@ shell-snapshots/
 statsig/
 todos/
 prompts/
+session-commits.jsonl
+session-archives/
 
 # Windows
 Thumbs.db
