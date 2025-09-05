@@ -56,8 +56,8 @@ if (Test-Path $PromptFile) {
             Write-Host "Error creating tag: $_" -ForegroundColor Yellow
         }
         
-        # 処理後、current_prompt.txtをクリア（次回の混乱を防ぐ）
-        Clear-Content -Path $PromptFile -ErrorAction SilentlyContinue
+        # 処理後、プロンプトファイルを削除（次回の混乱を防ぐ）
+        Remove-Item -Path $PromptFile -Force -ErrorAction SilentlyContinue
     }
 }
 
