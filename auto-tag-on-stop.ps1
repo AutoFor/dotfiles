@@ -1,9 +1,10 @@
 # auto-tag-on-stop.ps1
 # Stopフック時にプロンプトを読み込んでGitタグを生成
 
-param(
-    [string]$PromptFile = "$PSScriptRoot\prompts\current_prompt.txt"
-)
+# プロセスIDベースでプロンプトファイルを特定
+$promptDir = "$PSScriptRoot\prompts"
+$pid = $PID
+$PromptFile = "$promptDir\prompt_$pid.txt"
 
 # プロンプトファイルを読み込み
 if (Test-Path $PromptFile) {
