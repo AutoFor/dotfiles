@@ -403,6 +403,18 @@ Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 # スクリプト終了時に環境変数をクリア
 $env:SMART_COMMIT_RUNNING = $null
 
+# セッションコミットログに記録
+$sessionCommitLog = Join-Path $PSScriptRoot "session-commits.jsonl"
+$commitRecord = @{
+    hash = $commitHash
+    timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+    title = $title
+    detail = $detail
+    files = ($staged -split "`n" | Where-Object { $_ -match '\S' })
+} | ConvertTo-Json -Compress
+Add-Content -Path $sessionCommitLog -Value $commitRecord -Encoding UTF8
+Write-Log "セッションコミットログに記録しました"
+
 # 最終サマリー
 Write-Log "---------- サマリー ----------"
 Write-Log "コミット成功: はい"
