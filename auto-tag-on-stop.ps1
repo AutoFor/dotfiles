@@ -58,6 +58,9 @@ if (Test-Path $PromptFile) {
         
         # 処理後、プロンプトファイルを削除（次回の混乱を防ぐ）
         Remove-Item -Path $PromptFile -Force -ErrorAction SilentlyContinue
+        
+        # 古いプロンプトファイルをクリーンアップ
+        & "$PSScriptRoot\cleanup-prompts.ps1" -KeepDays 1 -KeepFiles 10
     }
 }
 
