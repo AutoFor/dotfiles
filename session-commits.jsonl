@@ -1,1 +1,1 @@
-﻿{"detail":"- session-commits.jsonl内のコミット詳細説明を拡充\r\n- Windows通知機能の説明をより具体的に記述\r\n- 作業ディレクトリ情報表示機能の詳細を追加\r\n- 通知の識別性向上に関する説明を補完\r\n- セッション履歴の整合性保持に関する記述を明確化","title":"chore: セッション記録の詳細情報を更新","timestamp":"2025-09-08 06:34:09","files":"session-commits.jsonl","hash":"0d6cf89"}
+﻿{"detail":"- session-commits.jsonl内のコミット詳細説明を拡充\r\n- Windows通知機能の説明をより具体的に記述\r\n- 作業ディレクトリ情報表示機能の詳細を追加\r\n- 通知の識別性向上に関する説明を補完\r\n- セッション履歴の整合性保持に関する記述を明確化","title":"chore: セッション記録の詳細情報を更新","timestamp":"2025-09-08 06:35:43","files":"session-commits.jsonl","hash":"244679b"}

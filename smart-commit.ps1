@@ -249,28 +249,28 @@ $prompt = @"
 以下のgit diffからコミットメッセージを生成してください。
 
 要件:
-1. タイトルと詳細を別々に出力
-2. タイトルは<<<TITLE>>>と<<<END>>>で囲む
-3. 詳細は<<<DETAIL>>>と<<<END>>>で囲む
-4. タイトルはConventional Commits形式（日本語で記述）
-   - prefixは英語（feat/fix/docs/style/refactor/test/chore）で開始
-   - 形式: "prefix: 日本語の説明"（例: feat: ユーザー認証機能を追加）
-   - 1行50文字以内
-5. 詳細は日本語で、変更内容を箇条書きで説明
-6. コードブロック(```)は使用禁止
+1. PREFIX、TITLE、DETAILの3つを別々に出力
+2. PREFIXは<<<PREFIX>>>と<<<END>>>で囲む
+3. TITLEは<<<TITLE>>>と<<<END>>>で囲む
+4. DETAILは<<<DETAIL>>>と<<<END>>>で囲む
+5. PREFIXはConventional Commitsの英語プレフィックスのみ（feat/fix/docs/style/refactor/test/chore/perf/ci/build）
+6. TITLEは日本語で変更内容を簡潔に説明（50文字以内）
+7. DETAILは日本語で変更内容を箇条書きで詳細説明
+8. コードブロック(```)は使用禁止
 
 出力形式:
-<<<TITLE>>>feat: 新機能を追加<<<END>>>
+<<<PREFIX>>>feat<<<END>>>
+<<<TITLE>>>ユーザー認証機能を追加<<<END>>>
 <<<DETAIL>>>
-- 新機能の実装内容を日本語で説明
-- 変更点を日本語で箇条書き
-- 技術的な詳細も日本語で記載
+- ログイン機能の実装
+- JWTトークンによる認証処理
+- パスワードリセット機能の追加
 <<<END>>>
 
 重要:
-- タイトルのprefix部分（feat:等）は必ず英語
-- タイトルの説明部分は日本語で記述
-- 詳細説明は必ず日本語
+- PREFIXは英語プレフィックスのみ（コロンなし）
+- TITLEは日本語で記述
+- DETAILは日本語で詳細説明
 
 変更されたファイル:
 $($staged -split "`n" | ForEach-Object { "- $_" } | Out-String)
