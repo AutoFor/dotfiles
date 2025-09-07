@@ -97,6 +97,26 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
     }
     
     $staged = git diff --cached --name-only
+    
+    # ステージング後の確認
+    if ([string]::IsNullOrWhiteSpace($staged)) {
+        Write-Host "${RED}❌ No files were staged. Check your .gitignore settings.${RESET}"
+        Write-Log "警告: git add -Aは成功したが、ファイルがステージングされなかった"
+        Write-Log "考えられる原因: .gitignoreですべてのファイルが無視されている"
+        
+        # .gitignoreの内容を確認
+        if (Test-Path ".gitignore") {
+            $gitignoreContent = Get-Content ".gitignore" -Head 10
+            Write-Log ".gitignore内容（最初の10行）:"
+            $gitignoreContent | ForEach-Object { Write-Log "  $_" }
+        }
+        
+        Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        Write-Log "     スマートコミット失敗（ステージング対象なし）"
+        Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        exit 0  # Hook用に0で終了
+    }
+    
     Write-Log "ステージング完了: $(($staged -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines)) ファイル"
     $staged -split "`n" | ForEach-Object { if ($_) { Write-Log "  ステージング済み: $_" } }
 } else {
