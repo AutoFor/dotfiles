@@ -252,9 +252,9 @@ $prompt = @"
 1. タイトルと詳細を別々に出力
 2. タイトルは<<<TITLE>>>と<<<END>>>で囲む
 3. 詳細は<<<DETAIL>>>と<<<END>>>で囲む
-4. タイトルはConventional Commits形式（英語必須）
-   - 必ず英語のprefix（feat/fix/docs/style/refactor/test/chore）で開始
-   - 形式: "prefix: description"（例: feat: add user authentication）
+4. タイトルはConventional Commits形式（日本語で記述）
+   - prefixは英語（feat/fix/docs/style/refactor/test/chore）で開始
+   - 形式: "prefix: 日本語の説明"（例: feat: ユーザー認証機能を追加）
    - 1行50文字以内
 5. 詳細は日本語で、変更内容を箇条書きで説明
 6. コードブロック(```)は使用禁止
