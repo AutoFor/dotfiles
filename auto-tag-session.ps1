@@ -138,7 +138,7 @@ $($commits | ForEach-Object { "- $($_.title)" } | Out-String)
 
 Files modified ($($uniqueFiles.Count)):
 $($uniqueFiles | Select-Object -First 10 | ForEach-Object { "- $_" } | Out-String)
-$($uniqueFiles.Count -gt 10 ? "... and $($uniqueFiles.Count - 10) more files" : "")
+$(if ($uniqueFiles.Count -gt 10) { "... and $($uniqueFiles.Count - 10) more files" } else { "" })
 
 Period: $($commits[0].timestamp) - $($commits[-1].timestamp)
 "@
