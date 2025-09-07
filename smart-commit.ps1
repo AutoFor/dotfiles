@@ -394,6 +394,8 @@ Write-Log "---------- コミットメッセージ生成完了 ----------"
 # コミットの実行
 Write-Host "`n${BLUE}📦 Committing changes...${RESET}"
 Write-Log "---------- Gitコミット実行 ----------"
+Write-Log "実行ディレクトリ: $(Get-Location)"
+Write-Log "Gitリポジトリルート: $(git rev-parse --show-toplevel 2>&1)"
 
 $commitArgs = @()
 if ($Amend) { 
