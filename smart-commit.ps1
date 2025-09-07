@@ -42,7 +42,9 @@ Write-Host ""
 Write-Log "##################################################"
 Write-Log "          スマートコミット開始"
 Write-Log "##################################################"
-Write-Log "作業ディレクトリ: $(Get-Location)"
+Write-Log "スクリプト保存場所: $PSScriptRoot"
+Write-Log "現在の作業ディレクトリ (PWD): $(Get-Location)"
+Write-Log "Git操作対象ディレクトリ: $(Get-Location)"
 Write-Log "パラメータ: Push=$Push, NoVerify=$NoVerify, Amend=$Amend, Type=$Type"
 Write-Host "${YELLOW}📝 Log file: $logFile${RESET}"
 
@@ -55,6 +57,26 @@ if (-not (Test-Path .git)) {
 }
 
 # 変更の確認
+Write-Log "---------- Gitリポジトリ確認 ----------"
+Write-Log "実行ディレクトリ: $(Get-Location)"
+
+# Gitリポジトリの確認
+$gitRoot = git rev-parse --show-toplevel 2>&1
+if ($LASTEXITCODE -eq 0) {
+    Write-Log "Gitリポジトリルート: $gitRoot"
+} else {
+    Write-Host "${RED}❌ Not in a git repository${RESET}"
+    Write-Log "エラー: Gitリポジトリが見つかりません"
+    Write-Log "現在のディレクトリ: $(Get-Location)"
+    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    Write-Log "     スマートコミット失敗（Gitリポジトリなし）"
+    Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    exit 0
+}
+
+$gitBranch = git branch --show-current 2>&1
+Write-Log "現在のブランチ: $gitBranch"
+
 Write-Log "変更確認中 (git status --porcelain)"
 $status = git status --porcelain
 Write-Log "Git status結果: $(if ([string]::IsNullOrWhiteSpace($status)) { '変更なし' } else { "$($status -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines) ファイル変更あり" })"
