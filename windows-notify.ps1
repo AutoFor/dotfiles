@@ -34,4 +34,10 @@ elseif (-not $PSBoundParameters.ContainsKey('Message')) {
     }
 }
 
+# 作業ディレクトリのフォルダ名をタイトルに追加
+if ($IncludeWorkingDirectory) {
+    $currentDir = Split-Path -Leaf (Get-Location)
+    $Title = "[$currentDir] $Title"
+}
+
 New-BurntToastNotification -Text @($Title, $Message) -Sound $Sound
