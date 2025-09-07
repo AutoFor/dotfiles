@@ -307,48 +307,62 @@ try {
     }
     
     # タイトルと詳細の抽出
-    Write-Log "Claudeの応答からタイトルと詳細を抽出中"
+    Write-Log "Claudeの応答からPREFIX、TITLE、DETAILを抽出中"
     
+    $prefix = ""
     $title = ""
     $detail = ""
     
-    # タイトルの抽出（両方の形式に対応）
-    if ($message -match '<<<TITLE>>>([^<]+)<<<END>>>' -or $message -match '<<TITLE>>([^<]+)<<END>>') {
-        $title = $matches[1].Trim()
-        Write-Log "抽出されたタイトル: $title"
+    # PREFIXの抽出
+    if ($message -match '<<<PREFIX>>>([^<]+)<<<END>>>') {
+        $prefix = $matches[1].Trim()
+        Write-Log "抽出されたPREFIX: $prefix"
         
-        # タイトルの検証
-        if ($title -notmatch '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
-            Write-Log "警告: タイトルがConventional Commits形式ではありません"
-            # フォールバック: feat:を追加
-            $title = "feat: $title"
-            Write-Log "'feat:' プレフィックスを追加: $title"
+        # PREFIXの検証
+        if ($prefix -notmatch '^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)$') {
+            Write-Log "警告: PREFIXが不正です: $prefix"
+            $prefix = "feat"  # デフォルト
+            Write-Log "デフォルトPREFIXを使用: $prefix"
         }
     } else {
-        Write-Log "<<<TITLE>>>タグが応答に見つかりません"
-        # フォールバック: 従来の方法で抽出
+        Write-Log "<<<PREFIX>>>タグが見つかりません - デフォルトを使用"
+        $prefix = "feat"
+    }
+    
+    # TITLEの抽出
+    if ($message -match '<<<TITLE>>>([^<]+)<<<END>>>') {
+        $title = $matches[1].Trim()
+        Write-Log "抽出されたTITLE: $title"
+    } else {
+        Write-Log "<<<TITLE>>>タグが見つかりません"
+        # フォールバック: 最初の非空行を使用
         $lines = $message -split "`n"
         foreach ($line in $lines) {
-            if ($line -match '^\s*(feat|fix|docs|style|refactor|test|chore|perf|ci|build):') {
+            if ($line.Trim() -ne "" -and -not $line.StartsWith("#") -and -not $line.StartsWith("-")) {
                 $title = $line.Trim()
-                Write-Log "フォールバック方式でタイトル発見: $title"
+                if ($title.Length -gt 50) {
+                    $title = $title.Substring(0, 50)
+                }
                 break
             }
         }
-        
-        if (-not $title) {
-            $title = "feat: コードの更新"
+        if ($title -eq "") {
+            $title = "変更を適用"
             Write-Log "デフォルトタイトルを使用: $title"
         }
     }
     
-    # 詳細の抽出（両方の形式に対応）
-    if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>' -or $message -match '<<DETAIL>>([\s\S]+?)<<END>>') {
+    # DETAILの抽出
+    if ($message -match '<<<DETAIL>>>([\s\S]+?)<<<END>>>') {
         $detail = $matches[1].Trim()
-        Write-Log "抽出された詳細 (長さ: $($detail.Length) 文字)"
+        Write-Log "抽出されたDETAIL (長さ: $($detail.Length) 文字)"
     } else {
-        Write-Log "詳細タグが見つかりません - 詳細メッセージなし"
+        Write-Log "<<<DETAIL>>>タグが見つかりません - 詳細メッセージなし"
     }
+    
+    # コミットタイトルの組み立て
+    $commitTitle = "${prefix}: ${title}"
+    Write-Log "組み立てたコミットタイトル: $commitTitle"
     
     # コミットメッセージの組み立て
     if ($detail) {
