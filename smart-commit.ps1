@@ -104,8 +104,11 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
     Write-Log "ステージング済みの変更なし - すべてのファイルをステージング (git add -A)"
     
     # git add -Aの実行とエラーチェック
+    Write-Log "実行コマンド: git add -A"
+    Write-Log "実行ディレクトリ: $(Get-Location)"
     $addOutput = git add -A 2>&1
     $addExitCode = $LASTEXITCODE
+    Write-Log "git add -A 終了コード: $addExitCode"
     
     if ($addExitCode -ne 0) {
         Write-Host "${RED}❌ Failed to stage files:${RESET}"
@@ -133,6 +136,11 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
             $gitignoreContent | ForEach-Object { Write-Log "  $_" }
         }
         
+        # 変更されたファイルの状態を再確認
+        Write-Log "変更ファイルの状態再確認:"
+        $statusDetail = git status --short
+        $statusDetail -split "`n" | ForEach-Object { if ($_) { Write-Log "  $_" } }
+        
         Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         Write-Log "     スマートコミット失敗（ステージング対象なし）"
         Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -147,6 +155,8 @@ if ([string]::IsNullOrWhiteSpace($staged)) {
 }
 
 # 差分の取得とスマート抽出
+Write-Log "---------- 差分取得 ----------"
+Write-Log "実行ディレクトリ: $(Get-Location)"
 Write-Log "差分取得中 (git diff --cached)"
 $diff = git diff --cached
 Write-Log "差分サイズ: $($diff.Length) 文字"
