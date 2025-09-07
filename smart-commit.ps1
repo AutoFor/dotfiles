@@ -364,16 +364,19 @@ try {
     $commitTitle = "${prefix}: ${title}"
     Write-Log "組み立てたコミットタイトル: $commitTitle"
     
-    # コミットメッセージの組み立て
+    # 最終的なコミットメッセージの組み立て
     if ($detail) {
         # タイトルと詳細を結合
-        $message = "$title`n`n$detail"
+        $message = "$commitTitle`n`n$detail"
         Write-Log "タイトルと詳細を結合したコミットメッセージ"
     } else {
         # タイトルのみ
-        $message = $title
+        $message = $commitTitle
         Write-Log "タイトルのみ使用（詳細なし）"
     }
+    
+    # 変数を更新（互換性のため）
+    $title = $commitTitle
     
     # ログには記録しない（冗長なため）
     
@@ -392,13 +395,12 @@ Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 # 生成されたメッセージの表示
 Write-Host "`n${GREEN}✅ Generated commit message:${RESET}"
 
-# タイトルと詳細を分けて表示
+# PREFIX、TITLE、DETAILを分けて表示
+Write-Host "${CYAN}Prefix: $prefix${RESET}"
+Write-Host "${CYAN}Title: $title${RESET}"
 if ($detail) {
-    Write-Host "${CYAN}Title: $title${RESET}"
     Write-Host "${CYAN}Detail:${RESET}"
     Write-Host "${CYAN}$detail${RESET}"
-} else {
-    Write-Host "${CYAN}$message${RESET}"
 }
 
 Write-Log "---------- コミットメッセージ生成完了 ----------"
