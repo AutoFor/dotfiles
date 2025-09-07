@@ -80,7 +80,22 @@ $staged = git diff --cached --name-only
 if ([string]::IsNullOrWhiteSpace($staged)) {
     Write-Host "`n${YELLOW}⚠️  No staged changes. Staging all changes...${RESET}"
     Write-Log "ステージング済みの変更なし - すべてのファイルをステージング (git add -A)"
-    git add -A
+    
+    # git add -Aの実行とエラーチェック
+    $addOutput = git add -A 2>&1
+    $addExitCode = $LASTEXITCODE
+    
+    if ($addExitCode -ne 0) {
+        Write-Host "${RED}❌ Failed to stage files:${RESET}"
+        Write-Host $addOutput
+        Write-Log "エラー: git add -A 失敗 (終了コード: $addExitCode)"
+        Write-Log "エラー詳細: $addOutput"
+        Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        Write-Log "     スマートコミット失敗（ステージングエラー）"
+        Write-Log "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        exit 0  # Hook用に0で終了
+    }
+    
     $staged = git diff --cached --name-only
     Write-Log "ステージング完了: $(($staged -split "`n" | Measure-Object -Line | Select-Object -ExpandProperty Lines)) ファイル"
     $staged -split "`n" | ForEach-Object { if ($_) { Write-Log "  ステージング済み: $_" } }
