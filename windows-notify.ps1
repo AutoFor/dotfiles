@@ -4,7 +4,8 @@ param(
     [string]$Message = "",
     [string]$MessageFile,
     [ValidateSet("Default","IM","Mail","Reminder","Alarm","SMS","LoopingAlarm","LoopingAlarm2","LoopingCall","Silent")]
-    [string]$Sound = "Reminder"
+    [string]$Sound = "Reminder",
+    [switch]$IncludeWorkingDirectory
 )
 
 # smart-commit.ps1実行中はすべての通知をスキップ
