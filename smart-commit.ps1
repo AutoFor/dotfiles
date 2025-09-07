@@ -260,7 +260,7 @@ $prompt = @"
 6. コードブロック(```)は使用禁止
 
 出力形式:
-<<<TITLE>>>feat: add new feature<<<END>>>
+<<<TITLE>>>feat: 新機能を追加<<<END>>>
 <<<DETAIL>>>
 - 新機能の実装内容を日本語で説明
 - 変更点を日本語で箇条書き
