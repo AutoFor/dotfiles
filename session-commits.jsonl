@@ -1,1 +1,0 @@
-﻿{"detail":"- PREFIX、TITLE、DETAILを分離した新しい出力形式を導入\r\n- session-commits.jsonlの記録データを最新形式に更新\r\n- smart-commit.ps1でコミットタイトル組み立て処理を追加\r\n- PREFIX抽出ロジックを新しい形式に対応\r\n- メッセージ表示処理をPREFIX、TITLE、DETAIL分離表示に変更","title":"feat: コミットメッセージ生成システムの出力形式を改善","timestamp":"2025-09-08 06:39:18","files":["session-commits.jsonl","smart-commit.ps1"],"hash":"e73451b"}
