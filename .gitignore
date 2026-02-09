@@ -18,6 +18,7 @@ todos/
 prompts/
 session-commits.jsonl
 session-archives/
+debug/
 
 # Windows
 Thumbs.db
