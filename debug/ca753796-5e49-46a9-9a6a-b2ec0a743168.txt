@@ -1,0 +1,57 @@
+[DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude\settings.json, c:\prj\uipath-github-xaml-visualizer\.claude\settings.local.json...
+[DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+[DEBUG] Applying permission update: Adding 3 allow rule(s) to destination 'localSettings': ["Bash(git init:*)","Bash(git add:*)","Bash(git commit -m \"$(cat <<''EOF''\nInitial commit: Add project specification\n\nUiPath XAML Visualizer for GitHub プロジェクトの仕様書を追加。\n主要機能:\n- GitHub上でUiPath XAMLファイルを視覚的に表示\n- ワークフロー構造の可視化（Sequence/Flowchart/StateMachine）\n- 差分表示機能\n- Informative Screenshot表示機能\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"]
+[DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+[DEBUG] >>>>> getSkillsIfEnabled() CALLED <<<<<
+[DEBUG] ENABLE_SKILLS value: true, type: boolean
+[DEBUG] ENABLE_SKILLS check passed, loading skills...
+[DEBUG] Loading skills from directories: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=c:\prj\uipath-github-xaml-visualizer\.claude\skills
+[DEBUG] >>>>> getPluginSkills CALLED <<<<<
+[DEBUG] Creating shell snapshot for bash (C:\Program Files\Git\bin\bash.exe)
+[DEBUG] Looking for shell config file: C:\Users\SeiyaKawashima\.bashrc
+[DEBUG] Snapshots directory: C:\Users\SeiyaKawashima\.claude\shell-snapshots
+[DEBUG] Creating snapshot at: C:\Users\SeiyaKawashima\.claude\shell-snapshots\snapshot-bash-1770324630201-1ny5tl.sh
+[DEBUG] Shell binary exists: true
+[DEBUG] Execution timeout: 10000ms
+[DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\ca753796-5e49-46a9-9a6a-b2ec0a743168-agent-ca753796-5e49-46a9-9a6a-b2ec0a743168.json.tmp.73864.1770324630223
+[DEBUG] Temp file written successfully, size: 2 bytes
+[DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\ca753796-5e49-46a9-9a6a-b2ec0a743168-agent-ca753796-5e49-46a9-9a6a-b2ec0a743168.json.tmp.73864.1770324630223 to C:\Users\SeiyaKawashima\.claude\todos\ca753796-5e49-46a9-9a6a-b2ec0a743168-agent-ca753796-5e49-46a9-9a6a-b2ec0a743168.json
+[DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\ca753796-5e49-46a9-9a6a-b2ec0a743168-agent-ca753796-5e49-46a9-9a6a-b2ec0a743168.json written atomically
+[DEBUG] getPluginSkills: Processing 0 enabled plugins
+[DEBUG] Total plugin skills loaded: 0
+[DEBUG] Total plugin commands loaded: 0
+[DEBUG] Registered 0 hooks from 0 plugins
+[DEBUG] Loaded 0 skills total (managed: 0, user: 0, project: 0)
+[DEBUG] getSkillsIfEnabled returning: 0 skill dir commands, 0 plugin skills
+[ERROR] Failed to save config with lock: Error: Lock file is already being held
+[DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324630451
+[DEBUG] Preserving file permissions: 100666
+[DEBUG] Temp file written successfully, size: 34296 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324630451 to C:\Users\SeiyaKawashima\.claude.json
+[DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+[ERROR] Failed to save config with lock: Error: Lock file is already being held
+[DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324630461
+[DEBUG] Preserving file permissions: 100666
+[DEBUG] Temp file written successfully, size: 34296 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324630461 to C:\Users\SeiyaKawashima\.claude.json
+[DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+[DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=c:\Users\SeiyaKawashima\.vscode\extensions\anthropic.claude-code-2.0.24\resources\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+[DEBUG] Total plugin agents loaded: 0
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool:
+[ERROR] "AxiosError: AxiosError: Request failed with status code 401\n    at DR (file:///c:/Users/SeiyaKawashima/.vscode/extensions/anthropic.claude-code-2.0.24/resources/claude-code/cli.js:24:1136)\n    at IncomingMessage.<anonymous> (file:///c:/Users/SeiyaKawashima/.vscode/extensions/anthropic.claude-code-2.0.24/resources/claude-code/cli.js:29:9841)\n    at IncomingMessage.emit (node:events:530:35)\n    at IncomingMessage.emit (node:domain:489:12)\n    at endReadableNT (node:internal/streams/readable:1698:12)\n    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)\n    at L71.request (file:///c:/Users/SeiyaKawashima/.vscode/extensions/anthropic.claude-code-2.0.24/resources/claude-code/cli.js:31:2129)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async YHB (file:///c:/Users/SeiyaKawashima/.vscode/extensions/anthropic.claude-code-2.0.24/resources/claude-code/cli.js:1540:25937)"
+[DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324631003
+[DEBUG] Preserving file permissions: 100666
+[DEBUG] Temp file written successfully, size: 34296 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.73864.1770324631003 to C:\Users\SeiyaKawashima\.claude.json
+[DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+[DEBUG] Failed to fetch Grove notice config: AxiosError: Request failed with status code 401
+[DEBUG] Getting matching hook commands for SessionStart with query: startup
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+[DEBUG] Getting matching hook commands for SessionEnd with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)

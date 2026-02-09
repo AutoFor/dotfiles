@@ -1,0 +1,261 @@
+2026-01-11T05:56:38.428Z [DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude, C:\prjUiPath\MoneyForwardCrossPlatform\.claude...
+2026-01-11T05:56:38.438Z [DEBUG] [init] configureGlobalMTLS starting
+2026-01-11T05:56:38.439Z [DEBUG] [init] configureGlobalMTLS complete
+2026-01-11T05:56:38.439Z [DEBUG] [init] configureGlobalAgents starting
+2026-01-11T05:56:38.440Z [DEBUG] [init] configureGlobalAgents complete
+2026-01-11T05:56:38.464Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-01-11T05:56:38.475Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-01-11T05:56:38.476Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-01-11T05:56:38.476Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-01-11T05:56:38.483Z [DEBUG] Applying permission update: Adding 16 allow rule(s) to destination 'localSettings': ["Bash(Select-Object -ExpandProperty FullName)","Bash(Where-Object { $_ullName -notmatch \"\\\\.local\" -and $_ullName -notmatch \"obj\" -and $_ullName -notmatch \"\\\\bin\" })","Bash(if not exist \"c:\\\\prjUiPath\\\\MoneyForwardCrossPlatform\\\\.claude\\\\skills\" mkdir \"c:\\\\prjUiPath\\\\MoneyForwardCrossPlatform\\\\.claude\\\\skills\")","Bash(dir /s /b \"*.DataService.*.dll\")","Bash(Get-ChildItem -Path . -Recurse -Filter \"DataService.MoneyForwardCrossPlatform.dll\" -ErrorAction SilentlyContinue)","Bash(Select-Object -First 1 -ExpandProperty FullName)","Read(//c/Users/SeiyaKawashima/AppData/Local/UiPath/Logs/**)","Bash(dir:*)","Bash(dotnet build:*)","Bash(find:*)","Bash(cat:*)","Bash(test:*)","Bash(for file in \"Amex\\\\AmexLogin.xaml\" \"ワークフロー.cs\" \"ワークフロー1.cs\" \"Amex\\\\AmexDownloadCsv.xaml\" \"ワークフロー2.cs\" \"ProcessMfFamily月1全期間更新.xaml\" \"ProcessMfFamily毎日データ更新.xaml\")","Bash(do test -f \"$file\")","Bash(echo:*)","Bash(done)"]
+2026-01-11T05:56:38.484Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-01-11T05:56:38.512Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-01-11T05:56:38.512Z [DEBUG] Total LSP servers loaded: 0
+2026-01-11T05:56:38.513Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-01-11T05:56:38.513Z [DEBUG] LSP manager initialized with 0 servers
+2026-01-11T05:56:38.514Z [DEBUG] LSP server manager initialized successfully
+2026-01-11T05:56:38.515Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-01-11T05:56:38.515Z [DEBUG] [STARTUP] MCP configs loaded in 31ms
+2026-01-11T05:56:38.519Z [DEBUG] Watching for changes in skill directories: C:\prjUiPath\MoneyForwardCrossPlatform\.claude\skills...
+2026-01-11T05:56:38.527Z [DEBUG] [STARTUP] Running setup()...
+2026-01-11T05:56:38.553Z [DEBUG] Stats cache stale (2026-01-09), processing 2026-01-10 to 2026-01-10 in background
+2026-01-11T05:56:38.565Z [DEBUG] Loading skills from: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=[C:\prjUiPath\MoneyForwardCrossPlatform\.claude\skills]
+2026-01-11T05:56:38.566Z [DEBUG] Passes: Cache stale, returning cached data and refreshing in background
+2026-01-11T05:56:38.588Z [DEBUG] Loaded 0 installed plugins from C:\Users\SeiyaKawashima\.claude\plugins\installed_plugins.json
+2026-01-11T05:56:38.631Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\f59f3073-d5ad-4e5b-a665-209f98a10edf-agent-f59f3073-d5ad-4e5b-a665-209f98a10edf.json.tmp.24704.1768110998631
+2026-01-11T05:56:38.633Z [DEBUG] Temp file written successfully, size: 2 bytes
+2026-01-11T05:56:38.633Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\f59f3073-d5ad-4e5b-a665-209f98a10edf-agent-f59f3073-d5ad-4e5b-a665-209f98a10edf.json.tmp.24704.1768110998631 to C:\Users\SeiyaKawashima\.claude\todos\f59f3073-d5ad-4e5b-a665-209f98a10edf-agent-f59f3073-d5ad-4e5b-a665-209f98a10edf.json
+2026-01-11T05:56:38.634Z [DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\f59f3073-d5ad-4e5b-a665-209f98a10edf-agent-f59f3073-d5ad-4e5b-a665-209f98a10edf.json written atomically
+2026-01-11T05:56:38.931Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-01-11T05:56:38.932Z [DEBUG] Total plugin skills loaded: 0
+2026-01-11T05:56:38.932Z [DEBUG] Total plugin commands loaded: 0
+2026-01-11T05:56:38.933Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-01-11T05:56:39.043Z [DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, legacy commands: 0)
+2026-01-11T05:56:39.045Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 0 bundled skills
+2026-01-11T05:56:39.141Z [DEBUG] Creating shell snapshot for bash (C:\Program Files\Git\bin\bash.exe)
+2026-01-11T05:56:39.142Z [DEBUG] Looking for shell config file: C:\Users\SeiyaKawashima\.bashrc
+2026-01-11T05:56:39.142Z [DEBUG] Snapshots directory: C:\Users\SeiyaKawashima\.claude\shell-snapshots
+2026-01-11T05:56:39.216Z [DEBUG] Creating snapshot at: C:\Users\SeiyaKawashima\.claude\shell-snapshots\snapshot-bash-1768110999142-hm86dj.sh
+2026-01-11T05:56:39.216Z [DEBUG] Shell binary exists: true
+2026-01-11T05:56:39.217Z [DEBUG] Execution timeout: 10000ms
+2026-01-11T05:56:39.463Z [DEBUG] [STARTUP] setup() completed in 935ms
+2026-01-11T05:56:39.464Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-01-11T05:56:39.501Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=C:\Users\SeiyaKawashima\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+2026-01-11T05:56:39.536Z [DEBUG] Total plugin agents loaded: 0
+2026-01-11T05:56:39.538Z [DEBUG] [STARTUP] Commands and agents loaded in 74ms
+2026-01-11T05:56:39.539Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:39.539Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:39.543Z [DEBUG] Passes: Cache stale, returning cached data and refreshing in background
+2026-01-11T05:56:39.543Z [DEBUG] Passes: Reusing in-flight eligibility fetch
+2026-01-11T05:56:39.555Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:39.737Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-01-11T05:56:39.745Z [DEBUG] Grove: Cache stale, returning cached data and refreshing in background
+2026-01-11T05:56:39.766Z [DEBUG] Skills and commands included in Skill tool:
+2026-01-11T05:56:39.772Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:39.773Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:39.774Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:39.792Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768110999792
+2026-01-11T05:56:39.792Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T05:56:39.794Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T05:56:39.794Z [DEBUG] Applied original permissions to temp file
+2026-01-11T05:56:39.795Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768110999792 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T05:56:39.796Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T05:56:39.797Z [DEBUG] Passes eligibility cached for org 8a27b9f5-e9de-45a8-8064-b42569e64681: true
+2026-01-11T05:56:39.803Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--prjUiPath-MoneyForwardCrossPlatform\f59f3073-d5ad-4e5b-a665-209f98a10edf\subagents\agent-a1832db.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--prjUiPath-MoneyForwardCrossPlatform\tasks\a1832db.output'
+    at symlinkSync (node:fs:1889:11)
+    at gDA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1664:9948)
+    at M42 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1766:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6989
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at YeA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14204)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6712)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-11T05:56:39.809Z [DEBUG] Getting matching hook commands for SubagentStart with query: Explore
+2026-01-11T05:56:39.810Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:39.810Z [DEBUG] Matched 0 unique hooks for query "Explore" (0 before deduplication)
+2026-01-11T05:56:39.827Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--prjUiPath-MoneyForwardCrossPlatform\f59f3073-d5ad-4e5b-a665-209f98a10edf\subagents\agent-a35bdd4.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--prjUiPath-MoneyForwardCrossPlatform\tasks\a35bdd4.output'
+    at symlinkSync (node:fs:1889:11)
+    at gDA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1664:9948)
+    at M42 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1766:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6989
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at YeA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14204)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6712)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-11T05:56:39.829Z [DEBUG] Getting matching hook commands for SubagentStart with query: Plan
+2026-01-11T05:56:39.830Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:39.830Z [DEBUG] Matched 0 unique hooks for query "Plan" (0 before deduplication)
+2026-01-11T05:56:39.845Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--prjUiPath-MoneyForwardCrossPlatform\f59f3073-d5ad-4e5b-a665-209f98a10edf\subagents\agent-a09f608.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--prjUiPath-MoneyForwardCrossPlatform\tasks\a09f608.output'
+    at symlinkSync (node:fs:1889:11)
+    at gDA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1664:9948)
+    at M42 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1766:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6989
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at YeA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14204)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3046:6712)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-11T05:56:39.847Z [DEBUG] Getting matching hook commands for SubagentStart with query: Bash
+2026-01-11T05:56:39.848Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:39.849Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:39.882Z [DEBUG] Stats cache saved successfully (lastComputedDate: 2026-01-10)
+2026-01-11T05:56:39.883Z [DEBUG] Stats cache updated with 53 new sessions
+2026-01-11T05:56:39.915Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-11T05:56:39.926Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:39.926Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:39.927Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:39.951Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-11T05:56:39.958Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:39.959Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:39.960Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:39.972Z [DEBUG] Tool search disabled: MCPSearchTool is not available (may have been disallowed via disallowedTools).
+2026-01-11T05:56:39.977Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:39.977Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:39.978Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:39.997Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768110999997
+2026-01-11T05:56:39.998Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T05:56:39.998Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T05:56:39.999Z [DEBUG] Applied original permissions to temp file
+2026-01-11T05:56:40.000Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768110999997 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T05:56:40.001Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T05:56:40.055Z [DEBUG] Shell snapshot created successfully (2323 bytes)
+2026-01-11T05:56:40.178Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768111000178
+2026-01-11T05:56:40.178Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T05:56:40.179Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T05:56:40.180Z [DEBUG] Applied original permissions to temp file
+2026-01-11T05:56:40.180Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.24704.1768111000178 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T05:56:40.181Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T05:56:40.184Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-01-11T05:56:40.185Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:40.185Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-01-11T05:56:40.237Z [DEBUG] Total plugin output styles loaded: 0
+2026-01-11T05:56:40.438Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-11T05:56:40.439Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-11T05:56:40.439Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-11T05:56:40.440Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-11T05:56:40.443Z [DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+2026-01-11T05:56:40.444Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:40.444Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-01-11T05:56:40.447Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-11T05:56:40.453Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:40.453Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:40.453Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:40.465Z [DEBUG] Successfully refreshed marketplace: claude-plugins-official
+2026-01-11T05:56:40.466Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-01-11T05:56:40.678Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:41.394Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:42.006Z [DEBUG] Getting matching hook commands for SubagentStop with query: undefined
+2026-01-11T05:56:42.006Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:42.006Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-01-11T05:56:42.240Z [DEBUG] Getting matching hook commands for SubagentStop with query: undefined
+2026-01-11T05:56:42.240Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:42.241Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-01-11T05:56:42.598Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:42.641Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:44.203Z [DEBUG] executePreToolHooks called for tool: Bash
+2026-01-11T05:56:44.205Z [DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+2026-01-11T05:56:44.205Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:44.205Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:44.255Z [DEBUG] tree-sitter: loaded from disk
+2026-01-11T05:56:44.402Z [DEBUG] Session environment not yet supported on Windows
+2026-01-11T05:56:45.082Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-11T05:56:45.088Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:45.088Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:45.089Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:45.099Z [DEBUG] Persisted tool result to C:\Users\SeiyaKawashima\.claude\projects\C--prjUiPath-MoneyForwardCrossPlatform\f59f3073-d5ad-4e5b-a665-209f98a10edf\tool-results\toolu_01TQCqBZagnhWNqSmcRf8rFc.txt (73.2KB)
+2026-01-11T05:56:45.101Z [DEBUG] Getting matching hook commands for PostToolUse with query: Bash
+2026-01-11T05:56:45.102Z [DEBUG] Found 1 hook matchers in settings
+2026-01-11T05:56:45.102Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:45.159Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-11T05:56:45.160Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-11T05:56:45.160Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-11T05:56:45.161Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-11T05:56:45.167Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-11T05:56:45.175Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:45.175Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:45.176Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:46.559Z [DEBUG] executePreToolHooks called for tool: Bash
+2026-01-11T05:56:46.559Z [DEBUG] executePreToolHooks called for tool: Glob
+2026-01-11T05:56:46.560Z [DEBUG] executePreToolHooks called for tool: Glob
+2026-01-11T05:56:46.560Z [DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+2026-01-11T05:56:46.561Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:46.561Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:46.562Z [DEBUG] Getting matching hook commands for PreToolUse with query: Glob
+2026-01-11T05:56:46.562Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:46.563Z [DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+2026-01-11T05:56:46.563Z [DEBUG] Getting matching hook commands for PreToolUse with query: Glob
+2026-01-11T05:56:46.564Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:46.564Z [DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+2026-01-11T05:56:46.735Z [DEBUG] [Agent: Plan] Reached max turns limit (1)
+2026-01-11T05:56:47.018Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:47.067Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:48.381Z [DEBUG] executePreToolHooks called for tool: Read
+2026-01-11T05:56:48.382Z [DEBUG] Getting matching hook commands for PreToolUse with query: Read
+2026-01-11T05:56:48.382Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:48.383Z [DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+2026-01-11T05:56:49.108Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:49.108Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:49.108Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:49.388Z [ERROR] MaxFileReadTokenExceededError: MaxFileReadTokenExceededError: File content (31371 tokens) exceeds maximum allowed tokens (25000). Please use offset and limit parameters to read specific portions of the file, or use the GrepTool to search for specific content.
+    at OeB (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1664:13298)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1673:996)
+    at async tJ7 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3265:27187)
+2026-01-11T05:56:49.390Z [DEBUG] Getting matching hook commands for PostToolUseFailure with query: Read
+2026-01-11T05:56:49.390Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:49.391Z [DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+2026-01-11T05:56:49.439Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-11T05:56:49.439Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-11T05:56:49.440Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-11T05:56:49.440Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-11T05:56:49.445Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-11T05:56:49.451Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:49.452Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:49.452Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:50.805Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:50.806Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:50.806Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:50.917Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:54.339Z [DEBUG] executePreToolHooks called for tool: Bash
+2026-01-11T05:56:54.340Z [DEBUG] executePreToolHooks called for tool: Bash
+2026-01-11T05:56:54.341Z [DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+2026-01-11T05:56:54.341Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:54.342Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:54.342Z [DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+2026-01-11T05:56:54.342Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:56:54.343Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:54.456Z [DEBUG] Session environment not yet supported on Windows
+2026-01-11T05:56:54.573Z [DEBUG] Session environment not yet supported on Windows
+2026-01-11T05:56:55.095Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-11T05:56:55.098Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:55.098Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:55.100Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:55.106Z [DEBUG] Getting matching hook commands for PostToolUse with query: Bash
+2026-01-11T05:56:55.106Z [DEBUG] Found 1 hook matchers in settings
+2026-01-11T05:56:55.106Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:55.238Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-11T05:56:55.241Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:55.241Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:55.243Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:55.248Z [DEBUG] Getting matching hook commands for PostToolUse with query: Bash
+2026-01-11T05:56:55.248Z [DEBUG] Found 1 hook matchers in settings
+2026-01-11T05:56:55.249Z [DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+2026-01-11T05:56:55.311Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-11T05:56:55.311Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-11T05:56:55.311Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-11T05:56:55.312Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-11T05:56:55.315Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-11T05:56:55.323Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-11T05:56:55.324Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-11T05:56:55.324Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-11T05:56:55.773Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:55.789Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:56:57.015Z [DEBUG] Stream started - received first chunk
+2026-01-11T05:57:04.329Z [DEBUG] Getting matching hook commands for Stop with query: undefined
+2026-01-11T05:57:04.330Z [DEBUG] Found 1 hook matchers in settings
+2026-01-11T05:57:04.330Z [DEBUG] Matched 1 unique hooks for query "no match query" (1 before deduplication)
+2026-01-11T05:57:04.672Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-01-11T05:57:04.676Z [DEBUG] Getting matching hook commands for SessionEnd with query: other
+2026-01-11T05:57:04.676Z [DEBUG] Found 0 hook matchers in settings
+2026-01-11T05:57:04.677Z [DEBUG] Matched 0 unique hooks for query "other" (0 before deduplication)
+2026-01-11T05:57:04.681Z [DEBUG] Cleaned up session snapshot: C:\Users\SeiyaKawashima\.claude\shell-snapshots\snapshot-bash-1768110999142-hm86dj.sh
+2026-01-11T05:57:04.682Z [DEBUG] LSP server manager shut down successfully

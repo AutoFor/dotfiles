@@ -1,0 +1,657 @@
+# チケット情報スクレイピングツール
+
+![Line Coverage](docs/badges/badge_linecoverage.svg)
+![Branch Coverage](docs/badges/badge_branchcoverage.svg)
+
+マルチサイト対応（eplus.jp・ticketjam.jp）のチケット情報スクレイピングツールです。SQLiteデータベースを使用した会場マスター管理機能と、キューベース連続処理機能を提供します。
+
+## 🚀 主要機能
+
+### スクレイピング機能
+- **eplus.jp対応**: 会場名で検索してイベント情報を取得
+- **ticketjam.jp対応**: イベント名で検索してチケット情報を取得
+- **マルチサイト統合**: 両サイトを統一インターフェースで操作
+
+### データベース機能  
+- **会場マスター管理**: 445会場の情報をCSVインポートで管理
+- **キューベース処理**: 複数会場の連続スクレイピング
+- **SQLiteデータベース**: ローカル永続化とデータ管理
+- **アーティスト管理**: アーティスト情報の正規化と関連付け（新機能）
+
+### 運用機能
+- **10種類の動作モード**: 柔軟な運用スタイルに対応
+- **統合ログシステム**: 詳細なログ出力とエラー追跡
+- **CSV出力機能**: データの外部活用をサポート
+
+## 📦 インストールと環境構築
+
+### 必要な環境
+- **.NET 9.0 SDK**: 最新の.NET環境
+- **Chrome/Chromium**: WebDriverで使用（自動ダウンロード）
+- **Windows 10/11**: 開発・動作確認済み
+
+### ダウンロードと実行
+1. **リリース版のダウンロード**
+   ```bash
+   # GitHubリリースから最新版をダウンロード
+   # または直接実行ファイルを取得
+   ```
+
+2. **実行権限の確認**
+   ```bash
+   # Windows環境での実行
+   .\EplusTicketScraper.exe
+   ```
+
+3. **開発環境でのビルド**
+   ```bash
+   git clone <repository-url>
+   cd ScrapingTickets_master
+   dotnet build EplusTicketScraper.csproj
+   dotnet run
+   ```
+
+## 🎯 使用方法
+
+### 基本的な使い方（推奨）
+
+#### 1. 対話形式で実行（最も簡単）
+```bash
+dotnet run
+# または
+.\EplusTicketScraper.exe
+
+# モード選択画面が表示されます:
+# 1. eplus.jp（会場名で検索）
+# 2. ticketjam.jp（イベント名で検索）
+# 3. 単一会場（single）
+# ... 10種類のモードから選択
+```
+
+### 動作モード一覧
+
+#### スクレイピングモード
+- **eplus**: eplus.jp専用スクレイピング
+- **ticketjam**: ticketjam.jp専用スクレイピング  
+- **single**: eplus.jp単一会場（データベース使用）
+
+#### データベース管理モード
+- **queue**: キューベース連続処理
+- **add**: 会場をキューに追加
+- **list**: 保存済みイベント一覧
+- **stats**: 統計情報表示
+
+#### 会場マスター管理モード
+- **import**: CSVから会場マスターをインポート
+- **venues**: 会場マスター管理
+- **target**: スクレイピング対象設定
+
+### コマンドライン実行例
+
+#### eplus.jpスクレイピング
+```bash
+# 基本的な実行
+dotnet run -- --mode eplus --venue "LIQUIDROOM"
+
+# ヘッドレスモードで実行
+dotnet run -- --mode eplus --venue "Zepp Tokyo" --headless
+
+# 詳細オプション付き実行
+dotnet run -- -m eplus -v "日本武道館" -h -d --max-pages 10
+```
+
+#### ticketjam.jpスクレイピング
+```bash
+# イベント名で検索
+dotnet run -- --mode ticketjam --search "group_inou"
+
+# ヘッドレスモードで実行
+dotnet run -- -m ticketjam -s "LIQUIDROOM 21st" --headless
+```
+
+#### データベースモード
+```bash
+# 会場マスターをインポート
+dotnet run -- --mode import
+
+# スクレイピング対象を設定
+dotnet run -- --mode target
+
+# キューベース処理を実行
+dotnet run -- --mode queue --headless
+
+# 統計情報を表示
+dotnet run -- --mode stats
+```
+
+## 🗄️ データベース構成
+
+### SQLiteデータベースファイルの場所
+
+#### 統合データベース（eplus.jp + ticketjam.jp）
+```
+TicketMarketData/ticket_market.db
+```
+- **フルパス例（Windows）**: `C:\prj\ScrapingTickets_master\TicketMarketData\ticket_market.db`
+- **相対パス**: プロジェクトルートから `TicketMarketData/ticket_market.db`
+- **ファイルサイズ**: 両サイトのデータを1つのファイルで管理
+- **特徴**: eplus.jpとticketjam.jpのテーブルを同一DB内で分離管理
+
+### データベースパスの設定場所
+
+#### 設定方法1: JSON設定ファイル（推奨）※新機能
+
+##### appsettings.json での設定
+プロジェクトルートに `appsettings.json` ファイルを作成し、以下のように設定します：
+
+```json
+{
+  "Database": {
+    "ConnectionString": "TicketMarketData/ticket_market.db",
+    "EnableLogging": true,
+    "CommandTimeout": 30
+  },
+  "Scraping": {
+    "DefaultWaitTime": 2,
+    "MaxRetryCount": 3,
+    "HeadlessMode": false
+  },
+  "Logging": {
+    "LogLevel": "Info",
+    "LogDirectory": "Logs"
+  }
+}
+```
+
+**設定項目の説明：**
+- `Database.ConnectionString`: データベースファイルのパス（相対パスまたは絶対パス）
+- `Database.EnableLogging`: データベース操作のログ出力（true/false）
+- `Database.CommandTimeout`: SQLコマンドのタイムアウト秒数
+- `Scraping.DefaultWaitTime`: スクレイピング時の待機時間（秒）
+- `Scraping.MaxRetryCount`: エラー時の最大リトライ回数
+- `Scraping.HeadlessMode`: ヘッドレスモードのデフォルト値
+- `Logging.LogLevel`: ログレベル（Debug/Info/Warning/Error）
+- `Logging.LogDirectory`: ログファイルの保存ディレクトリ
+
+##### パスの変更例
+```json
+{
+  "Database": {
+    "ConnectionString": "C:/MyData/custom_database.db"  // 絶対パスの例
+  }
+}
+```
+
+または
+
+```json
+{
+  "Database": {
+    "ConnectionString": "Data/MyDB/tickets.db"  // 相対パスの例
+  }
+}
+```
+
+#### 設定方法2: コンストラクタで直接指定
+
+```csharp
+// DatabaseService.csの例
+var dbService = new DatabaseService("カスタムパス/my_database.db");
+
+// TicketJamDatabaseService.csの例
+var ticketJamDb = new TicketJamDatabaseService("カスタムパス/my_database.db");
+```
+
+#### 設定の優先順位
+
+1. **最優先**: コンストラクタ引数で指定したパス
+2. **次優先**: appsettings.json の `Database.ConnectionString`
+3. **デフォルト**: `TicketMarketData/ticket_market.db`
+
+#### 注意事項
+- appsettings.json が存在しない場合は、デフォルトパスが使用されます
+- フォルダが存在しない場合は自動的に作成されます
+- 相対パスはプロジェクトルートからの相対パスとして解釈されます
+- 両サービス（DatabaseService と TicketJamDatabaseService）は同じ設定ファイルを参照します
+
+### SQLiteデータベースの直接アクセス方法
+
+#### SQLiteツールでの接続
+```bash
+# SQLite3コマンドラインツール（要インストール）
+sqlite3 TicketMarketData/ticket_market.db
+
+# データベース内でのコマンド例
+.tables                           # テーブル一覧表示
+
+# eplus.jp関連テーブル
+SELECT COUNT(*) FROM EventInfo;   # イベント数確認
+SELECT * FROM Artist;             # アーティスト一覧
+SELECT * FROM VenueMaster;        # 会場マスター
+
+# ticketjam.jp関連テーブル  
+SELECT COUNT(*) FROM tickets;     # チケット数確認
+SELECT * FROM search_history;     # 検索履歴
+
+.quit                             # 終了
+```
+
+#### GUIツール推奨
+- **DB Browser for SQLite**: https://sqlitebrowser.org/
+- **SQLiteStudio**: https://sqlitestudio.pl/
+- **Visual Studio Code + SQLite拡張機能**
+
+### データベーステーブル構成（統合DB内）
+
+統合データベース `ticket_market.db` には以下のテーブルが含まれます：
+
+#### eplus.jp関連テーブル
+
+#### VenueMasterテーブル（会場マスター）
+- 445会場の基本情報を管理
+- スクレイピング対象フラグ
+- 最終処理日時・結果を記録
+
+#### VenueQueueテーブル（処理キュー）
+- 処理待ち会場のキュー管理
+- ステータス管理（Pending/Processing/Completed/Failed）
+- エラー情報の記録
+
+#### EventInfoテーブル（イベント情報）
+- スクレイピング結果の永続化
+- イベント詳細情報の保存
+- 検索・統計機能のベース
+- ArtistIds: 関連アーティストIDリスト（新機能）
+
+#### Artistテーブル（アーティストマスター）※新機能
+- アーティスト情報の正規化管理
+- 固有IDによる一意管理
+- 大文字小文字を区別しない重複防止
+
+#### EventArtistテーブル（関連テーブル）※新機能
+- イベントとアーティストの多対多関連
+- 複数アーティスト共演イベントに対応
+
+#### ticketjam.jp関連テーブル
+
+#### ticketsテーブル（チケット情報）
+- チケット出品情報の保存
+- 価格、枚数、取引状況など詳細情報
+- 検索キーワード別に管理
+
+#### search_historyテーブル（検索履歴）
+- 検索キーワードと結果件数
+- 検索日時とステータス管理
+
+## 📁 プロジェクト構成（分割設計）
+
+```
+プロジェクトルート/
+├── Program.cs              # エントリーポイント（引数解析・分岐）
+├── EplusProgram.cs         # eplus.jp専用機能
+├── TicketJamProgram.cs     # ticketjam.jp専用機能  
+├── DatabaseProgram.cs      # データベース関連機能
+├── DebugLogger.cs          # 統合ログシステム
+├── Models/                 # データモデル
+│   ├── EventInfo.cs        # eplus.jpイベント情報（ArtistIds追加）
+│   ├── Artist.cs           # アーティストマスター（新規追加）
+│   ├── TicketJamEventInfo.cs # ticketjam.jpチケット情報
+│   ├── VenueMaster.cs      # 会場マスター情報
+│   └── VenueQueue.cs       # 会場キュー情報
+└── Services/               # サービスクラス
+    ├── EplusScraperService.cs        # eplus.jpスクレイピング
+    ├── TicketJamScraperService.cs    # ticketjam.jpスクレイピング
+    ├── DatabaseService.cs            # データベース操作（アーティスト管理機能追加）
+    ├── CsvExportService.cs           # CSV出力（eplus）
+    ├── TicketJamCsvExportService.cs  # CSV出力（ticketjam）
+    ├── WebDriverService.cs           # WebDriver管理
+    └── HtmlParserService.cs          # HTML解析
+```
+
+### 分割設計の利点
+- **コンフリクト回避**: 機能別ファイル分離でマージ競合を防止
+- **保守性向上**: 各機能の独立性により影響範囲を限定
+- **開発効率**: 並行開発とテストが容易
+
+## 📊 CSV出力機能
+
+### eplus.jp CSV形式
+```csv
+Date,Title,Venue,Status,Genre,Price,DetailUrl
+2025/01/15,イベント名,LIQUIDROOM,販売中,ロック,3500円,https://...
+```
+
+### ticketjam.jp CSV形式（統計付き）
+```csv
+EventName,Price,Quantity,TicketStatus,TransactionStatus,Location,EventDate
+group_inou,5000,2,出品中,取引中,東京,2025-01-15
+
+=== 統計情報 ===
+総チケット数: 45件
+出品中: 32件, リクエスト: 13件
+平均価格: 4500円
+```
+
+## ⚙️ コマンドラインオプション
+
+### 基本オプション
+| オプション | 短縮形 | 説明 |
+|------------|--------|------|
+| `--mode` | `-m` | 動作モード指定 |
+| `--help` | `-?` | ヘルプ表示 |
+| `--headless` | `-h` | ヘッドレスモード |
+| `--test` |  | ロガーテスト実行 |
+
+### スクレイピングオプション
+| オプション | 短縮形 | 説明 | 対象モード |
+|------------|--------|------|-----------|
+| `--venue` | `-v` | 会場名指定 | eplus, single |
+| `--search` | `-s` | 検索クエリ指定 | ticketjam |
+| `--skip-details` | `-d` | 詳細ページスキップ | eplus, single |
+| `--max-pages` | `-p` | 最大ページ数 | eplus, single |
+| `--no-csv` |  | CSV出力スキップ | single |
+
+## 🏃‍♂️ 推奨運用フロー
+
+### 初期設定（初回のみ）
+1. **会場マスターのインポート**
+   ```bash
+   dotnet run -- --mode import
+   # CSVファイル: C:\prj\ticket_eplus\eplus_venues_all.csv
+   ```
+
+2. **スクレイピング対象の設定**
+   ```bash
+   dotnet run -- --mode target
+   # キーワード一括設定: "LIQUIDROOM", "Zepp", "武道館" など
+   ```
+
+### 日常運用
+1. **対象会場をキューに追加**
+   ```bash
+   dotnet run -- --mode venues
+   # 「4. 対象会場をキューに追加」を選択
+   ```
+
+2. **キューベース連続処理**
+   ```bash
+   dotnet run -- --mode queue --headless
+   # バックグラウンドで全対象会場を処理
+   ```
+
+3. **結果確認と分析**
+   ```bash
+   dotnet run -- --mode stats    # 統計情報確認
+   dotnet run -- --mode list     # 取得データ一覧
+   ```
+
+## 🛠️ トラブルシューティング
+
+### よくある問題と解決方法
+
+#### WebDriverエラー
+```bash
+# Chrome/Chromiumが見つからない場合
+# → 最新のChromeをインストール
+# → selenium-managerが自動でドライバーをダウンロード
+```
+
+#### データベースエラー
+```bash
+# データベースファイルが破損した場合
+rm eplus_scraper.db
+dotnet run -- --mode import  # 再インポート
+```
+
+#### ネットワークエラー
+```bash
+# 接続タイムアウトが多発する場合
+# → ヘッドレスモードを無効にして確認
+# → 待機時間を増加（ソースコード調整）
+```
+
+#### ログファイルの確認
+- 詳細なエラー情報は自動生成されるログファイルを確認
+- 場所：プロジェクトルート配下（実行時に表示）
+
+## 🧪 テスト機能
+
+### 単体テストの実行方法
+
+#### 1. コマンドラインから実行
+```bash
+# 基本的な実行（全テスト実行）
+dotnet test
+
+# 詳細な結果表示
+dotnet test --logger "console;verbosity=detailed"
+
+# 特定のテストのみ実行
+dotnet test --filter "FullyQualifiedName~EplusScraperServiceTests"
+
+# テスト結果をファイルに出力
+dotnet test --logger "trx;LogFileName=test-results.trx"
+```
+
+#### 2. Visual Studioから実行
+1. **テストエクスプローラーを開く**
+   - メニュー: `テスト` → `テストエクスプローラー`
+   - ショートカット: `Ctrl + E, T`
+
+2. **テストの実行**
+   - 全テスト実行: 上部の `すべて実行` ボタン
+   - 個別実行: テスト名を右クリック → `実行`
+   - デバッグ実行: テスト名を右クリック → `デバッグ`
+
+3. **テスト結果の確認**
+   - 緑のチェック: 成功
+   - 赤の×: 失敗
+   - 黄色の!: スキップ
+
+#### 3. VS Codeから実行
+```bash
+# .NET Test Explorer拡張機能をインストール後
+# サイドバーのテストアイコンから実行可能
+```
+
+### テストプロジェクト構成
+```
+TicketScraperTests/
+├── EplusE2EIntegrationTest.cs      # E2E統合テスト（実サイトアクセス）
+├── QueueSystemIntegrationTest.cs   # キューシステム統合テスト
+├── DebugLogger.cs                  # テスト用ロガー
+└── TicketScraperTests.csproj       # テストプロジェクトファイル
+```
+
+### テストケース一覧
+
+#### 基本機能テスト
+- `ScrapeService_ShouldInitialize`: サービス初期化テスト
+- `Properties_ShouldBeSettable`: プロパティ設定テスト
+- `ClearEvents_ShouldRemoveAllEvents`: イベントクリア機能テスト
+- `GetEvents_ShouldReturnEventList`: イベント取得テスト
+
+#### データモデルテスト
+- `EventInfo_ShouldCreateCorrectly`: EventInfoモデル作成テスト
+- `DatabaseIntegration_ShouldWork`: データベース統合テスト
+- `VenueQueue_ShouldAddAndRetrieve`: 会場キュー操作テスト
+
+#### 詳細テスト
+- `ScrapeEvents_ShouldHandleEmptyResults`: 空結果処理テスト
+- `Logger_ShouldLogMessages`: ログ出力テスト
+- `MaxPages_ShouldAcceptVariousValues`: 境界値テスト（Theory）
+- `MultipleSettings_ShouldWorkTogether`: 複数設定組み合わせテスト
+
+### テスト実行時の注意事項
+
+#### 環境準備
+```bash
+# テストプロジェクトの復元
+dotnet restore TicketScraperTests/TicketScraperTests.csproj
+
+# メインプロジェクトのビルド
+dotnet build EplusTicketScraper.csproj
+```
+
+#### トラブルシューティング
+
+**テストが見つからない場合**
+```bash
+# ソリューション全体をクリーンビルド
+dotnet clean
+dotnet build
+dotnet test
+```
+
+**参照エラーが出る場合**
+```bash
+# プロジェクト参照を再追加
+dotnet add TicketScraperTests/TicketScraperTests.csproj reference EplusTicketScraper.csproj
+```
+
+**テストデータベースの削除**
+```bash
+# テスト実行後の一時ファイルをクリーンアップ
+del test_eplus_scraper.db
+```
+
+### カバレッジレポートの生成（オプション）
+```bash
+# coverletツールをインストール
+dotnet tool install --global coverlet.console
+
+# カバレッジ付きでテスト実行
+dotnet test /p:CollectCoverage=true /p:CoverletOutputFormat=opencover
+
+# HTMLレポート生成（ReportGeneratorが必要）
+dotnet tool install --global dotnet-reportgenerator-globaltool
+reportgenerator -reports:coverage.opencover.xml -targetdir:coveragereport
+```
+
+### 新しいテストケースの追加方法
+
+1. **テストメソッドの追加**
+```csharp
+[Fact]
+public void YourNewTest_ShouldWork()
+{
+    // Arrange
+    var service = new EplusScraperService();
+    
+    // Act
+    var result = service.YourMethod();
+    
+    // Assert
+    Assert.NotNull(result);
+}
+```
+
+2. **パラメータ化テストの追加**
+```csharp
+[Theory]
+[InlineData("value1")]
+[InlineData("value2")]
+public void ParameterizedTest(string input)
+{
+    // テスト実装
+}
+```
+
+### CI/CD統合（GitHub Actions例）
+```yaml
+- name: Run tests
+  run: dotnet test --logger "trx;LogFileName=test-results.trx"
+  
+- name: Upload test results
+  uses: actions/upload-artifact@v2
+  with:
+    name: test-results
+    path: "**/test-results.trx"
+```
+
+## 📈 パフォーマンス
+
+### 処理速度の目安
+- **eplus.jp**: 1会場あたり 30-60秒（5ページ）
+- **ticketjam.jp**: 1イベントあたり 10-30秒
+- **キューモード**: 10会場で約5-10分（並列処理）
+- **テスト実行**: 約200ms（15テストケース）
+
+### 最適化のポイント
+- ヘッドレスモード使用で処理速度向上
+- 詳細ページスキップで処理時間短縮
+- 最大ページ数制限で効率的なデータ取得
+- **受付終了イベントの自動スキップ**（新機能）
+
+### スクレイピングの効率化機能
+
+#### 受付終了イベントの自動スキップ
+スクレイピング処理の効率化のため、以下の条件でイベント詳細ページの取得を自動的にスキップします：
+
+**スキップ条件：**
+- ステータスが「受付終了」のイベント
+- ステータスが「予定枚数終了」のイベント
+- ClosedDate（受付終了日）が既に設定されているイベント
+
+**実装箇所：**
+- `Services/HtmlParserService.cs:150-156` - ステータス判定とClosedDate設定
+- `Services/EplusScraperService.cs:205-210` - 詳細ページ取得スキップ処理
+
+**メリット：**
+- 不要なページアクセスを削減
+- スクレイピング時間の短縮
+- サーバー負荷の軽減
+
+## 🔒 セキュリティ配慮
+
+### スクレイピング倫理
+- アクセス間隔の制御（2秒間隔）
+- 適切なUser-Agentの設定
+- robots.txtの尊重
+
+### データ保護
+- 全データはローカル保存（外部送信なし）
+- 一時ファイルの自動クリーンアップ
+- 個人情報の除外処理
+
+## 📋 リリース情報
+
+### v2.2.0 (最新) - 分割設計版
+- **機能分散設計**: Program.cs分割によりコンフリクト回避を実現
+- **保守性向上**: 各機能の独立ファイル化
+- **継続機能**: 従来のすべての機能を保持
+
+### v2.1.0 - 会場マスター管理版
+- 会場マスター管理機能追加
+- CSVインポート機能（445会場対応）
+- スクレイピング対象管理機能
+
+### v2.0.0 - マルチサイト対応版
+- ticketjam.jp対応追加
+- 統合UI（10モード対応）
+- 統計情報付きCSV出力
+
+### v1.0.0 - 初回リリース
+- eplus.jp専用スクレイピング機能
+- SQLiteデータベース統合
+- キューベース連続処理
+
+## 🤝 コントリビューション
+
+### 開発への参加
+- Issue報告: バグ・要望の報告
+- Pull Request: 機能改善・追加の提案
+- ドキュメント改善: READMEや仕様書の更新
+
+### 分割設計ガイドライン
+- 新機能は専用ファイルで実装
+- Program.csは分岐処理のみ
+- 共通機能はServicesフォルダに配置
+
+## 📄 ライセンス
+
+本プロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルを参照してください。
+
+---
+
+**注意**: このツールはスクレイピング対象サイトの利用規約を遵守して使用してください。商用利用や大規模な自動化には十分な配慮が必要です。

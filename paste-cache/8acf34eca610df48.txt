@@ -1,0 +1,50 @@
+ざっくり言うと「ほぼ触らない月」は数百円〜数千円台、「ちょこちょこ開発で使う月」は数千円〜1万円いかないくらいに収まるケースが多いです。 [azure.microsoft](https://azure.microsoft.com/en-us/pricing/details/azure-sql-database/single/)
+
+## 料金イメージの前提
+
+- プラン: Azure SQL Database Single / General Purpose / Serverless。 [azure.microsoft](https://azure.microsoft.com/ja-jp/pricing/details/azure-sql-database/single/)
+- コンピュート課金:
+  - 0.5 vCore〜で「vCore 秒単位」で課金（従量課金制）。 [learn.microsoft](https://learn.microsoft.com/ja-jp/azure/azure-sql/database/serverless-tier-overview?view=azuresql)
+- ストレージ課金:
+  - GP tier は Premium Blob Storage、5GB〜を「GB・月」で課金。 [azure.microsoft](https://azure.microsoft.com/en-us/pricing/details/azure-sql-database/single/)
+- Auto-pause:
+  - 一定時間アイドル状態が続くと自動停止、停止中はストレージのみ課金。 [learn.microsoft](https://learn.microsoft.com/ja-jp/azure/azure-sql/database/serverless-tier-overview?view=azuresql)
+
+（※公式サイトは国別/通貨別の具体単価が「$-」マスクになっているので、ここでは「桁感」のイメージで回答しています。） [azure.microsoft](https://azure.microsoft.com/ja-jp/pricing/details/azure-sql-database/single/)
+
+## 具体的な利用パターン別の目安
+
+1. ほぼ放置（PoC終わってたまに見る程度）
+- 状態:
+  - 月に数時間しか起動しない、Auto-pause で普段は止まっている。
+- コストイメージ:
+  - コンピュート: 0.5〜1 vCore × 数時間分だけの従量課金 → 数十〜数百円レベルに収まる可能性が高い。 [azure.microsoft](https://azure.microsoft.com/en-us/pricing/details/azure-sql-database/single/)
+  - ストレージ: 5〜10GB なら、数百円程度/月。 [azure.microsoft](https://azure.microsoft.com/ja-jp/pricing/details/azure-sql-database/single/)
+- 合計イメージ:
+  - 数百円〜1,000円台くらいに収まる想定。
+
+2. 平日だけ毎日開発で触る（1〜2時間/日程度）
+- 状態:
+  - 平日1〜2時間だけクエリ叩いたりして、その後はアイドル→Auto-pause。 [learn.microsoft](https://learn.microsoft.com/ja-jp/azure/azure-sql/database/serverless-tier-overview?view=azuresql)
+- コストイメージ:
+  - コンピュート: 0.5〜1 vCore × (1〜2時間 × 20日) → 合計 20〜40時間分。 [azure.microsoft](https://azure.microsoft.com/en-us/pricing/details/azure-sql-database/single/)
+  - ストレージ: 上と同じく数百円/月。 [azure.microsoft](https://azure.microsoft.com/ja-jp/pricing/details/azure-sql-database/single/)
+- 合計イメージ:
+  - 数千円〜1万円弱くらい（割とクエリ重めかどうかで前後）。
+
+3. ほぼ毎日、長時間起動してしまう場合
+- 状態:
+  - ほぼ常時オンライン（Auto-pause まで行かない）。
+- コストイメージ:
+  - コンピュートの秒課金が積み上がるので、同じ vCore 数なら Serverless より **Provisioned の最小 vCore** の方が安くなることが多い。 [bekk](https://www.bekk.christmas/post/2020/03/can-you-save-money-with-the-azure-sql-serverless-tier)
+
+## もう少し詰めて見積もる方法
+
+- 公式の価格ページ（日本語）でリージョンを「Japan East/West」にして、  
+  「Single Database → General Purpose → Serverless → 0.5 vCore & 最小ストレージ」を選ぶと具体単価を確認できます。 [azure.microsoft](https://azure.microsoft.com/ja-jp/pricing)
+- その単価に対して:
+  - 「1日あたり使用時間（例: 2時間）」×「営業日数（例: 20日）」＝月トータル時間
+  - vCore時間単価 × 時間数 ＋ ストレージ（GB/月）  
+ で、おおよその月額が出せます。 [learn.microsoft](https://learn.microsoft.com/ja-jp/azure/azure-sql/database/serverless-tier-overview?view=azuresql)
+
+もし「リージョン（多分 Japan East？）」「1日にどれくらい使う想定か（時間・頻度）」を教えてもらえれば、こちらでざっくりの金額レンジ（○円〜○円くらい）をもう一段具体化します。

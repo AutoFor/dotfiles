@@ -1,0 +1,1033 @@
+2026-01-10T02:41:03.425Z [DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude, C:\Users\SeiyaKawashima\.claude, C:\Users\SeiyaKawashima\.claude...
+2026-01-10T02:41:03.432Z [DEBUG] [init] configureGlobalMTLS starting
+2026-01-10T02:41:03.432Z [DEBUG] [init] configureGlobalMTLS complete
+2026-01-10T02:41:03.432Z [DEBUG] [init] configureGlobalAgents starting
+2026-01-10T02:41:03.432Z [DEBUG] [init] configureGlobalAgents complete
+2026-01-10T02:41:03.455Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-01-10T02:41:03.466Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-01-10T02:41:03.466Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-01-10T02:41:03.466Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-01-10T02:41:03.473Z [DEBUG] Applying permission update: Adding 54 allow rule(s) to destination 'localSettings': ["Bash(powershell:*)","Bash(aws ec2 describe-instances:*)","Bash(aws iam create-role:*)","Bash(aws iam put-role-policy:*)","Bash(aws lambda create-function:*)","Bash(aws events put-rule:*)","Bash(aws lambda add-permission:*)","Bash(aws events put-targets:*)","Bash(aws events list-rules:*)","Bash(winget install:*)","Bash(az:*)","Bash(dir:*)","Bash(mkdir:*)","Bash(npm install:*)","Bash(ls:*)","Bash(dotnet --version)","Bash(echo $SHELL)","Bash(pwsh:*)","Bash(winget search:*)","WebFetch(domain:www.uipath.com)","WebSearch","Bash(.uipcli.exe --help)","Bash(where:*)","Bash(C:UsersSeiyaKawashimauipath-clitoolsuipcli.exe --version)","Bash(curl:*)","Bash(iconv:*)","Bash(Select-Object Id, ProcessName, Path -First 50)","Bash($env:AZURE_CORE_COLLECT_TELEMETRY=\"no\")","Bash(export AZURE_CORE_COLLECT_TELEMETRY=no)","Bash(start win11-lite.rdp)","Bash(Get-Volume)","Bash(Where-Object DriveLetter -ne $null)","Bash(Format-Table -AutoSize)","Bash(wmic:*)","WebFetch(domain:ipinfo.io)","Bash(mstsc:*)","Bash(aws sts get-caller-identity:*)","Bash(aws rds describe-db-instances:*)","Bash(aws:*)","Bash(timeout:*)","Bash(claude --version)","Bash(wsl --version)","Bash(wsl --list:*)","Bash(wsl:*)","Bash(adb version:*)","Bash(nul)","Bash(reg query \"HKEY_LOCAL_MACHINE\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\" /f \"Figma\" 2)","Bash(reg query \"HKEY_CURRENT_USER\\\\SOFTWARE\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\" /f \"Figma\" 2)","Bash(claude mcp add:*)","mcp__figma-dev-mode-mcp-server__get_design_context","mcp__figma-dev-mode-mcp-server__get_metadata","Bash(Copy-Item \"$env:LOCALAPPDATA\\\\Google\\\\Chrome\\\\User Data\\\\Default\\\\History\" -Destination \"$env:TEMP\\\\History_copy\" -Force)","Bash(Write-Host \"コピー完了\")","Bash(sqlite3:*)"]
+2026-01-10T02:41:03.473Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-01-10T02:41:03.500Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-01-10T02:41:03.500Z [DEBUG] Total LSP servers loaded: 0
+2026-01-10T02:41:03.500Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-01-10T02:41:03.500Z [DEBUG] LSP manager initialized with 0 servers
+2026-01-10T02:41:03.500Z [DEBUG] [STARTUP] MCP configs loaded in 27ms
+2026-01-10T02:41:03.500Z [DEBUG] LSP server manager initialized successfully
+2026-01-10T02:41:03.501Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-01-10T02:41:03.503Z [DEBUG] [STARTUP] Running setup()...
+2026-01-10T02:41:03.526Z [DEBUG] Stats cache is up to date
+2026-01-10T02:41:03.534Z [DEBUG] Loading skills from: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=[]
+2026-01-10T02:41:03.535Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-01-10T02:41:03.552Z [DEBUG] Loaded 0 installed plugins from C:\Users\SeiyaKawashima\.claude\plugins\installed_plugins.json
+2026-01-10T02:41:03.586Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\72335845-27c6-4a12-8db9-6fcff5fdf839-agent-72335845-27c6-4a12-8db9-6fcff5fdf839.json.tmp.63096.1768012863585
+2026-01-10T02:41:03.586Z [DEBUG] Temp file written successfully, size: 2 bytes
+2026-01-10T02:41:03.586Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\72335845-27c6-4a12-8db9-6fcff5fdf839-agent-72335845-27c6-4a12-8db9-6fcff5fdf839.json.tmp.63096.1768012863585 to C:\Users\SeiyaKawashima\.claude\todos\72335845-27c6-4a12-8db9-6fcff5fdf839-agent-72335845-27c6-4a12-8db9-6fcff5fdf839.json
+2026-01-10T02:41:03.587Z [DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\72335845-27c6-4a12-8db9-6fcff5fdf839-agent-72335845-27c6-4a12-8db9-6fcff5fdf839.json written atomically
+2026-01-10T02:41:03.599Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-01-10T02:41:03.599Z [DEBUG] Total plugin skills loaded: 0
+2026-01-10T02:41:03.599Z [DEBUG] Total plugin commands loaded: 0
+2026-01-10T02:41:03.599Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-01-10T02:41:03.620Z [DEBUG] [STARTUP] setup() completed in 117ms
+2026-01-10T02:41:03.620Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-01-10T02:41:03.675Z [DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, legacy commands: 0)
+2026-01-10T02:41:03.677Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 0 bundled skills
+2026-01-10T02:41:03.753Z [DEBUG] Creating shell snapshot for bash (C:\Program Files\Git\bin\bash.exe)
+2026-01-10T02:41:03.753Z [DEBUG] Looking for shell config file: C:\Users\SeiyaKawashima\.bashrc
+2026-01-10T02:41:03.754Z [DEBUG] Snapshots directory: C:\Users\SeiyaKawashima\.claude\shell-snapshots
+2026-01-10T02:41:03.762Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=C:\Users\SeiyaKawashima\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+2026-01-10T02:41:03.790Z [DEBUG] Total plugin agents loaded: 0
+2026-01-10T02:41:03.791Z [DEBUG] [STARTUP] Commands and agents loaded in 171ms
+2026-01-10T02:41:03.791Z [DEBUG] [STARTUP] Running showSetupScreens()...
+2026-01-10T02:41:03.792Z [DEBUG] [render] initYoga starting
+2026-01-10T02:41:03.810Z [DEBUG] Creating snapshot at: C:\Users\SeiyaKawashima\.claude\shell-snapshots\snapshot-bash-1768012863754-4et5z8.sh
+2026-01-10T02:41:03.810Z [DEBUG] Shell binary exists: true
+2026-01-10T02:41:03.810Z [DEBUG] Execution timeout: 10000ms
+2026-01-10T02:41:03.826Z [DEBUG] [render] initYoga complete
+2026-01-10T02:41:03.891Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012863891
+2026-01-10T02:41:03.891Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:03.892Z [DEBUG] Temp file written successfully, size: 32421 bytes
+2026-01-10T02:41:03.892Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:03.892Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012863891 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:03.892Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:04.399Z [DEBUG] Shell snapshot created successfully (2323 bytes)
+2026-01-10T02:41:04.670Z [DEBUG] Grove: Using fresh cached config
+2026-01-10T02:41:04.670Z [DEBUG] [render] initYoga starting
+2026-01-10T02:41:04.678Z [DEBUG] [render] initYoga complete
+2026-01-10T02:41:04.705Z [DEBUG] Git remote URL: null
+2026-01-10T02:41:04.705Z [DEBUG] No git remote URL found
+2026-01-10T02:41:04.705Z [DEBUG] Not in a GitHub repository, skipping path mapping update
+2026-01-10T02:41:04.873Z [DEBUG] Successfully refreshed marketplace: claude-plugins-official
+2026-01-10T02:41:04.873Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-01-10T02:41:04.947Z [DEBUG] [STARTUP] showSetupScreens() completed in 1156ms
+2026-01-10T02:41:04.947Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:04.947Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:04.948Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-01-10T02:41:04.968Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:05.063Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-01-10T02:41:05.071Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865071
+2026-01-10T02:41:05.071Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.071Z [DEBUG] Temp file written successfully, size: 32421 bytes
+2026-01-10T02:41:05.071Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.071Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865071 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.072Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:05.082Z [DEBUG] Skipping SessionStart:startup hook execution - workspace trust not accepted
+2026-01-10T02:41:05.092Z [DEBUG] [render] initYoga starting
+2026-01-10T02:41:05.092Z [DEBUG] Skills and commands included in Skill tool:
+2026-01-10T02:41:05.092Z [DEBUG] [render] initYoga complete
+2026-01-10T02:41:05.096Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:05.096Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:05.097Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:05.109Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--Users-SeiyaKawashima\72335845-27c6-4a12-8db9-6fcff5fdf839\subagents\agent-a6e123e.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--Users-SeiyaKawashima\tasks\a6e123e.output'
+    at symlinkSync (node:fs:1889:11)
+    at ZWA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1671:9904)
+    at V92 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1773:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21896
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at CtA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14274)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21619)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-10T02:41:05.112Z [DEBUG] Skipping SubagentStart:Explore hook execution - workspace trust not accepted
+2026-01-10T02:41:05.123Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--Users-SeiyaKawashima\72335845-27c6-4a12-8db9-6fcff5fdf839\subagents\agent-a1b3321.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--Users-SeiyaKawashima\tasks\a1b3321.output'
+    at symlinkSync (node:fs:1889:11)
+    at ZWA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1671:9904)
+    at V92 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1773:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21896
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at CtA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14274)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21619)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-10T02:41:05.125Z [DEBUG] Skipping SubagentStart:Plan hook execution - workspace trust not accepted
+2026-01-10T02:41:05.132Z [ERROR] Error: Error: EPERM: operation not permitted, symlink 'C:\Users\SeiyaKawashima\.claude\projects\C--Users-SeiyaKawashima\72335845-27c6-4a12-8db9-6fcff5fdf839\subagents\agent-a29c646.jsonl' -> 'C:\Users\SEIYAK~1\AppData\Local\Temp\claude\C--Users-SeiyaKawashima\tasks\a29c646.output'
+    at symlinkSync (node:fs:1889:11)
+    at ZWA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1671:9904)
+    at V92 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1773:1191)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21896
+    at AsyncLocalStorage.run (node:internal/async_local_storage/async_hooks:91:14)
+    at CtA (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:237:14274)
+    at Object.call (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:3172:21619)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2026-01-10T02:41:05.134Z [DEBUG] Skipping SubagentStart:Bash hook execution - workspace trust not accepted
+2026-01-10T02:41:05.187Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865187
+2026-01-10T02:41:05.187Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.187Z [DEBUG] Temp file written successfully, size: 32420 bytes
+2026-01-10T02:41:05.188Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.188Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865187 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.188Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:05.192Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865192
+2026-01-10T02:41:05.192Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.193Z [DEBUG] Temp file written successfully, size: 32420 bytes
+2026-01-10T02:41:05.193Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.193Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865192 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.193Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:05.198Z [DEBUG] [REPL:mount] REPL mounted, disabled=false
+2026-01-10T02:41:05.201Z [DEBUG] Official marketplace auto-install skipped: already_attempted
+2026-01-10T02:41:05.202Z [DEBUG] performStartupChecks called
+2026-01-10T02:41:05.203Z [DEBUG] Trust not accepted for current directory - skipping plugin installations
+2026-01-10T02:41:05.214Z [DEBUG] AutoUpdaterWrapper: Installation type: npm-global
+2026-01-10T02:41:05.217Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865217
+2026-01-10T02:41:05.217Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.217Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:05.217Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.217Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865217 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.218Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:05.222Z [DEBUG] Loaded plugins - Enabled: 0, Disabled: 0, Commands: 0, Agents: 0, Errors: 0
+2026-01-10T02:41:05.258Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865258
+2026-01-10T02:41:05.259Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.259Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:05.259Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.259Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865258 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.260Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:05.279Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-10T02:41:05.283Z [DEBUG] Tool search disabled: MCPSearchTool is not available (may have been disallowed via disallowedTools).
+2026-01-10T02:41:05.286Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-10T02:41:05.297Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:05.297Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:05.297Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:05.300Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:05.300Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:05.303Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:05.307Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:05.307Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:05.311Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:05.332Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865332
+2026-01-10T02:41:05.332Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:05.333Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:05.333Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:05.333Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012865332 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:05.333Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:06.322Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T02:41:06.322Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T02:41:06.493Z [DEBUG] Stream started - received first chunk
+2026-01-10T02:41:07.040Z [DEBUG] Stream started - received first chunk
+2026-01-10T02:41:07.159Z [DEBUG] Stream started - received first chunk
+2026-01-10T02:41:07.639Z [DEBUG] Skipping SubagentStop hook execution - workspace trust not accepted
+2026-01-10T02:41:08.173Z [DEBUG] Skipping SubagentStop hook execution - workspace trust not accepted
+2026-01-10T02:41:08.711Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012868711
+2026-01-10T02:41:08.712Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:08.712Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:08.712Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:08.712Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012868711 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:08.713Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:10.284Z [DEBUG] Skipping SubagentStop hook execution - workspace trust not accepted
+2026-01-10T02:41:15.019Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-10T02:41:15.019Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-10T02:41:15.019Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-10T02:41:15.019Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-10T02:41:15.188Z [DEBUG] Skipping UserPromptSubmit hook execution - workspace trust not accepted
+2026-01-10T02:41:15.191Z [DEBUG] FileHistory: Added snapshot for cff24a16-9d16-4dfd-9565-f76530723f03, tracking 0 files
+2026-01-10T02:41:15.212Z [DEBUG] Tool search disabled for model 'claude-haiku-4-5-20251001': model does not support tool_reference blocks. This feature is only available on Claude Sonnet 4+, Opus 4+, and newer models.
+2026-01-10T02:41:15.253Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:15.253Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:15.254Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:15.262Z [DEBUG] Total plugin output styles loaded: 0
+2026-01-10T02:41:15.275Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-10T02:41:15.290Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-10T02:41:15.290Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-10T02:41:15.290Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-10T02:41:16.037Z [DEBUG] Stream started - received first chunk
+2026-01-10T02:41:16.907Z [DEBUG] Stream started - received first chunk
+2026-01-10T02:41:21.193Z [DEBUG] Skipping Stop hook execution - workspace trust not accepted
+2026-01-10T02:41:21.241Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012881241
+2026-01-10T02:41:21.241Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:21.241Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:21.241Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:21.241Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012881241 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:21.241Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:41:21.253Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012881253
+2026-01-10T02:41:21.253Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T02:41:21.254Z [DEBUG] Temp file written successfully, size: 32493 bytes
+2026-01-10T02:41:21.254Z [DEBUG] Applied original permissions to temp file
+2026-01-10T02:41:21.254Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768012881253 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T02:41:21.254Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T02:42:21.236Z [DEBUG] Skipping Notification:idle_prompt hook execution - workspace trust not accepted
+2026-01-10T03:11:06.313Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T03:11:06.314Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T03:11:08.257Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768014668257
+2026-01-10T03:11:08.257Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T03:11:08.258Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T03:11:08.258Z [DEBUG] Applied original permissions to temp file
+2026-01-10T03:11:08.258Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768014668257 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T03:11:08.259Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T04:03:08.859Z [DEBUG] npm view failed with code 1
+2026-01-10T04:03:08.859Z [DEBUG] npm stderr: (empty)
+2026-01-10T04:33:04.474Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T04:33:04.474Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T04:33:06.723Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768019586723
+2026-01-10T04:33:06.723Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T04:33:06.724Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T04:33:06.724Z [DEBUG] Applied original permissions to temp file
+2026-01-10T04:33:06.724Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768019586723 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T04:33:06.724Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T05:03:04.459Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T05:03:04.459Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T05:03:06.670Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768021386670
+2026-01-10T05:03:06.670Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T05:03:06.670Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T05:03:06.670Z [DEBUG] Applied original permissions to temp file
+2026-01-10T05:03:06.670Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768021386670 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T05:03:06.671Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T05:33:04.765Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T05:33:04.765Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T05:33:07.059Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768023187059
+2026-01-10T05:33:07.059Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T05:33:07.060Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T05:33:07.060Z [DEBUG] Applied original permissions to temp file
+2026-01-10T05:33:07.060Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768023187059 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T05:33:07.060Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T06:03:04.753Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T06:03:04.753Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T06:03:07.735Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768024987735
+2026-01-10T06:03:07.735Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T06:03:07.736Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T06:03:07.736Z [DEBUG] Applied original permissions to temp file
+2026-01-10T06:03:07.736Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768024987735 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T06:03:07.736Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T06:33:04.743Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T06:33:04.743Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T06:33:07.253Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768026787253
+2026-01-10T06:33:07.253Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T06:33:07.253Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T06:33:07.253Z [DEBUG] Applied original permissions to temp file
+2026-01-10T06:33:07.253Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768026787253 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T06:33:07.254Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T07:03:04.764Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T07:03:04.764Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T07:03:07.029Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768028587029
+2026-01-10T07:03:07.029Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T07:03:07.029Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T07:03:07.029Z [DEBUG] Applied original permissions to temp file
+2026-01-10T07:03:07.029Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768028587029 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T07:03:07.030Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T07:33:04.750Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T07:33:04.750Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T07:33:06.920Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768030386920
+2026-01-10T07:33:06.921Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T07:33:06.921Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T07:33:06.921Z [DEBUG] Applied original permissions to temp file
+2026-01-10T07:33:06.921Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768030386920 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T07:33:06.922Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T08:03:04.758Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T08:03:04.758Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T08:03:07.000Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768032187000
+2026-01-10T08:03:07.001Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T08:03:07.001Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T08:03:07.001Z [DEBUG] Applied original permissions to temp file
+2026-01-10T08:03:07.001Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768032187000 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T08:03:07.001Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T08:33:04.758Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T08:33:04.758Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T08:33:07.001Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768033987001
+2026-01-10T08:33:07.001Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T08:33:07.002Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T08:33:07.002Z [DEBUG] Applied original permissions to temp file
+2026-01-10T08:33:07.002Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768033987001 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T08:33:07.002Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T09:03:04.747Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T09:03:04.747Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T09:03:06.977Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768035786977
+2026-01-10T09:03:06.977Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T09:03:06.977Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T09:03:06.977Z [DEBUG] Applied original permissions to temp file
+2026-01-10T09:03:06.977Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768035786977 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T09:03:06.978Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T09:33:04.764Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T09:33:04.764Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T09:33:07.070Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768037587070
+2026-01-10T09:33:07.070Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T09:33:07.071Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T09:33:07.071Z [DEBUG] Applied original permissions to temp file
+2026-01-10T09:33:07.071Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768037587070 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T09:33:07.072Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T10:03:04.765Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T10:03:04.765Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T10:03:06.975Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768039386975
+2026-01-10T10:03:06.975Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T10:03:06.975Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T10:03:06.976Z [DEBUG] Applied original permissions to temp file
+2026-01-10T10:03:06.976Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768039386975 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T10:03:06.976Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T10:33:04.766Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T10:33:04.766Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T10:33:07.050Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768041187050
+2026-01-10T10:33:07.050Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T10:33:07.051Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T10:33:07.051Z [DEBUG] Applied original permissions to temp file
+2026-01-10T10:33:07.051Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768041187050 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T10:33:07.051Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T11:03:04.760Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T11:03:04.760Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T11:03:07.032Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768042987032
+2026-01-10T11:03:07.032Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T11:03:07.032Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T11:03:07.032Z [DEBUG] Applied original permissions to temp file
+2026-01-10T11:03:07.032Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768042987032 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T11:03:07.033Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T11:33:04.774Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T11:33:04.774Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T11:33:07.276Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768044787276
+2026-01-10T11:33:07.276Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T11:33:07.277Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T11:33:07.277Z [DEBUG] Applied original permissions to temp file
+2026-01-10T11:33:07.277Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768044787276 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T11:33:07.278Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T12:03:04.813Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T12:03:04.813Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T12:03:07.566Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768046587566
+2026-01-10T12:03:07.566Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T12:03:07.567Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T12:03:07.567Z [DEBUG] Applied original permissions to temp file
+2026-01-10T12:03:07.567Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768046587566 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T12:03:07.567Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T12:33:04.798Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T12:33:04.798Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T12:33:07.317Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768048387317
+2026-01-10T12:33:07.317Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T12:33:07.317Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T12:33:07.317Z [DEBUG] Applied original permissions to temp file
+2026-01-10T12:33:07.317Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768048387317 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T12:33:07.318Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T12:33:12.338Z [ERROR] Error: Error: 1P event logging: 1 events failed to export
+    at ji1.queueFailedEvents (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:262:2038)
+    at async ji1.doExport (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:262:1195)
+2026-01-10T12:33:12.340Z [ERROR] Error: Error: {"stack":"Error: Failed to export 1 events\n    at ji1.doExport (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:262:1297)","message":"Failed to export 1 events","name":"Error"}
+    at nW0.error (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:1823:34862)
+    at ic1.error (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:256:10502)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:256:41527
+    at Jb3 (file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:256:42073)
+    at file:///C:/Users/SeiyaKawashima/AppData/Roaming/npm/node_modules/@anthropic-ai/claude-code/cli.js:257:20245
+2026-01-10T21:22:29.133Z [DEBUG] npm view failed with code 1
+2026-01-10T21:22:29.133Z [DEBUG] npm stderr: (empty)
+2026-01-10T21:52:26.863Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T21:52:26.863Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T21:52:29.155Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768081949155
+2026-01-10T21:52:29.156Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T21:52:29.156Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T21:52:29.156Z [DEBUG] Applied original permissions to temp file
+2026-01-10T21:52:29.156Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768081949155 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T21:52:29.157Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-10T22:22:26.839Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-10T22:22:26.839Z [DEBUG] AutoUpdater: Using global update method
+2026-01-10T22:22:29.173Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768083749173
+2026-01-10T22:22:29.173Z [DEBUG] Preserving file permissions: 100666
+2026-01-10T22:22:29.173Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-10T22:22:29.173Z [DEBUG] Applied original permissions to temp file
+2026-01-10T22:22:29.173Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768083749173 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-10T22:22:29.174Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T05:45:00.284Z [DEBUG] npm view failed with code 1
+2026-01-11T05:45:00.284Z [DEBUG] npm stderr: (empty)
+2026-01-11T06:14:56.543Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T06:14:56.543Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T06:14:59.406Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768112099406
+2026-01-11T06:14:59.406Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T06:14:59.407Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T06:14:59.407Z [DEBUG] Applied original permissions to temp file
+2026-01-11T06:14:59.407Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768112099406 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T06:14:59.407Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T06:44:55.598Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T06:44:55.598Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T06:44:58.034Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768113898034
+2026-01-11T06:44:58.034Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T06:44:58.035Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T06:44:58.035Z [DEBUG] Applied original permissions to temp file
+2026-01-11T06:44:58.035Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768113898034 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T06:44:58.036Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T07:14:55.592Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T07:14:55.592Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T07:14:58.374Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768115698374
+2026-01-11T07:14:58.375Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T07:14:58.376Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T07:14:58.376Z [DEBUG] Applied original permissions to temp file
+2026-01-11T07:14:58.376Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768115698374 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T07:14:58.377Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T07:44:55.595Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T07:44:55.595Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T07:44:58.058Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768117498058
+2026-01-11T07:44:58.058Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T07:44:58.059Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T07:44:58.059Z [DEBUG] Applied original permissions to temp file
+2026-01-11T07:44:58.059Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768117498058 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T07:44:58.060Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T08:14:55.579Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T08:14:55.579Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T08:14:57.975Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768119297975
+2026-01-11T08:14:57.975Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T08:14:57.976Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T08:14:57.976Z [DEBUG] Applied original permissions to temp file
+2026-01-11T08:14:57.976Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768119297975 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T08:14:57.976Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T08:44:55.599Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T08:44:55.599Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T08:44:58.023Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768121098023
+2026-01-11T08:44:58.023Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T08:44:58.023Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T08:44:58.024Z [DEBUG] Applied original permissions to temp file
+2026-01-11T08:44:58.024Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768121098023 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T08:44:58.024Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T09:14:55.595Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T09:14:55.595Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T09:14:57.772Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768122897772
+2026-01-11T09:14:57.772Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T09:14:57.772Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T09:14:57.772Z [DEBUG] Applied original permissions to temp file
+2026-01-11T09:14:57.772Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768122897772 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T09:14:57.773Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T09:44:55.598Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T09:44:55.598Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T09:44:57.844Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768124697844
+2026-01-11T09:44:57.844Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T09:44:57.845Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T09:44:57.845Z [DEBUG] Applied original permissions to temp file
+2026-01-11T09:44:57.845Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768124697844 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T09:44:57.845Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T10:14:55.593Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T10:14:55.593Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T10:14:57.751Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768126497751
+2026-01-11T10:14:57.751Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T10:14:57.752Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T10:14:57.752Z [DEBUG] Applied original permissions to temp file
+2026-01-11T10:14:57.752Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768126497751 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T10:14:57.752Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T10:44:55.584Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T10:44:55.584Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T10:44:57.847Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768128297847
+2026-01-11T10:44:57.847Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T10:44:57.848Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T10:44:57.848Z [DEBUG] Applied original permissions to temp file
+2026-01-11T10:44:57.848Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768128297847 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T10:44:57.848Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T11:14:55.570Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T11:14:55.570Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T11:14:58.046Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768130098046
+2026-01-11T11:14:58.046Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T11:14:58.047Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T11:14:58.047Z [DEBUG] Applied original permissions to temp file
+2026-01-11T11:14:58.047Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768130098046 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T11:14:58.047Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-11T11:44:55.571Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-11T11:44:55.571Z [DEBUG] AutoUpdater: Using global update method
+2026-01-11T11:44:57.745Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768131897745
+2026-01-11T11:44:57.745Z [DEBUG] Preserving file permissions: 100666
+2026-01-11T11:44:57.745Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-11T11:44:57.745Z [DEBUG] Applied original permissions to temp file
+2026-01-11T11:44:57.745Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768131897745 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-11T11:44:57.746Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T10:40:13.700Z [DEBUG] npm view failed with code 1
+2026-01-13T10:40:13.700Z [DEBUG] npm stderr: (empty)
+2026-01-13T11:10:15.348Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T11:10:15.348Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T11:10:17.710Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768302617710
+2026-01-13T11:10:17.710Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T11:10:17.711Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T11:10:17.711Z [DEBUG] Applied original permissions to temp file
+2026-01-13T11:10:17.711Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768302617710 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T11:10:17.711Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T11:40:15.391Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T11:40:15.391Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T11:40:17.536Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768304417536
+2026-01-13T11:40:17.536Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T11:40:17.537Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T11:40:17.537Z [DEBUG] Applied original permissions to temp file
+2026-01-13T11:40:17.537Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768304417536 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T11:40:17.537Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T12:10:15.342Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T12:10:15.342Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T12:10:17.497Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768306217497
+2026-01-13T12:10:17.497Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T12:10:17.497Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T12:10:17.497Z [DEBUG] Applied original permissions to temp file
+2026-01-13T12:10:17.497Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768306217497 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T12:10:17.498Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T20:05:06.520Z [DEBUG] npm view failed with code 1
+2026-01-13T20:05:06.520Z [DEBUG] npm stderr: (empty)
+2026-01-13T20:35:03.406Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T20:35:03.406Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T20:35:05.969Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768336505969
+2026-01-13T20:35:05.969Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T20:35:05.970Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T20:35:05.970Z [DEBUG] Applied original permissions to temp file
+2026-01-13T20:35:05.970Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768336505969 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T20:35:05.971Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T21:05:03.411Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T21:05:03.411Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T21:05:05.620Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768338305620
+2026-01-13T21:05:05.620Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T21:05:05.620Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T21:05:05.621Z [DEBUG] Applied original permissions to temp file
+2026-01-13T21:05:05.621Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768338305620 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T21:05:05.621Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T21:35:03.921Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T21:35:03.921Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T21:35:07.230Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768340107230
+2026-01-13T21:35:07.230Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T21:35:07.231Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T21:35:07.231Z [DEBUG] Applied original permissions to temp file
+2026-01-13T21:35:07.231Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768340107230 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T21:35:07.232Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T22:05:03.919Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T22:05:03.919Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T22:05:06.130Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768341906130
+2026-01-13T22:05:06.130Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T22:05:06.130Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T22:05:06.130Z [DEBUG] Applied original permissions to temp file
+2026-01-13T22:05:06.130Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768341906130 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T22:05:06.131Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T22:35:03.917Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T22:35:03.917Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T22:35:06.083Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768343706083
+2026-01-13T22:35:06.083Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T22:35:06.084Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T22:35:06.084Z [DEBUG] Applied original permissions to temp file
+2026-01-13T22:35:06.084Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768343706083 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T22:35:06.084Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-13T23:05:03.918Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-13T23:05:03.918Z [DEBUG] AutoUpdater: Using global update method
+2026-01-13T23:05:06.123Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768345506123
+2026-01-13T23:05:06.123Z [DEBUG] Preserving file permissions: 100666
+2026-01-13T23:05:06.124Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-13T23:05:06.124Z [DEBUG] Applied original permissions to temp file
+2026-01-13T23:05:06.124Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768345506123 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-13T23:05:06.124Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T04:56:50.600Z [DEBUG] npm view failed with code 1
+2026-01-14T04:56:50.600Z [DEBUG] npm stderr: (empty)
+2026-01-14T05:26:46.622Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T05:26:46.622Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T05:26:48.945Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768368408945
+2026-01-14T05:26:48.945Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T05:26:48.946Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T05:26:48.946Z [DEBUG] Applied original permissions to temp file
+2026-01-14T05:26:48.946Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768368408945 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T05:26:48.946Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T05:56:46.587Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T05:56:46.587Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T05:56:48.925Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768370208925
+2026-01-14T05:56:48.925Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T05:56:48.926Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T05:56:48.926Z [DEBUG] Applied original permissions to temp file
+2026-01-14T05:56:48.926Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768370208925 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T05:56:48.926Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T06:26:46.587Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T06:26:46.587Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T06:26:48.869Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768372008869
+2026-01-14T06:26:48.869Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T06:26:48.870Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T06:26:48.870Z [DEBUG] Applied original permissions to temp file
+2026-01-14T06:26:48.870Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768372008869 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T06:26:48.870Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T06:56:46.597Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T06:56:46.597Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T06:56:49.037Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768373809037
+2026-01-14T06:56:49.037Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T06:56:49.038Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T06:56:49.038Z [DEBUG] Applied original permissions to temp file
+2026-01-14T06:56:49.038Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768373809037 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T06:56:49.039Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T07:26:46.605Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T07:26:46.605Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T07:26:48.783Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768375608783
+2026-01-14T07:26:48.783Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T07:26:48.784Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T07:26:48.784Z [DEBUG] Applied original permissions to temp file
+2026-01-14T07:26:48.784Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768375608783 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T07:26:48.785Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T07:56:46.579Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T07:56:46.579Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T07:56:48.696Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768377408696
+2026-01-14T07:56:48.696Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T07:56:48.697Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T07:56:48.697Z [DEBUG] Applied original permissions to temp file
+2026-01-14T07:56:48.697Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768377408696 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T07:56:48.698Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T08:26:46.600Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T08:26:46.600Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T08:26:48.858Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768379208858
+2026-01-14T08:26:48.859Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T08:26:48.859Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T08:26:48.859Z [DEBUG] Applied original permissions to temp file
+2026-01-14T08:26:48.859Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768379208858 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T08:26:48.860Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T08:56:46.599Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T08:56:46.599Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T08:56:48.979Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768381008979
+2026-01-14T08:56:48.979Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T08:56:48.979Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T08:56:48.979Z [DEBUG] Applied original permissions to temp file
+2026-01-14T08:56:48.979Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768381008979 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T08:56:48.980Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T09:26:46.607Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T09:26:46.607Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T09:26:48.817Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768382808817
+2026-01-14T09:26:48.817Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T09:26:48.817Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T09:26:48.818Z [DEBUG] Applied original permissions to temp file
+2026-01-14T09:26:48.818Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768382808817 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T09:26:48.818Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T09:56:46.597Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T09:56:46.597Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T09:56:48.800Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768384608800
+2026-01-14T09:56:48.800Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T09:56:48.800Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T09:56:48.800Z [DEBUG] Applied original permissions to temp file
+2026-01-14T09:56:48.800Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768384608800 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T09:56:48.801Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T10:26:46.601Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T10:26:46.601Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T10:26:48.839Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768386408838
+2026-01-14T10:26:48.839Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T10:26:48.839Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T10:26:48.839Z [DEBUG] Applied original permissions to temp file
+2026-01-14T10:26:48.839Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768386408838 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T10:26:48.840Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T10:56:46.584Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T10:56:46.584Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T10:56:48.803Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768388208803
+2026-01-14T10:56:48.804Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T10:56:48.804Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T10:56:48.804Z [DEBUG] Applied original permissions to temp file
+2026-01-14T10:56:48.804Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768388208803 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T10:56:48.805Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T11:26:46.599Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T11:26:46.599Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T11:26:48.799Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768390008799
+2026-01-14T11:26:48.799Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T11:26:48.799Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T11:26:48.799Z [DEBUG] Applied original permissions to temp file
+2026-01-14T11:26:48.799Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768390008799 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T11:26:48.800Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T11:56:46.621Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T11:56:46.621Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T11:56:48.987Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768391808987
+2026-01-14T11:56:48.987Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T11:56:48.988Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T11:56:48.988Z [DEBUG] Applied original permissions to temp file
+2026-01-14T11:56:48.988Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768391808987 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T11:56:48.988Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T20:10:58.854Z [DEBUG] npm view failed with code 1
+2026-01-14T20:10:58.854Z [DEBUG] npm stderr: (empty)
+2026-01-14T20:40:57.626Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T20:40:57.626Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T20:40:59.914Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768423259914
+2026-01-14T20:40:59.914Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T20:40:59.914Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T20:40:59.915Z [DEBUG] Applied original permissions to temp file
+2026-01-14T20:40:59.915Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768423259914 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T20:40:59.915Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T21:10:57.150Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T21:10:57.150Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T21:10:59.280Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768425059280
+2026-01-14T21:10:59.280Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T21:10:59.281Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T21:10:59.281Z [DEBUG] Applied original permissions to temp file
+2026-01-14T21:10:59.281Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768425059280 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T21:10:59.281Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T21:40:57.127Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T21:40:57.127Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T21:40:59.445Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768426859445
+2026-01-14T21:40:59.446Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T21:40:59.446Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T21:40:59.446Z [DEBUG] Applied original permissions to temp file
+2026-01-14T21:40:59.446Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768426859445 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T21:40:59.447Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T22:10:57.124Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T22:10:57.124Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T22:10:59.219Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768428659219
+2026-01-14T22:10:59.219Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T22:10:59.220Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T22:10:59.220Z [DEBUG] Applied original permissions to temp file
+2026-01-14T22:10:59.220Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768428659219 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T22:10:59.220Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T22:40:57.132Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T22:40:57.132Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T22:40:59.247Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768430459247
+2026-01-14T22:40:59.247Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T22:40:59.247Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T22:40:59.247Z [DEBUG] Applied original permissions to temp file
+2026-01-14T22:40:59.247Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768430459247 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T22:40:59.248Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-14T23:10:57.134Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-14T23:10:57.134Z [DEBUG] AutoUpdater: Using global update method
+2026-01-14T23:10:59.225Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768432259225
+2026-01-14T23:10:59.225Z [DEBUG] Preserving file permissions: 100666
+2026-01-14T23:10:59.225Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-14T23:10:59.225Z [DEBUG] Applied original permissions to temp file
+2026-01-14T23:10:59.225Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768432259225 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-14T23:10:59.226Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T03:30:38.757Z [DEBUG] npm view failed with code 1
+2026-01-15T03:30:38.757Z [DEBUG] npm stderr: (empty)
+2026-01-15T04:00:34.802Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T04:00:34.802Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T04:00:36.926Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768449636926
+2026-01-15T04:00:36.926Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T04:00:36.927Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T04:00:36.927Z [DEBUG] Applied original permissions to temp file
+2026-01-15T04:00:36.927Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768449636926 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T04:00:36.927Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T04:30:34.822Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T04:30:34.822Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T04:30:36.856Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768451436856
+2026-01-15T04:30:36.856Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T04:30:36.856Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T04:30:36.857Z [DEBUG] Applied original permissions to temp file
+2026-01-15T04:30:36.857Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768451436856 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T04:30:36.857Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T05:00:34.781Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T05:00:34.781Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T05:00:36.949Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768453236949
+2026-01-15T05:00:36.949Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T05:00:36.949Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T05:00:36.949Z [DEBUG] Applied original permissions to temp file
+2026-01-15T05:00:36.949Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768453236949 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T05:00:36.950Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T05:30:34.795Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T05:30:34.795Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T05:30:36.986Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768455036986
+2026-01-15T05:30:36.986Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T05:30:36.987Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T05:30:36.987Z [DEBUG] Applied original permissions to temp file
+2026-01-15T05:30:36.987Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768455036986 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T05:30:36.988Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T06:00:34.780Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T06:00:34.780Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T06:00:36.924Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768456836924
+2026-01-15T06:00:36.924Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T06:00:36.925Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T06:00:36.925Z [DEBUG] Applied original permissions to temp file
+2026-01-15T06:00:36.925Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768456836924 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T06:00:36.925Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T06:30:34.377Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T06:30:34.377Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T06:30:36.656Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768458636656
+2026-01-15T06:30:36.656Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T06:30:36.656Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T06:30:36.656Z [DEBUG] Applied original permissions to temp file
+2026-01-15T06:30:36.656Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768458636656 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T06:30:36.657Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T07:00:34.766Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T07:00:34.766Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T07:00:36.756Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768460436756
+2026-01-15T07:00:36.756Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T07:00:36.757Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T07:00:36.757Z [DEBUG] Applied original permissions to temp file
+2026-01-15T07:00:36.757Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768460436756 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T07:00:36.758Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T07:30:34.791Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T07:30:34.791Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T07:30:37.018Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768462237018
+2026-01-15T07:30:37.018Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T07:30:37.019Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T07:30:37.019Z [DEBUG] Applied original permissions to temp file
+2026-01-15T07:30:37.019Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768462237018 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T07:30:37.019Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T08:00:34.792Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T08:00:34.792Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T08:00:36.865Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768464036865
+2026-01-15T08:00:36.865Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T08:00:36.866Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T08:00:36.866Z [DEBUG] Applied original permissions to temp file
+2026-01-15T08:00:36.866Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768464036865 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T08:00:36.866Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T08:30:34.793Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T08:30:34.793Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T08:30:37.090Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768465837090
+2026-01-15T08:30:37.090Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T08:30:37.091Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T08:30:37.091Z [DEBUG] Applied original permissions to temp file
+2026-01-15T08:30:37.091Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768465837090 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T08:30:37.091Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T09:00:34.790Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T09:00:34.790Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T09:00:36.864Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768467636864
+2026-01-15T09:00:36.864Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T09:00:36.865Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T09:00:36.865Z [DEBUG] Applied original permissions to temp file
+2026-01-15T09:00:36.865Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768467636864 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T09:00:36.865Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T09:30:34.799Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T09:30:34.799Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T09:30:37.151Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768469437151
+2026-01-15T09:30:37.152Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T09:30:37.152Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T09:30:37.152Z [DEBUG] Applied original permissions to temp file
+2026-01-15T09:30:37.152Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768469437151 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T09:30:37.152Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T10:00:34.810Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T10:00:34.810Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T10:00:37.604Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768471237604
+2026-01-15T10:00:37.605Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T10:00:37.605Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T10:00:37.605Z [DEBUG] Applied original permissions to temp file
+2026-01-15T10:00:37.605Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768471237604 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T10:00:37.606Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T10:30:34.801Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T10:30:34.801Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T10:30:36.838Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768473036838
+2026-01-15T10:30:36.838Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T10:30:36.838Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T10:30:36.839Z [DEBUG] Applied original permissions to temp file
+2026-01-15T10:30:36.839Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768473036838 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T10:30:36.839Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T11:00:34.790Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T11:00:34.790Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T11:00:36.859Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768474836859
+2026-01-15T11:00:36.859Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T11:00:36.860Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T11:00:36.860Z [DEBUG] Applied original permissions to temp file
+2026-01-15T11:00:36.860Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768474836859 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T11:00:36.861Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T11:30:34.796Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T11:30:34.796Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T11:30:36.934Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768476636934
+2026-01-15T11:30:36.934Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T11:30:36.934Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T11:30:36.934Z [DEBUG] Applied original permissions to temp file
+2026-01-15T11:30:36.934Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768476636934 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T11:30:36.935Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T12:00:34.827Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T12:00:34.827Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T12:00:36.978Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768478436978
+2026-01-15T12:00:36.978Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T12:00:36.979Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T12:00:36.979Z [DEBUG] Applied original permissions to temp file
+2026-01-15T12:00:36.979Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768478436978 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T12:00:36.979Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T20:21:15.915Z [DEBUG] npm view failed with code 1
+2026-01-15T20:21:15.915Z [DEBUG] npm stderr: (empty)
+2026-01-15T20:51:14.920Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T20:51:14.920Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T20:51:17.656Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768510277656
+2026-01-15T20:51:17.656Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T20:51:17.656Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T20:51:17.657Z [DEBUG] Applied original permissions to temp file
+2026-01-15T20:51:17.657Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768510277656 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T20:51:17.657Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T21:21:14.914Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T21:21:14.914Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T21:21:18.077Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768512078077
+2026-01-15T21:21:18.077Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T21:21:18.077Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T21:21:18.078Z [DEBUG] Applied original permissions to temp file
+2026-01-15T21:21:18.078Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768512078077 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T21:21:18.078Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T21:51:14.896Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T21:51:14.896Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T21:51:16.892Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768513876892
+2026-01-15T21:51:16.892Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T21:51:16.893Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T21:51:16.893Z [DEBUG] Applied original permissions to temp file
+2026-01-15T21:51:16.893Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768513876892 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T21:51:16.893Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T22:21:14.897Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T22:21:14.897Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T22:21:17.131Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768515677131
+2026-01-15T22:21:17.131Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T22:21:17.131Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T22:21:17.131Z [DEBUG] Applied original permissions to temp file
+2026-01-15T22:21:17.131Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768515677131 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T22:21:17.132Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T22:57:43.745Z [DEBUG] npm view failed with code 1
+2026-01-15T22:57:43.746Z [DEBUG] npm stderr: (empty)
+2026-01-15T23:27:39.918Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T23:27:39.918Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T23:27:42.185Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768519662185
+2026-01-15T23:27:42.185Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T23:27:42.185Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T23:27:42.185Z [DEBUG] Applied original permissions to temp file
+2026-01-15T23:27:42.185Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768519662185 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T23:27:42.186Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-15T23:57:39.928Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-15T23:57:39.928Z [DEBUG] AutoUpdater: Using global update method
+2026-01-15T23:57:42.317Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768521462317
+2026-01-15T23:57:42.317Z [DEBUG] Preserving file permissions: 100666
+2026-01-15T23:57:42.317Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-15T23:57:42.318Z [DEBUG] Applied original permissions to temp file
+2026-01-15T23:57:42.318Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768521462317 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-15T23:57:42.318Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T00:27:39.941Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T00:27:39.941Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T00:27:42.402Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768523262402
+2026-01-16T00:27:42.402Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T00:27:42.403Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T00:27:42.403Z [DEBUG] Applied original permissions to temp file
+2026-01-16T00:27:42.403Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768523262402 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T00:27:42.403Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T00:57:39.927Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T00:57:39.928Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T00:57:42.363Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768525062363
+2026-01-16T00:57:42.364Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T00:57:42.364Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T00:57:42.364Z [DEBUG] Applied original permissions to temp file
+2026-01-16T00:57:42.364Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768525062363 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T00:57:42.365Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T01:27:39.913Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T01:27:39.913Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T01:27:42.135Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768526862135
+2026-01-16T01:27:42.135Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T01:27:42.136Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T01:27:42.136Z [DEBUG] Applied original permissions to temp file
+2026-01-16T01:27:42.136Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768526862135 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T01:27:42.136Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T01:57:39.918Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T01:57:39.918Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T01:57:42.344Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768528662344
+2026-01-16T01:57:42.344Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T01:57:42.344Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T01:57:42.344Z [DEBUG] Applied original permissions to temp file
+2026-01-16T01:57:42.344Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768528662344 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T01:57:42.345Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T02:27:39.942Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T02:27:39.942Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T02:27:42.206Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768530462206
+2026-01-16T02:27:42.206Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T02:27:42.207Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T02:27:42.207Z [DEBUG] Applied original permissions to temp file
+2026-01-16T02:27:42.207Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768530462206 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T02:27:42.207Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T02:57:39.927Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T02:57:39.927Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T02:57:41.952Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768532261952
+2026-01-16T02:57:41.952Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T02:57:41.953Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T02:57:41.953Z [DEBUG] Applied original permissions to temp file
+2026-01-16T02:57:41.953Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768532261952 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T02:57:41.953Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T03:27:39.919Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T03:27:39.919Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T03:27:42.197Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768534062197
+2026-01-16T03:27:42.197Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T03:27:42.197Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T03:27:42.198Z [DEBUG] Applied original permissions to temp file
+2026-01-16T03:27:42.198Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768534062197 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T03:27:42.198Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T03:57:39.903Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T03:57:39.903Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T03:57:41.891Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768535861891
+2026-01-16T03:57:41.892Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T03:57:41.892Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T03:57:41.892Z [DEBUG] Applied original permissions to temp file
+2026-01-16T03:57:41.892Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768535861891 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T03:57:41.893Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T04:27:39.933Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T04:27:39.933Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T04:27:41.927Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768537661927
+2026-01-16T04:27:41.927Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T04:27:41.928Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T04:27:41.928Z [DEBUG] Applied original permissions to temp file
+2026-01-16T04:27:41.928Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768537661927 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T04:27:41.928Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T04:57:39.914Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T04:57:39.914Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T04:57:41.889Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768539461889
+2026-01-16T04:57:41.889Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T04:57:41.889Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T04:57:41.890Z [DEBUG] Applied original permissions to temp file
+2026-01-16T04:57:41.890Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768539461889 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T04:57:41.890Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T05:27:39.908Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T05:27:39.908Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T05:27:41.910Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768541261910
+2026-01-16T05:27:41.910Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T05:27:41.911Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T05:27:41.911Z [DEBUG] Applied original permissions to temp file
+2026-01-16T05:27:41.911Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768541261910 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T05:27:41.911Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T05:57:39.927Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T05:57:39.927Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T05:57:41.893Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768543061893
+2026-01-16T05:57:41.893Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T05:57:41.893Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T05:57:41.893Z [DEBUG] Applied original permissions to temp file
+2026-01-16T05:57:41.893Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768543061893 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T05:57:41.894Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T06:27:39.931Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T06:27:39.931Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T06:27:41.946Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768544861946
+2026-01-16T06:27:41.947Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T06:27:41.947Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T06:27:41.947Z [DEBUG] Applied original permissions to temp file
+2026-01-16T06:27:41.947Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768544861946 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T06:27:41.948Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T06:57:39.909Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T06:57:39.909Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T06:57:41.854Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768546661854
+2026-01-16T06:57:41.854Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T06:57:41.855Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T06:57:41.855Z [DEBUG] Applied original permissions to temp file
+2026-01-16T06:57:41.855Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768546661854 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T06:57:41.855Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T07:27:39.959Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T07:27:39.959Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T07:27:41.944Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768548461944
+2026-01-16T07:27:41.944Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T07:27:41.944Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T07:27:41.944Z [DEBUG] Applied original permissions to temp file
+2026-01-16T07:27:41.944Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768548461944 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T07:27:41.945Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-01-16T07:57:39.898Z [DEBUG] AutoUpdater: Detected installation type: npm-global
+2026-01-16T07:57:39.898Z [DEBUG] AutoUpdater: Using global update method
+2026-01-16T07:57:41.882Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768550261882
+2026-01-16T07:57:41.882Z [DEBUG] Preserving file permissions: 100666
+2026-01-16T07:57:41.883Z [DEBUG] Temp file written successfully, size: 32644 bytes
+2026-01-16T07:57:41.883Z [DEBUG] Applied original permissions to temp file
+2026-01-16T07:57:41.883Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.63096.1768550261882 to C:\Users\SeiyaKawashima\.claude.json
+2026-01-16T07:57:41.883Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically

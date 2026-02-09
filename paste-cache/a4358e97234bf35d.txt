@@ -1,0 +1,25 @@
+PowerShell 7.5.4
+Warning: PowerShell detected that you might be using a screen reader and has disabled PSReadLine for compatibility purposes. If you want to re-enable it, run 'Import-Module PSReadLine'.
+
+PS C:\Users\SeiyaKawashima> cd C:\Users\SeiyaKawashima\actions-runner
+PS C:\Users\SeiyaKawashima\actions-runner> .\svc.cmd install
+.\svc.cmd: The term '.\svc.cmd' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+PS C:\Users\SeiyaKawashima\actions-runner> sc.exe create "actions.runner" binPath="C:\Users\SeiyaKawashima\actions-runner\bin\Runner.Listener.exe" start=auto
+[SC] CreateService SUCCESS
+PS C:\Users\SeiyaKawashima\actions-runner> sc.exe start "actions.runner"
+[SC] StartService FAILED 1053:
+
+The service did not respond to the start or control request in a timely fashion.
+
+PS C:\Users\SeiyaKawashima\actions-runner> sc.exe delete "actions.runner"
+[SC] DeleteService SUCCESS
+PS C:\Users\SeiyaKawashima\actions-runner> .\run.cmd
+        1 file(s) copied.
+
+√ Connected to GitHub
+
+Current runner version: '2.331.0'
+2026-02-09 06:38:51Z: Listening for Jobs
+2026-02-09 06:38:54Z: Running job: start-server
+

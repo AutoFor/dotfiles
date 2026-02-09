@@ -1,0 +1,115 @@
+2026-02-05T20:54:21.650Z [DEBUG] [init] configureGlobalMTLS starting
+2026-02-05T20:54:21.652Z [DEBUG] [init] configureGlobalMTLS complete
+2026-02-05T20:54:21.653Z [DEBUG] [init] configureGlobalAgents starting
+2026-02-05T20:54:21.653Z [DEBUG] [init] configureGlobalAgents complete
+2026-02-05T20:54:21.678Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-02-05T20:54:21.696Z [DEBUG] Applying permission update: Adding 4 allow rule(s) to destination 'localSettings': ["Bash(git init:*)","Bash(git add:*)","Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Add project specification\n\nUiPath XAML Visualizer for GitHub プロジェクトの仕様書を追加。\n主要機能:\n- GitHub上でUiPath XAMLファイルを視覚的に表示\n- ワークフロー構造の可視化（Sequence/Flowchart/StateMachine）\n- 差分表示機能\n- Informative Screenshot表示機能\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")","Bash(mkdir:*)"]
+2026-02-05T20:54:21.697Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-02-05T20:54:21.727Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-02-05T20:54:21.728Z [DEBUG] [claudeai-mcp] Checking gate (cached)...
+2026-02-05T20:54:21.729Z [DEBUG] [claudeai-mcp] Gate returned: false
+2026-02-05T20:54:21.729Z [DEBUG] [claudeai-mcp] Disabled via gate
+2026-02-05T20:54:21.733Z [DEBUG] [ToolSearch:optimistic] mode=tst-auto, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-02-05T20:54:21.734Z [DEBUG] [STARTUP] Running setup()...
+2026-02-05T20:54:21.738Z [DEBUG] Loading skills from: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=[]
+2026-02-05T20:54:21.739Z [DEBUG] Passes: Cache stale, returning cached data and refreshing in background
+2026-02-05T20:54:21.740Z [DEBUG] Error log sink initialized
+2026-02-05T20:54:21.746Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-02-05T20:54:21.746Z [DEBUG] Total plugin skills loaded: 0
+2026-02-05T20:54:21.746Z [DEBUG] Total plugin commands loaded: 0
+2026-02-05T20:54:21.747Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-02-05T20:54:21.776Z [DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, legacy commands: 0)
+2026-02-05T20:54:21.776Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 2 bundled skills
+2026-02-05T20:54:21.786Z [DEBUG] [STARTUP] setup() completed in 52ms
+2026-02-05T20:54:21.786Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-02-05T20:54:21.966Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=C:\Users\SeiyaKawashima\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+2026-02-05T20:54:21.981Z [DEBUG] Total plugin agents loaded: 0
+2026-02-05T20:54:21.982Z [DEBUG] [STARTUP] Commands and agents loaded in 196ms
+2026-02-05T20:54:21.983Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-02-05T20:54:21.983Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-02-05T20:54:21.983Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-02-05T20:54:21.985Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-05T20:54:21.985Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-05T20:54:21.986Z [DEBUG] Passes: Cache stale, returning cached data and refreshing in background
+2026-02-05T20:54:21.987Z [DEBUG] Passes: Reusing in-flight eligibility fetch
+2026-02-05T20:54:21.988Z [DEBUG] Total LSP servers loaded: 0
+2026-02-05T20:54:21.988Z [DEBUG] [STARTUP] MCP configs loaded in 291ms
+2026-02-05T20:54:21.989Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-02-05T20:54:21.989Z [DEBUG] LSP manager initialized with 0 servers
+2026-02-05T20:54:21.989Z [DEBUG] LSP server manager initialized successfully
+2026-02-05T20:54:21.990Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-02-05T20:54:21.990Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-05T20:54:22.094Z [DEBUG] Loaded 0 installed plugins from C:\Users\SeiyaKawashima\.claude\plugins\installed_plugins.json
+2026-02-05T20:54:22.094Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-02-05T20:54:22.096Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-02-05T20:54:22.106Z [DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude\settings.json, C:\prj\uipath-github-xaml-visualizer\.claude\settings.json, C:\prj\uipath-github-xaml-visualizer\.claude\settings.local.json...
+2026-02-05T20:54:22.113Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\d76f5f91-8484-455f-8789-7aa150384fd7-agent-d76f5f91-8484-455f-8789-7aa150384fd7.json.tmp.54804.1770324862113
+2026-02-05T20:54:22.114Z [DEBUG] Temp file written successfully, size: 2 bytes
+2026-02-05T20:54:22.114Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\d76f5f91-8484-455f-8789-7aa150384fd7-agent-d76f5f91-8484-455f-8789-7aa150384fd7.json.tmp.54804.1770324862113 to C:\Users\SeiyaKawashima\.claude\todos\d76f5f91-8484-455f-8789-7aa150384fd7-agent-d76f5f91-8484-455f-8789-7aa150384fd7.json
+2026-02-05T20:54:22.115Z [DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\d76f5f91-8484-455f-8789-7aa150384fd7-agent-d76f5f91-8484-455f-8789-7aa150384fd7.json written atomically
+2026-02-05T20:54:22.117Z [DEBUG] Grove: Using fresh cached config
+2026-02-05T20:54:22.211Z [DEBUG] Stats cache stale (2026-02-03), processing 2026-02-04 to 2026-02-04 in background
+2026-02-05T20:54:22.225Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862225
+2026-02-05T20:54:22.226Z [DEBUG] Preserving file permissions: 100666
+2026-02-05T20:54:22.226Z [DEBUG] Temp file written successfully, size: 34320 bytes
+2026-02-05T20:54:22.227Z [DEBUG] Applied original permissions to temp file
+2026-02-05T20:54:22.227Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862225 to C:\Users\SeiyaKawashima\.claude.json
+2026-02-05T20:54:22.228Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-02-05T20:54:22.247Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862247
+2026-02-05T20:54:22.248Z [DEBUG] Preserving file permissions: 100666
+2026-02-05T20:54:22.249Z [DEBUG] Temp file written successfully, size: 34362 bytes
+2026-02-05T20:54:22.249Z [DEBUG] Applied original permissions to temp file
+2026-02-05T20:54:22.249Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862247 to C:\Users\SeiyaKawashima\.claude.json
+2026-02-05T20:54:22.250Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-02-05T20:54:22.251Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-05T20:54:22.252Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-05T20:54:22.252Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-05T20:54:22.285Z [DEBUG] Stats cache saved successfully (lastComputedDate: 2026-02-04)
+2026-02-05T20:54:22.285Z [DEBUG] Stats cache updated with 1 new sessions
+2026-02-05T20:54:22.294Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862294
+2026-02-05T20:54:22.295Z [DEBUG] Preserving file permissions: 100666
+2026-02-05T20:54:22.296Z [DEBUG] Temp file written successfully, size: 34362 bytes
+2026-02-05T20:54:22.296Z [DEBUG] Applied original permissions to temp file
+2026-02-05T20:54:22.296Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862294 to C:\Users\SeiyaKawashima\.claude.json
+2026-02-05T20:54:22.297Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-02-05T20:54:22.297Z [DEBUG] Passes eligibility cached for org 8a27b9f5-e9de-45a8-8064-b42569e64681: true
+2026-02-05T20:54:22.503Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-02-05T20:54:22.504Z [DEBUG] Found 0 hook matchers in settings
+2026-02-05T20:54:22.504Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-02-05T20:54:22.552Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862552
+2026-02-05T20:54:22.552Z [DEBUG] Preserving file permissions: 100666
+2026-02-05T20:54:22.553Z [DEBUG] Temp file written successfully, size: 34397 bytes
+2026-02-05T20:54:22.553Z [DEBUG] Applied original permissions to temp file
+2026-02-05T20:54:22.554Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862552 to C:\Users\SeiyaKawashima\.claude.json
+2026-02-05T20:54:22.554Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-02-05T20:54:22.556Z [DEBUG] Total plugin output styles loaded: 0
+2026-02-05T20:54:22.714Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-02-05T20:54:22.715Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-02-05T20:54:22.715Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-02-05T20:54:22.716Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-02-05T20:54:22.716Z [DEBUG] Sending 1 skills via attachment (initial, 1 total sent)
+2026-02-05T20:54:22.720Z [DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+2026-02-05T20:54:22.721Z [DEBUG] Found 0 hook matchers in settings
+2026-02-05T20:54:22.721Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-02-05T20:54:22.727Z [DEBUG] Auto tool search disabled: 0 tokens (threshold: 20000, 10% of context) [source: query]
+2026-02-05T20:54:22.736Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.31.593; cc_entrypoint=claude-vscode;
+2026-02-05T20:54:22.741Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-05T20:54:22.741Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-05T20:54:22.744Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-05T20:54:22.826Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862826
+2026-02-05T20:54:22.827Z [DEBUG] Preserving file permissions: 100666
+2026-02-05T20:54:22.827Z [DEBUG] Temp file written successfully, size: 34472 bytes
+2026-02-05T20:54:22.828Z [DEBUG] Applied original permissions to temp file
+2026-02-05T20:54:22.828Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude.json.tmp.54804.1770324862826 to C:\Users\SeiyaKawashima\.claude.json
+2026-02-05T20:54:22.829Z [DEBUG] File C:\Users\SeiyaKawashima\.claude.json written atomically
+2026-02-05T20:54:23.361Z [DEBUG] Successfully refreshed marketplace: claude-plugins-official
+2026-02-05T20:54:23.361Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-02-05T20:54:25.913Z [DEBUG] Stream started - received first chunk
+2026-02-05T20:54:28.359Z [DEBUG] Getting matching hook commands for Stop with query: undefined
+2026-02-05T20:54:28.360Z [DEBUG] Found 1 hook matchers in settings
+2026-02-05T20:54:28.360Z [DEBUG] Matched 1 unique hooks for query "no match query" (1 before deduplication)
+2026-02-05T20:54:28.663Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-02-05T20:54:28.667Z [DEBUG] Getting matching hook commands for SessionEnd with query: other
+2026-02-05T20:54:28.668Z [DEBUG] Found 0 hook matchers in settings
+2026-02-05T20:54:28.668Z [DEBUG] Matched 0 unique hooks for query "other" (0 before deduplication)
+2026-02-05T20:54:28.674Z [DEBUG] LSP server manager shut down successfully

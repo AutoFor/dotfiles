@@ -1,0 +1,8 @@
+2026-02-09T05:32:32.170Z [DEBUG] [init] configureGlobalMTLS starting
+2026-02-09T05:32:32.171Z [DEBUG] [init] configureGlobalMTLS complete
+2026-02-09T05:32:32.171Z [DEBUG] [init] configureGlobalAgents starting
+2026-02-09T05:32:32.171Z [DEBUG] [init] configureGlobalAgents complete
+2026-02-09T05:32:32.198Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-02-09T05:32:33.495Z [DEBUG] Getting matching hook commands for SessionEnd with query: other
+2026-02-09T05:32:33.495Z [DEBUG] Found 0 hook matchers in settings
+2026-02-09T05:32:33.495Z [DEBUG] Matched 0 unique hooks for query "other" (0 before deduplication)

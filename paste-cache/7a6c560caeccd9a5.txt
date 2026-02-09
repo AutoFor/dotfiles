@@ -1,0 +1,55 @@
+PowerShell 7.5.4
+Warning: PowerShell detected that you might be using a screen reader and has disabled PSReadLine for compatibility purposes. If you want to re-enable it, run 'Import-Module PSReadLine'.
+
+PS C:\Users\SeiyaKawashima> mkdir actions-runner; cd actions-runner
+
+    Directory: C:\Users\SeiyaKawashima
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----          2026/02/09    15:15                actions-runner
+
+PS C:\Users\SeiyaKawashima\actions-runner> Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v2.331.0/actions-runner-win-x64-2.331.0.zip -OutFile actions-runner-win-x64-2.331.0.zip
+PS C:\Users\SeiyaKawashima\actions-runner> if((Get-FileHash -Path actions-runner-win-x64-2.331.0.zip -Algorithm SHA256).Hash.ToUpper() -ne '473e74b86cd826e073f1c1f2c004d3fb9e6c9665d0d51710a23e5084a601c78a'.ToUpper()){ throw 'Computed checksum did not match' }
+PS C:\Users\SeiyaKawashima\actions-runner> Add-Type -AssemblyName System.IO.Compression.FileSystem ; [System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD/actions-runner-win-x64-2.331.0.zip", "$PWD")
+PS C:\Users\SeiyaKawashima\actions-runner> ./config.cmd --url https://github.com/AutoFor/uipath-xaml-visualizer --token BCYSS2LAA2UOGC3ZHH2ISQ3JRGERU
+
+--------------------------------------------------------------------------------
+|        ____ _ _   _   _       _          _        _   _                      |
+|       / ___(_) |_| | | |_   _| |__      / \   ___| |_(_) ___  _ __  ___      |
+|      | |  _| | __| |_| | | | | '_ \    / _ \ / __| __| |/ _ \| '_ \/ __|     |
+|      | |_| | | |_|  _  | |_| | |_) |  / ___ \ (__| |_| | (_) | | | \__ \     |
+|       \____|_|\__|_| |_|\__,_|_.__/  /_/   \_\___|\__|_|\___/|_| |_|___/     |
+|                                                                              |
+|                       Self-hosted runner registration                        |
+|                                                                              |
+--------------------------------------------------------------------------------
+
+# Authentication
+
+
+√ Connected to GitHub
+
+# Runner Registration
+
+Enter the name of the runner group to add this runner to: [press Enter for Default]
+
+Enter the name of runner: [press Enter for DESKTOP]
+
+This runner will have the following labels: 'self-hosted', 'Windows', 'X64'
+Enter any additional labels (ex. label-1,label-2): [press Enter to skip]
+
+√ Runner successfully added
+
+# Runner settings
+
+Enter name of work folder: [press Enter for _work]
+
+√ Settings Saved.
+
+Would you like to run the runner as service? (Y/N) [press Enter for N] Y
+Needs Administrator privileges for configuring runner as windows service.
+PS C:\Users\SeiyaKawashima\actions-runner> runs-on: self-hosted
+runs-on:: The term 'runs-on:' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+PS C:\Users\SeiyaKawashima\actions-runner>

@@ -1,0 +1,77 @@
+2026-01-20T12:19:17.865Z [DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude, C:\prj\ScrapingTickets_master\.claude...
+2026-01-20T12:19:17.872Z [DEBUG] [init] configureGlobalMTLS starting
+2026-01-20T12:19:17.873Z [DEBUG] [init] configureGlobalMTLS complete
+2026-01-20T12:19:17.873Z [DEBUG] [init] configureGlobalAgents starting
+2026-01-20T12:19:17.873Z [DEBUG] [init] configureGlobalAgents complete
+2026-01-20T12:19:17.899Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-01-20T12:19:17.909Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-01-20T12:19:17.909Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-01-20T12:19:17.909Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-01-20T12:19:17.915Z [DEBUG] Applying permission update: Adding 15 allow rule(s) to destination 'localSettings': ["Bash(dotnet build)","Bash(dotnet build:*)","Bash(git checkout:*)","Bash(git branch:*)","Bash(git add:*)","Bash(git merge:*)","Bash(powershell:*)","Bash(dir:*)","Bash(git clean:*)","Read(C:\\\\prj/**)","Read(C:\\\\prj/**)","Bash(dotnet test:*)","Bash(dotnet tool install:*)","Bash(git push:*)","Bash(wc:*)"]
+2026-01-20T12:19:17.915Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-01-20T12:19:17.942Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-01-20T12:19:17.942Z [DEBUG] Total LSP servers loaded: 0
+2026-01-20T12:19:17.942Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-01-20T12:19:17.942Z [DEBUG] LSP manager initialized with 0 servers
+2026-01-20T12:19:17.942Z [DEBUG] LSP server manager initialized successfully
+2026-01-20T12:19:17.943Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-01-20T12:19:17.943Z [DEBUG] [STARTUP] MCP configs loaded in 28ms
+2026-01-20T12:19:17.948Z [DEBUG] [STARTUP] Running setup()...
+2026-01-20T12:19:17.959Z [DEBUG] Stats cache is up to date
+2026-01-20T12:19:17.968Z [DEBUG] Loading skills from: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=[]
+2026-01-20T12:19:17.969Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-01-20T12:19:17.992Z [DEBUG] Loaded 0 installed plugins from C:\Users\SeiyaKawashima\.claude\plugins\installed_plugins.json
+2026-01-20T12:19:18.024Z [DEBUG] Error log sink initialized
+2026-01-20T12:19:18.045Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\a2530ce5-16ed-4b79-bb31-9776e4bbde62-agent-a2530ce5-16ed-4b79-bb31-9776e4bbde62.json.tmp.72476.1768911558045
+2026-01-20T12:19:18.045Z [DEBUG] Temp file written successfully, size: 2 bytes
+2026-01-20T12:19:18.045Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\a2530ce5-16ed-4b79-bb31-9776e4bbde62-agent-a2530ce5-16ed-4b79-bb31-9776e4bbde62.json.tmp.72476.1768911558045 to C:\Users\SeiyaKawashima\.claude\todos\a2530ce5-16ed-4b79-bb31-9776e4bbde62-agent-a2530ce5-16ed-4b79-bb31-9776e4bbde62.json
+2026-01-20T12:19:18.046Z [DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\a2530ce5-16ed-4b79-bb31-9776e4bbde62-agent-a2530ce5-16ed-4b79-bb31-9776e4bbde62.json written atomically
+2026-01-20T12:19:18.049Z [DEBUG] Using cached index entry for session: 92aebd89-ad6d-431f-9f34-da73be8e5648
+2026-01-20T12:19:18.050Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-01-20T12:19:18.050Z [DEBUG] Total plugin skills loaded: 0
+2026-01-20T12:19:18.050Z [DEBUG] Total plugin commands loaded: 0
+2026-01-20T12:19:18.050Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-01-20T12:19:18.088Z [DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, legacy commands: 0)
+2026-01-20T12:19:18.089Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 0 bundled skills
+2026-01-20T12:19:18.317Z [DEBUG] [STARTUP] setup() completed in 369ms
+2026-01-20T12:19:18.317Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-01-20T12:19:18.341Z [DEBUG] Session index: added 1, updated 1, removed 0 (total: 3)
+2026-01-20T12:19:18.342Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=C:\Users\SeiyaKawashima\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+2026-01-20T12:19:18.371Z [DEBUG] Total plugin agents loaded: 0
+2026-01-20T12:19:18.371Z [DEBUG] [STARTUP] Commands and agents loaded in 54ms
+2026-01-20T12:19:18.372Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-20T12:19:18.372Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-20T12:19:18.373Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-01-20T12:19:18.374Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-20T12:19:18.395Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-01-20T12:19:18.399Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-01-20T12:19:18.402Z [DEBUG] Grove: Using fresh cached config
+2026-01-20T12:19:18.434Z [DEBUG] Skills and commands included in Skill tool:
+2026-01-20T12:19:18.438Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-20T12:19:18.438Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-20T12:19:18.438Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-20T12:19:18.915Z [DEBUG] Successfully refreshed marketplace: claude-plugins-official
+2026-01-20T12:19:18.915Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-01-20T12:19:19.146Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-01-20T12:19:19.146Z [DEBUG] Found 0 hook matchers in settings
+2026-01-20T12:19:19.146Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-01-20T12:19:19.197Z [DEBUG] Total plugin output styles loaded: 0
+2026-01-20T12:19:19.361Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-01-20T12:19:19.362Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-01-20T12:19:19.362Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-01-20T12:19:19.362Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-01-20T12:19:19.366Z [DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+2026-01-20T12:19:19.366Z [DEBUG] Found 0 hook matchers in settings
+2026-01-20T12:19:19.366Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-01-20T12:19:19.372Z [DEBUG] Auto tool search disabled: 0 chars (threshold: 50000, 10% of context)
+2026-01-20T12:19:19.379Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-01-20T12:19:19.379Z [DEBUG] [API:auth] OAuth token check starting
+2026-01-20T12:19:19.379Z [DEBUG] [API:auth] OAuth token check complete
+2026-01-20T12:19:21.212Z [DEBUG] Stream started - received first chunk
+2026-01-20T12:19:24.507Z [DEBUG] Getting matching hook commands for Stop with query: undefined
+2026-01-20T12:19:24.507Z [DEBUG] Found 1 hook matchers in settings
+2026-01-20T12:19:24.507Z [DEBUG] Matched 1 unique hooks for query "no match query" (1 before deduplication)
+2026-01-20T12:19:24.851Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-01-20T12:19:24.855Z [DEBUG] Getting matching hook commands for SessionEnd with query: other
+2026-01-20T12:19:24.855Z [DEBUG] Found 0 hook matchers in settings
+2026-01-20T12:19:24.855Z [DEBUG] Matched 0 unique hooks for query "other" (0 before deduplication)

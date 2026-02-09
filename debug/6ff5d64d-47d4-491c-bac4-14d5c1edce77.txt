@@ -1,0 +1,82 @@
+2026-02-06T11:35:40.488Z [DEBUG] [init] configureGlobalMTLS starting
+2026-02-06T11:35:40.490Z [DEBUG] [init] configureGlobalMTLS complete
+2026-02-06T11:35:40.491Z [DEBUG] [init] configureGlobalAgents starting
+2026-02-06T11:35:40.491Z [DEBUG] [init] configureGlobalAgents complete
+2026-02-06T11:35:40.520Z [DEBUG] Using bash path: "C:\Program Files\Git\bin\bash.exe"
+2026-02-06T11:35:40.538Z [DEBUG] Applying permission update: Adding 5 allow rule(s) to destination 'localSettings': ["Bash(Select-Object Id,ProcessName,StartTime)","Bash(Format-Table)","Bash(npm run build:test:*)","Bash(./restart-server.bat)","Bash(git checkout:*)"]
+2026-02-06T11:35:40.539Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-02-06T11:35:40.573Z [DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+2026-02-06T11:35:40.574Z [DEBUG] [claudeai-mcp] Checking gate (cached)...
+2026-02-06T11:35:40.575Z [DEBUG] [claudeai-mcp] Gate returned: false
+2026-02-06T11:35:40.575Z [DEBUG] [claudeai-mcp] Disabled via gate
+2026-02-06T11:35:40.579Z [DEBUG] [ToolSearch:optimistic] mode=tst-auto, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-02-06T11:35:40.580Z [DEBUG] [STARTUP] Running setup()...
+2026-02-06T11:35:40.584Z [DEBUG] Loading skills from: managed=C:\ProgramData\ClaudeCode\.claude\skills, user=C:\Users\SeiyaKawashima\.claude\skills, project=[]
+2026-02-06T11:35:40.586Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-02-06T11:35:40.587Z [DEBUG] Error log sink initialized
+2026-02-06T11:35:40.594Z [DEBUG] getPluginSkills: Processing 0 enabled plugins
+2026-02-06T11:35:40.595Z [DEBUG] Total plugin skills loaded: 0
+2026-02-06T11:35:40.595Z [DEBUG] Total plugin commands loaded: 0
+2026-02-06T11:35:40.596Z [DEBUG] Registered 0 hooks from 0 plugins
+2026-02-06T11:35:40.622Z [DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, legacy commands: 0)
+2026-02-06T11:35:40.623Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 2 bundled skills
+2026-02-06T11:35:40.635Z [DEBUG] [STARTUP] setup() completed in 55ms
+2026-02-06T11:35:40.636Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-02-06T11:35:40.665Z [DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=C:\Users\SeiyaKawashima\AppData\Roaming\npm\node_modules\@anthropic-ai\claude-code\vendor\ripgrep\x64-win32\rg.exe)
+2026-02-06T11:35:40.690Z [DEBUG] Total plugin agents loaded: 0
+2026-02-06T11:35:40.691Z [DEBUG] [STARTUP] Commands and agents loaded in 55ms
+2026-02-06T11:35:40.692Z [DEBUG] [LSP MANAGER] initializeLspServerManager() called
+2026-02-06T11:35:40.693Z [DEBUG] [LSP MANAGER] Created manager instance, state=pending
+2026-02-06T11:35:40.693Z [DEBUG] [LSP MANAGER] Starting async initialization (generation 1)
+2026-02-06T11:35:40.695Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-06T11:35:40.695Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-06T11:35:40.697Z [DEBUG] Passes: Using fresh cached eligibility data
+2026-02-06T11:35:40.698Z [DEBUG] Total LSP servers loaded: 0
+2026-02-06T11:35:40.699Z [DEBUG] [STARTUP] MCP configs loaded in 159ms
+2026-02-06T11:35:40.700Z [DEBUG] [LSP SERVER MANAGER] getAllLspServers returned 0 server(s)
+2026-02-06T11:35:40.700Z [DEBUG] LSP manager initialized with 0 servers
+2026-02-06T11:35:40.701Z [DEBUG] LSP server manager initialized successfully
+2026-02-06T11:35:40.702Z [DEBUG] LSP notification handlers registered successfully for all 0 server(s)
+2026-02-06T11:35:40.702Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-06T11:35:40.836Z [DEBUG] Loaded 0 installed plugins from C:\Users\SeiyaKawashima\.claude\plugins\installed_plugins.json
+2026-02-06T11:35:40.837Z [DEBUG] Initialized versioned plugins system with 0 plugins
+2026-02-06T11:35:40.840Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-02-06T11:35:40.852Z [DEBUG] Watching for changes in setting files C:\Users\SeiyaKawashima\.claude\settings.json, C:\prj\uipath-github-xaml-visualizer\.claude\settings.json, C:\prj\uipath-github-xaml-visualizer\.claude\settings.local.json...
+2026-02-06T11:35:40.859Z [DEBUG] Writing to temp file: C:\Users\SeiyaKawashima\.claude\todos\6ff5d64d-47d4-491c-bac4-14d5c1edce77-agent-6ff5d64d-47d4-491c-bac4-14d5c1edce77.json.tmp.31376.1770377740859
+2026-02-06T11:35:40.860Z [DEBUG] Temp file written successfully, size: 2 bytes
+2026-02-06T11:35:40.861Z [DEBUG] Renaming C:\Users\SeiyaKawashima\.claude\todos\6ff5d64d-47d4-491c-bac4-14d5c1edce77-agent-6ff5d64d-47d4-491c-bac4-14d5c1edce77.json.tmp.31376.1770377740859 to C:\Users\SeiyaKawashima\.claude\todos\6ff5d64d-47d4-491c-bac4-14d5c1edce77-agent-6ff5d64d-47d4-491c-bac4-14d5c1edce77.json
+2026-02-06T11:35:40.862Z [DEBUG] File C:\Users\SeiyaKawashima\.claude\todos\6ff5d64d-47d4-491c-bac4-14d5c1edce77-agent-6ff5d64d-47d4-491c-bac4-14d5c1edce77.json written atomically
+2026-02-06T11:35:40.864Z [DEBUG] Grove: Using fresh cached config
+2026-02-06T11:35:40.976Z [DEBUG] Stats cache is up to date
+2026-02-06T11:35:41.007Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-06T11:35:41.008Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-06T11:35:41.008Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-06T11:35:41.264Z [DEBUG] Getting matching hook commands for SessionStart with query: startup
+2026-02-06T11:35:41.265Z [DEBUG] Found 0 hook matchers in settings
+2026-02-06T11:35:41.265Z [DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+2026-02-06T11:35:41.275Z [DEBUG] [SystemPrompt] path=simple proactive=false
+2026-02-06T11:35:41.319Z [DEBUG] Total plugin output styles loaded: 0
+2026-02-06T11:35:41.503Z [DEBUG] LSP Diagnostics: getLSPDiagnosticAttachments called
+2026-02-06T11:35:41.503Z [DEBUG] LSP Diagnostics: Checking registry - 0 pending
+2026-02-06T11:35:41.504Z [DEBUG] Hooks: Found 0 total hooks in registry
+2026-02-06T11:35:41.505Z [DEBUG] Hooks: checkForNewResponses returning 0 responses
+2026-02-06T11:35:41.505Z [DEBUG] Sending 1 skills via attachment (initial, 1 total sent)
+2026-02-06T11:35:41.510Z [DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+2026-02-06T11:35:41.510Z [DEBUG] Found 0 hook matchers in settings
+2026-02-06T11:35:41.511Z [DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+2026-02-06T11:35:41.518Z [DEBUG] Auto tool search disabled: 0 tokens (threshold: 20000, 10% of context) [source: query]
+2026-02-06T11:35:41.528Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.31.593; cc_entrypoint=claude-vscode;
+2026-02-06T11:35:41.533Z [DEBUG] [API:request] Creating client, ANTHROPIC_CUSTOM_HEADERS present: false, has Authorization header: false
+2026-02-06T11:35:41.534Z [DEBUG] [API:auth] OAuth token check starting
+2026-02-06T11:35:41.537Z [DEBUG] [API:auth] OAuth token check complete
+2026-02-06T11:35:42.319Z [DEBUG] Successfully refreshed marketplace: claude-plugins-official
+2026-02-06T11:35:42.320Z [DEBUG] Plugin autoupdate: checking installed plugins
+2026-02-06T11:35:43.537Z [DEBUG] Stream started - received first chunk
+2026-02-06T11:35:48.923Z [DEBUG] Getting matching hook commands for Stop with query: undefined
+2026-02-06T11:35:48.923Z [DEBUG] Found 1 hook matchers in settings
+2026-02-06T11:35:48.923Z [DEBUG] Matched 1 unique hooks for query "no match query" (1 before deduplication)
+2026-02-06T11:35:49.297Z [DEBUG] Hook output does not start with {, treating as plain text
+2026-02-06T11:35:49.302Z [DEBUG] Getting matching hook commands for SessionEnd with query: other
+2026-02-06T11:35:49.302Z [DEBUG] Found 0 hook matchers in settings
+2026-02-06T11:35:49.303Z [DEBUG] Matched 0 unique hooks for query "other" (0 before deduplication)
+2026-02-06T11:35:49.307Z [DEBUG] LSP server manager shut down successfully
