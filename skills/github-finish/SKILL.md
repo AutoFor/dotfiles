@@ -29,8 +29,8 @@ allowed-tools:
 PR と Issue の作成、紐付けを行います。
 
 **実行内容:**
+- ブランチ名から Issue を検出
 - プルリクエスト作成
-- イシュー作成
 - PR と Issue を紐づけ
 
 ### 2. `/github-pr-approve` スキルを実行
