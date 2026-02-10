@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # GitHub App Bot による PR 自動承認スクリプト
 # 使用方法: bash approve-pr.sh <owner> <repo> <pr_number>
-# 依存ツール: bash, openssl, curl, jq
+# 依存ツール: bash, openssl, curl
 
 set -euo pipefail
 
@@ -58,7 +58,8 @@ TOKEN_RESPONSE=$(curl -s -X POST \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   "https://api.github.com/app/installations/${GITHUB_APP_INSTALLATION_ID}/access_tokens")
 
-ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token // empty')
+# jq不要: sedでtokenフィールドを抽出
+ACCESS_TOKEN=$(echo "$TOKEN_RESPONSE" | sed -n 's/.*"token" *: *"\([^"]*\)".*/\1/p')
 
 if [ -z "$ACCESS_TOKEN" ]; then
   echo "Error: Failed to get installation access token" >&2

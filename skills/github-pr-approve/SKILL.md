@@ -166,7 +166,7 @@ git worktree remove ../claude-config-feature
 - Worktree を削除する前にコミット・プッシュが完了しているか確認
 - `git fetch --prune` でリモートで削除されたブランチをローカルからも削除
 - master ブランチに戻った後は、新しい作業を開始する前に必ず新しいブランチを作成する
-- approve-pr.sh は `bash`, `openssl`, `curl`, `jq` に依存する
+- approve-pr.sh は `bash`, `openssl`, `curl` に依存する
 
 ## よくある質問
 
