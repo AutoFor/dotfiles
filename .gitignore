@@ -7,7 +7,6 @@ tasks/
 # Claude Code内部設定ファイル
 .claude/
 .credentials.json
-settings.json
 settings.local.json
 
 # IDEとプラグイン
