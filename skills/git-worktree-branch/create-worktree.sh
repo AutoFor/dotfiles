@@ -4,8 +4,15 @@ set -euo pipefail
 # プロジェクト名を取得（リポジトリのディレクトリ名）
 PROJ=$(basename "$(git rev-parse --show-toplevel)")
 
-# タイムスタンプでブランチ名を生成
-BRANCH=$(date +%Y%m%d-%H%M%S)
+# タイムスタンプを生成
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+# テーマ引数があればブランチ名に付加（例: 20260210-143052-add-dark-mode）
+if [ $# -ge 1 ]; then
+  BRANCH="${TIMESTAMP}-$*"
+else
+  BRANCH="$TIMESTAMP"
+fi
 
 # Worktree ディレクトリのパス
 WORKTREE_DIR="../${PROJ}-${BRANCH}"
