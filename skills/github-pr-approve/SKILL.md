@@ -45,7 +45,7 @@ bash ~/.claude/skills/github-pr-approve/approve-pr.sh <owner> <repo> <PR番号>
 
 **例:**
 ```bash
-bash ~/.claude/skills/github-pr-approve/approve-pr.sh SeiyaKawashima my-repo 44
+bash ~/.claude/skills/github-pr-approve/approve-pr.sh <owner> my-repo 44
 ```
 
 **エラーが出た場合:**
@@ -139,7 +139,7 @@ git worktree remove ../myproject-feature
 
 ```bash
 # 1a. GitHub App Bot で PR を承認
-bash ~/.claude/skills/github-pr-approve/approve-pr.sh SeiyaKawashima my-repo 44
+bash ~/.claude/skills/github-pr-approve/approve-pr.sh <owner> my-repo 44
 
 # 1b. PR マージ
 gh pr merge 44 --squash

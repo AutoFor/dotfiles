@@ -75,3 +75,7 @@ __pycache__/
 venv/
 env/
 .env
+
+# クレデンシャルファイル（テンプレートの .example は追跡する）
+github-app-config.env
+mcp/mcp-config.json
