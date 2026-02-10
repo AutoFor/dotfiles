@@ -17,6 +17,7 @@
 | `/git-worktree-branch` | Git Worktree を使った新規ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
 | `/github-pr-create` | PR と Issue の作成・紐付け | 「作業が完了した」「PRを作成したい」 |
 | `/github-pr-approve` | PR の承認・マージと後処理 | 「PRを承認する」「マージして」 |
+| `/github-finish` | PR 作成から承認まで一気に実行 | 「全部やって」「一気に完了させて」 |
 | `/japanese-comments` | TypeScript/JavaScript コードに日本語コメント追加 | 「コードを書いて」「実装して」 |
 
 スキルは `~/.claude/skills/` に保存されています。
