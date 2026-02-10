@@ -1,3 +1,9 @@
+# 秘密鍵（GitHub App）
+*.pem
+
+# タスク管理
+tasks/
+
 # Claude Code内部設定ファイル
 .claude/
 .credentials.json
