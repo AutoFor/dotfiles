@@ -16,7 +16,7 @@ allowed-tools:
 
 このスキルは、作業完了時にブランチ名から Issue 番号を検出し、PR を作成して紐付けを行います。
 
-**Issue は `/git-worktree-branch` または `/git-worktree-from-issue` で事前に作成済みであることが前提です。**
+**Issue は `/git-worktree-branch`、`/git-worktree-from-issue`、または `/git-branch` で事前に作成済みであることが前提です。**
 
 ## 前提条件の確認
 

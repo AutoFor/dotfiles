@@ -90,10 +90,21 @@ gh issue close <Issue番号>
 
 作業ブランチから master ブランチに戻る。
 
+**まず Worktree を使用しているか判定する:**
+
 ```bash
-cd ../<メインディレクトリ>  # メインリポジトリに戻る（Worktree使用時）
-git checkout master
+git worktree list
 ```
+
+- **出力が2行以上** → Worktree 使用中:
+  ```bash
+  cd ../<メインディレクトリ>  # メインリポジトリに戻る
+  git checkout master
+  ```
+- **出力が1行のみ** → 通常ブランチ:
+  ```bash
+  git checkout master
+  ```
 
 ### 4. リモートの最新状態を取得と不要ブランチ削除
 
@@ -104,18 +115,23 @@ git pull
 git fetch --prune
 ```
 
-### 5. Worktree の削除（Worktree使用時のみ）
+### 5. 後片付け（Worktree / ブランチの削除）
 
-Git Worktree を使用していた場合、作業ディレクトリを削除する。
+Step 3 で判定した結果に基づいて後片付けを行う。
 
-```bash
-git worktree remove ../<プロジェクト名>-<ブランチ種別>
-```
+- **Worktree 使用中の場合:** Worktree を削除する
+  ```bash
+  git worktree remove ../<プロジェクト名>-<ブランチ種別>
+  ```
+  **例:**
+  ```bash
+  git worktree remove ../myproject-feature
+  ```
 
-**例:**
-```bash
-git worktree remove ../myproject-feature
-```
+- **通常ブランチの場合:** ローカルブランチを削除する
+  ```bash
+  git branch -d <ブランチ名>
+  ```
 
 ### 6. 完了メッセージをユーザーに表示
 
@@ -130,9 +146,9 @@ git worktree remove ../myproject-feature
 - Issue #[Issue番号] をクローズ
 - master ブランチに切り替え
 - リモートの最新状態を取得
-- Worktree を削除（使用時のみ）
+- Worktree を削除 / ローカルブランチを削除
 
-新しい作業を開始する場合は、`/git-worktree-branch` スキルをご利用ください。
+新しい作業を開始する場合は、`/git-worktree-branch` または `/git-branch` スキルをご利用ください。
 ```
 
 ## 実行例
