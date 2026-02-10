@@ -15,7 +15,8 @@
 | スキル名 | 説明 | 呼び出し方法 |
 |---------|------|------------|
 | `/git-worktree-branch` | Git Worktree を使った新規ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
-| `/github-finish` | 作業完了時の PR・Issue 作成フロー | 「作業が完了した」「PRを作成したい」 |
+| `/github-pr-create` | PR と Issue の作成・紐付け | 「作業が完了した」「PRを作成したい」 |
+| `/github-pr-approve` | PR の承認・マージと後処理 | 「PRを承認する」「マージして」 |
 | `/japanese-comments` | TypeScript/JavaScript コードに日本語コメント追加 | 「コードを書いて」「実装して」 |
 
 スキルは `~/.claude/skills/` に保存されています。
@@ -37,27 +38,37 @@
 2. Worktree ディレクトリに移動
 3. コード修正
 4. コミット & プッシュ
-5. プルリクエスト & Issue 作成
-6. PR マージ後に Worktree 削除
+5. `/github-pr-create` で PR・Issue 作成
+6. `/github-pr-approve` で PR マージ・後処理
 
 ---
 
 ## 📋 GitHub 運用ルール
 
-**詳細は `/github-finish` スキルを参照してください。**
+作業完了時は、2つのスキルを順番に実行します。
 
-### 作業完了後の必須手順
+### ステップ1: PR・Issue 作成 (`/github-pr-create`)
 
-作業（テーマ）が完了したら、以下の順序で実行：
+**詳細は `/github-pr-create` スキルを参照してください。**
+
+作業完了時に実行：
 
 1. プルリクエスト作成
 2. イシュー作成
 3. PR と Issue を紐づけ
 4. ユーザーに確認を依頼
-5. PR 承認とマージ（ユーザー承認後）
-6. Issue クローズ
-7. master ブランチに戻る
-8. リモートの最新状態を取得
+
+### ステップ2: PR 承認・マージ (`/github-pr-approve`)
+
+**詳細は `/github-pr-approve` スキルを参照してください。**
+
+ユーザー承認後に実行：
+
+1. PR 承認とマージ
+2. Issue クローズ
+3. master ブランチに戻る
+4. リモートの最新状態を取得
+5. Worktree 削除（使用時のみ）
 
 ---
 
