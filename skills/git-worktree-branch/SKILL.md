@@ -6,6 +6,7 @@ user-invocable: true
 allowed-tools:
   - Bash
   - Read
+  - mcp__github__get_me
 ---
 
 # Git Worktree ブランチ運用スキル
@@ -99,12 +100,6 @@ cd ../<プロジェクト名>-<ブランチ種別>
 - Worktreeを削除する前にコミット・プッシュを忘れずに行う
 - `.git` フォルダは元のリポジトリで共有される
 - PRマージ後は忘れずにWorktreeを削除する
-
-## 例外: Worktree を使わなくてもよいケース
-
-以下の場合は通常の `git checkout -b` でも可：
-- ドキュメントの軽微な修正（README.md、CLAUDE.mdなど）
-- 設定ファイルの更新（.claude/settings.local.jsonなど）
 
 ## Worktree 一覧の確認
 
