@@ -20,6 +20,14 @@ session-commits.jsonl
 session-archives/
 debug/
 
+# キャッシュと履歴
+cache/
+file-history/
+paste-cache/
+plans/
+history.jsonl
+stats-cache.json
+
 # Windows
 Thumbs.db
 Desktop.ini
