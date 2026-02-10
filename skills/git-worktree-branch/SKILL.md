@@ -1,39 +1,68 @@
 ---
 name: git-worktree-branch
-description: 新しい作業を開始するときに Git Worktree とブランチを即座に作成する。質問なしで即実行。
+description: 新しい作業を開始するときに GitHub Issue を作成し、Git Worktree とブランチを作成する。
 disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Bash
+  - mcp__github__issue_write
+  - mcp__github__get_me
 ---
 
-# Git Worktree ブランチ即時作成スキル
-
-呼び出されたら**質問せずに即座に以下を実行**する。
+# Git Worktree ブランチ作成スキル（Issue-first）
 
 ## 引数の処理
 
-- **引数なし** (`/git-worktree-branch`): タイムスタンプのみのブランチを作成（従来通り）
-- **引数あり** (`/git-worktree-branch ダークモード対応`): テーマを英語スラッグに変換してブランチ名に付加
+- **引数なし** (`/git-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
+- **引数あり** (`/git-worktree-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
 
-**テーマの変換ルール:**
-1. ユーザーの引数（日本語OK）を短い英語スラッグに変換する
-2. 小文字、ハイフン区切り、英数字のみ（例: `add-dark-mode`, `fix-login-bug`）
-3. 3〜5単語程度に簡潔にまとめる
+## 実行フロー（引数ありの場合）
 
-**ブランチ名の例:**
-- 引数なし → `20260210-143052`
-- `ダークモード追加` → `20260210-143052-add-dark-mode`
-- `ログインバグ修正` → `20260210-143052-fix-login-bug`
-
-## 実行
+### 1. リポジトリ情報を取得
 
 ```bash
-# 引数なしの場合
-bash ~/.claude/skills/git-worktree-branch/create-worktree.sh
-
-# 引数ありの場合（英語スラッグに変換済みの値を渡す）
-bash ~/.claude/skills/git-worktree-branch/create-worktree.sh <英語スラッグ>
+git remote -v
 ```
 
-スクリプト実行後、出力されたディレクトリに `cd` する。
+出力から `owner` と `repo` を特定する。
+
+### 2. GitHub Issue を作成
+
+`mcp__github__issue_write` を使用：
+- method: `create`
+- owner: （リポジトリオーナー）
+- repo: （リポジトリ名）
+- title: ユーザーの引数をそのまま使用
+- body: 作業の概要を簡潔に記載
+
+### 3. ブランチ名を生成
+
+1. ユーザーの引数を英語スラッグに変換する
+   - 小文字、ハイフン区切り、英数字のみ
+   - 3〜5単語程度に簡潔にまとめる
+   - 例: `ダークモード追加` → `add-dark-mode`
+2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
+   - 例: `issue-17-add-dark-mode`
+
+### 4. Worktree を作成
+
+```bash
+bash ~/.claude/skills/git-worktree-branch/create-worktree.sh <ブランチ名>
+```
+
+### 5. Worktree ディレクトリに移動
+
+スクリプト出力のディレクトリに `cd` する。
+
+### 6. 完了メッセージ
+
+以下の形式で出力する：
+
+```
+処理が終了しました。
+
+Issue: #<Issue番号> - <Issueタイトル>
+ブランチ: <ブランチ名>
+```
+
+**これ以上何も出力しない。コード編集・次のステップの提案は一切しない。**
