@@ -9,7 +9,13 @@ allowed-tools:
 
 # GitHub 作業完了フロースキル（自動実行版）
 
-このスキルは、`/github-pr-create` と `/github-pr-approve` を順番に実行し、作業完了から PR マージまでを一気に行います。
+このスキルは、`/github-pr-create` と `/github-pr-approve` を **Skill ツールで順番に呼び出して** 実行し、作業完了から PR マージまでを一気に行います。
+
+## 絶対禁止事項
+
+- **`gh pr review --approve` は絶対に使用しないこと。** 自分の PR は GitHub の仕様上承認できないため、必ず失敗する。
+- **Bash ツールで直接 PR 承認やマージを行わないこと。** 必ず `/github-pr-approve` スキルを Skill ツールで呼び出すこと。
+- **サブスキルの処理を自分で再実装しないこと。** 必ず Skill ツールで委譲すること。
 
 ## 前提条件の確認
 
@@ -22,9 +28,9 @@ allowed-tools:
 
 ## 実行手順
 
-このスキルは以下の2つのスキルを順番に呼び出します：
+**重要: 以下の各ステップは必ず Skill ツールを使って対応するスキルを呼び出すこと。直接 Bash コマンドで実行してはならない。**
 
-### 1. `/github-pr-create` スキルを実行
+### 1. Skill ツールで `/github-pr-create` を呼び出す
 
 PR と Issue の作成、紐付けを行います。
 
@@ -33,12 +39,13 @@ PR と Issue の作成、紐付けを行います。
 - プルリクエスト作成
 - PR と Issue を紐づけ
 
-### 2. `/github-pr-approve` スキルを実行
+### 2. Skill ツールで `/github-pr-approve` を呼び出す
 
-PR の承認・マージと後処理を行います。
+PR の承認・マージと後処理を行います。このスキルは内部で `approve-pr.sh`（GitHub App Bot）を使用して PR を承認する。
 
 **実行内容:**
-- PR 承認とマージ
+- GitHub App Bot による PR 承認（`approve-pr.sh` を使用）
+- PR マージ
 - Issue クローズ
 - master ブランチに戻る
 - リモートの最新状態を取得
