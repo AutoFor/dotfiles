@@ -5,30 +5,34 @@ disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Skill
+  - Bash
 ---
 
 # GitHub 作業完了フロースキル（自動実行版）
 
-このスキルは、`/github-pr-create` と `/github-pr-approve` を **Skill ツールで順番に呼び出して** 実行し、作業完了から PR マージまでを一気に行います。
+このスキルは、未コミットの変更があれば `/smart-commit` でコミットし、`/github-pr-create` と `/github-pr-approve` を **Skill ツールで順番に呼び出して** 実行し、作業完了から PR マージまでを一気に行います。
 
 ## 絶対禁止事項
 
 - **`gh pr review --approve` は絶対に使用しないこと。** 自分の PR は GitHub の仕様上承認できないため、必ず失敗する。
 - **Bash ツールで直接 PR 承認やマージを行わないこと。** 必ず `/github-pr-approve` スキルを Skill ツールで呼び出すこと。
 - **サブスキルの処理を自分で再実装しないこと。** 必ず Skill ツールで委譲すること。
-
-## 前提条件の確認
-
-以下を確認してから手順を開始する：
-
-- ✅ 作業ブランチに必要なコミットがすべて含まれている
-- ✅ リモートリポジトリに `git push` 済みである
-- ✅ コードが正常に動作する
-- ✅ **ユーザーの承認を得ている（確認なしで自動実行される）**
+- **直接 `git add && git commit` を実行しないこと。** 未コミットの変更がある場合は必ず `/smart-commit` スキルを Skill ツールで呼び出すこと。
 
 ## 実行手順
 
 **重要: 以下の各ステップは必ず Skill ツールを使って対応するスキルを呼び出すこと。直接 Bash コマンドで実行してはならない。**
+
+### 0. 未コミット・未プッシュの変更を確認
+
+```bash
+git status --short
+git log @{u}..HEAD --oneline 2>/dev/null
+```
+
+- **未コミットの変更がある場合** → Skill ツールで `/smart-commit` を呼び出してコミットする
+- **未プッシュのコミットがある場合** → `git push` を実行する
+- **すべてコミット・プッシュ済みの場合** → ステップ1へ進む
 
 ### 1. Skill ツールで `/github-pr-create` を呼び出す
 
