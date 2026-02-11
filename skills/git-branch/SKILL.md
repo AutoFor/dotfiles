@@ -1,22 +1,21 @@
 ---
 name: git-branch
-description: 新しい作業を開始するときに GitHub Issue を作成し、ブランチを作成する（Worktree なし）。main 上の未プッシュコミットがある場合は自動でブランチに移植する。
+description: 作業中の変更内容（diff）から自動で GitHub Issue を作成し、ブランチを作成する（Worktree なし）。main 上の未プッシュコミットがある場合は自動でブランチに移植する。
 disable-model-invocation: false
 user-invocable: true
 allowed-tools:
   - Bash
+  - Skill
   - mcp__github__issue_write
   - mcp__github__get_me
 ---
 
-# Git ブランチ作成スキル（Issue-first、Worktree なし）
+# Git ブランチ作成スキル（diff ベース自動命名、Worktree なし）
 
-## 引数の処理
+引数は一切使用しない（渡されても無視する）。
+常に現在の変更内容から Issue タイトルを自動生成する。
 
-- **引数なし** (`/git-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
-- **引数あり** (`/git-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
-
-## 実行フロー（引数ありの場合）
+## 実行フロー
 
 ### 1. リポジトリ情報を取得
 
@@ -26,34 +25,63 @@ git remote -v
 
 出力から `owner` と `repo` を特定する。
 
-### 2. GitHub Issue を作成
+### 2. 変更内容を分析
+
+以下のコマンドで現在の作業内容を収集する：
+
+```bash
+# デフォルトブランチ名を判定
+git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
+
+# 変更ファイル一覧
+git status --short
+
+# unstaged の差分
+git diff
+
+# staged の差分
+git diff --cached
+
+# 未プッシュコミット
+git log origin/<デフォルトブランチ>..HEAD --oneline
+```
+
+**変更が何もない場合**（status が空、diff が空、未プッシュコミットもなし）:
+「変更がありません。先にコードを変更してから実行してください。」と表示して **停止する。それ以上何もしない。**
+
+### 3. Issue タイトルを自動生成
+
+ステップ 2 で収集した diff・status・コミットログを分析し、作業内容を要約して日本語で簡潔な Issue タイトルを生成する。
+
+- 例: `hooks設定を新フォーマットに修正`
+- 例: `ダークモード対応を追加`
+- 例: `ログイン画面のバリデーションを改善`
+
+### 4. GitHub Issue を作成
 
 `mcp__github__issue_write` を使用：
 - method: `create`
 - owner: （リポジトリオーナー）
 - repo: （リポジトリ名）
-- title: ユーザーの引数をそのまま使用
-- body: 作業の概要を簡潔に記載
+- title: ステップ 3 で自動生成したタイトル
+- body: diff の内容に基づいた作業の概要を簡潔に記載
 
-### 3. ブランチ名を生成
+### 5. ブランチ名を生成
 
-1. ユーザーの引数を英語スラッグに変換する
+1. ステップ 3 のタイトルを英語スラッグに変換する
    - 小文字、ハイフン区切り、英数字のみ
    - 3〜5単語程度に簡潔にまとめる
-   - 例: `ダークモード追加` → `add-dark-mode`
+   - 例: `hooks設定を新フォーマットに修正` → `fix-hooks-config-format`
 2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
-   - 例: `issue-17-add-dark-mode`
+   - 例: `issue-17-fix-hooks-config-format`
 
-### 4. ブランチを作成
+### 6. ブランチを作成
 
 現在のブランチと未プッシュコミットの状態を判定し、適切な方法でブランチを作成する。
 
 #### ケース A: main/master にいて、未プッシュコミットがある場合
 
 ```bash
-# デフォルトブランチ名を判定（main または master）
-git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@'
-
 # 現在のブランチを確認
 git branch --show-current
 
@@ -73,7 +101,17 @@ git branch -f <デフォルトブランチ> origin/<デフォルトブランチ>
 git checkout -b <ブランチ名>
 ```
 
-### 5. 完了メッセージ
+### 7. 変更をコミット
+
+未コミットの変更がある場合、`/smart-commit` スキルを実行してコミットを作成する。
+
+```bash
+git status --short
+```
+
+変更がなければこのステップをスキップする。
+
+### 8. 完了メッセージ
 
 以下の形式で出力する：
 

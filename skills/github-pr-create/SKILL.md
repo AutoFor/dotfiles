@@ -6,6 +6,7 @@ user-invocable: true
 allowed-tools:
   - Bash
   - Read
+  - Skill
   - mcp__github__create_pull_request
   - mcp__github__update_pull_request
   - mcp__github__issue_read
@@ -22,11 +23,28 @@ allowed-tools:
 
 以下を確認してから手順を開始する：
 
-- 作業ブランチに必要なコミットがすべて含まれている
-- リモートリポジトリに `git push` 済みである
 - コードが正常に動作する
+- 未コミットの変更がある場合はステップ0で自動コミットする
 
 ## 実行手順
+
+### 0. コミットとプッシュ
+
+未コミットの変更があるか確認する：
+
+```bash
+git status --short
+```
+
+**変更がある場合:**
+`/smart-commit` スキルを実行してコミットを作成する。
+
+**コミット完了後（または変更がない場合）:**
+リモートにプッシュする：
+
+```bash
+git push -u origin <ブランチ名>
+```
 
 ### 1. ブランチ名から Issue 番号を抽出
 
