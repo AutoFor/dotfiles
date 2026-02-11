@@ -18,6 +18,7 @@
 |---------|------|------------|
 | `/git-worktree-branch` | 新規 Issue + ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
 | `/git-worktree-from-issue` | **既存Issue**からブランチ作成 | 「Issue #123から作業したい」「既存のIssueで作業する」 |
+| `/git-branch-finish` | diff からブランチ作成→PR→マージまで一気通貫 | 「ブランチ作成から全部やって」「diffから一気に完了させて」 |
 
 #### GitHub PR スキル
 
