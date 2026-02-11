@@ -13,6 +13,10 @@ allowed-tools:
 
 このスキルは、GitHub App Bot による PR 承認、マージ、その後の後処理を行う標準手順を提供します。
 
+## 絶対禁止事項
+
+**`gh pr review --approve` は絶対に使用しないこと。** 自分の PR は GitHub の仕様上承認できないため、必ず失敗する。PR の承認には必ず `approve-pr.sh`（GitHub App Bot）を使用すること。
+
 ## 前提条件の確認
 
 以下を確認してから手順を開始する：
@@ -177,6 +181,7 @@ git worktree remove ../claude-config-feature
 
 ## 注意事項
 
+- **`gh pr review --approve` は絶対に使用禁止** — 必ず `approve-pr.sh` を使うこと
 - **必ずユーザーの承認を得てから実行する**
 - **初回セットアップが必要** — GitHub App 作成・インストール・設定ファイル配置が完了していること
 - Worktree を削除する前にコミット・プッシュが完了しているか確認
