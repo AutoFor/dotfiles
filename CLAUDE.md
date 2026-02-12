@@ -48,11 +48,12 @@
 
 1. Issue番号を指定（例: `/git-worktree-from-issue 123`）または対話的に選択
 2. Issueタイトルから自動でブランチ名を生成（`feature/issue-123-xxx`形式）
-3. Git Worktreeを作成して作業開始
+3. Git Worktreeを作成し、Draft PR を自動作成して作業開始
 
 **メリット:**
 - Issue番号がブランチ名に含まれる → PR作成時に自動検出
 - 既存の課題管理と連携しやすい
+- Draft PR により作業の可視化・CI の早期実行が可能
 
 #### パターン2: 新規作業から開始（Issue-first）
 
@@ -60,15 +61,16 @@
 
 1. 作業内容を引数で指定（例: `/git-worktree-branch ダークモード追加`）
 2. GitHub Issue を自動作成
-3. ブランチ名 `issue-<番号>-<スラッグ>` で Git Worktree を作成して作業開始
+3. ブランチ名 `issue-<番号>-<スラッグ>` で Git Worktree を作成し、Draft PR を自動作成して作業開始
 
 **メリット:**
 - 作業開始時に必ず Issue が存在する
 - ブランチ名に Issue 番号が含まれる → PR作成時に自動検出
+- Draft PR により作業の可視化・CI の早期実行が可能
 
 ### 作業完了時の手順
 
-#### ステップ1: PR 作成 (`/github-pr-create`)
+#### ステップ1: Draft PR を Ready for Review に変更 (`/github-pr-create`)
 
 **詳細は `/github-pr-create` スキルを参照してください。**
 
@@ -76,7 +78,7 @@
 
 1. ブランチ名から Issue 番号を検出
 2. Issue の存在を確認
-3. プルリクエスト作成（`Closes #<番号>` で紐付け）
+3. 既存の Draft PR を検索し、Ready for Review に変更（Draft PR がない場合は新規 PR を作成）
 4. ユーザーに確認を依頼
 
 #### ステップ2: PR 承認・マージ (`/github-pr-approve`)

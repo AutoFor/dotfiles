@@ -7,6 +7,7 @@ allowed-tools:
   - Bash
   - mcp__github__search_issues
   - mcp__github__issue_read
+  - mcp__github__create_pull_request
   - mcp__github__get_me
 ---
 
@@ -108,21 +109,45 @@ Worktree ディレクトリへの移動コマンドを実行:
 cd ../<プロジェクト名>-<ブランチ種別>
 ```
 
+### 5a. 空コミットを作成して push
+
+Worktree 作成直後は差分がないため、空コミットでブランチをリモートに push する：
+
+```bash
+git commit --allow-empty -m "chore: start work on #<Issue番号>"
+git push -u origin <ブランチ名>
+```
+
+### 5b. Draft PR を作成
+
+`mcp__github__create_pull_request` で Draft PR を作成する（`draft: true` を指定）：
+- title: `WIP: <Issueタイトル>`
+- body: `Closes #<Issue番号>\n\n作業中...`
+- head: `<ブランチ名>`
+- base: main（または master）
+- draft: true
+
+**フォールバック:** `mcp__github__create_pull_request` が `draft` パラメータをサポートしない場合：
+
+```bash
+gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
+
+作業中..."
+```
+
 ### 6. 作業開始の確認メッセージ
 
 ユーザーに以下のメッセージを表示:
 
 ```
-✅ Issue #<番号> から作業を開始しました。
+Issue #<番号> から作業を開始しました。
 
-📋 Issue: <タイトル>
-🌿 ブランチ: <ブランチ名>
-📁 作業ディレクトリ: ../<プロジェクト名>-<ブランチ種別>
+Issue: <タイトル>
+ブランチ: <ブランチ名>
+作業ディレクトリ: ../<プロジェクト名>-<ブランチ種別>
+Draft PR: #<PR番号>
 
-作業完了後は以下の手順を実行してください:
-1. 変更をコミット
-2. リモートにプッシュ: git push -u origin <ブランチ名>
-3. PRを作成: /github-pr-create スキルを使用（既存Issue自動検出）
+作業完了後は `/github-pr-create` で Draft PR を Ready for Review に変更してください。
 ```
 
 ## 実行例
@@ -143,7 +168,15 @@ git worktree add ../claude-config-feature feature/issue-123-preview-feature
 # 4. ディレクトリに移動
 cd ../claude-config-feature
 
-# 5. 確認メッセージを表示
+# 5a. 空コミット + push
+git commit --allow-empty -m "chore: start work on #123"
+git push -u origin feature/issue-123-preview-feature
+
+# 5b. Draft PR を作成
+# mcp__github__create_pull_request で Draft PR を作成
+# → Draft PR #124 作成
+
+# 6. 確認メッセージを表示
 # "Issue #123 から作業を開始しました..."
 ```
 
@@ -163,8 +196,8 @@ cd ../claude-config-feature
 
 ## 次のステップ
 
-作業完了後は、以下のスキルを使用してPRを作成:
-- `/github-pr-create` - 既存Issue自動検出してPR作成
+作業完了後は、以下のスキルを使用して Draft PR を Ready for Review に変更:
+- `/github-pr-create` - 既存 Draft PR を検出して Ready for Review に変更（Draft PR がない場合は新規作成）
 
 ## Worktree 一覧の確認
 
