@@ -7,6 +7,7 @@ allowed-tools:
   - Bash
   - Skill
   - mcp__github__issue_write
+  - mcp__github__create_pull_request
   - mcp__github__get_me
 ---
 
@@ -111,6 +112,29 @@ git status --short
 
 変更がなければこのステップをスキップする。
 
+### 7a. push して Draft PR を作成
+
+smart-commit で既にコミットがあるため空コミットは不要。
+
+```bash
+git push -u origin <ブランチ名>
+```
+
+`mcp__github__create_pull_request` で Draft PR を作成する（`draft: true` を指定）：
+- title: `WIP: <Issueタイトル>`
+- body: `Closes #<Issue番号>\n\n作業中...`
+- head: `<ブランチ名>`
+- base: main（または master）
+- draft: true
+
+**フォールバック:** `mcp__github__create_pull_request` が `draft` パラメータをサポートしない場合：
+
+```bash
+gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
+
+作業中..."
+```
+
 ### 8. 完了メッセージ
 
 以下の形式で出力する：
@@ -122,6 +146,7 @@ git status --short
 
 Issue: #<Issue番号> - <Issueタイトル>
 ブランチ: <ブランチ名>
+Draft PR: #<PR番号>
 
 <デフォルトブランチ> にあった未プッシュコミット（<コミット数>件）をブランチに移植しました。
 <デフォルトブランチ> は origin/<デフォルトブランチ> にリセットされました。
@@ -134,6 +159,7 @@ Issue: #<Issue番号> - <Issueタイトル>
 
 Issue: #<Issue番号> - <Issueタイトル>
 ブランチ: <ブランチ名>
+Draft PR: #<PR番号>
 ```
 
 **これ以上何も出力しない。コード編集・次のステップの提案は一切しない。**

@@ -6,6 +6,7 @@ user-invocable: true
 allowed-tools:
   - Bash
   - mcp__github__issue_write
+  - mcp__github__create_pull_request
   - mcp__github__get_me
 ---
 
@@ -54,6 +55,32 @@ bash ~/.claude/skills/git-worktree-branch/create-worktree.sh <ブランチ名>
 
 スクリプト出力のディレクトリに `cd` する。
 
+### 5a. 空コミットを作成して push
+
+Worktree 作成直後は差分がないため、空コミットでブランチをリモートに push する：
+
+```bash
+git commit --allow-empty -m "chore: start work on #<Issue番号>"
+git push -u origin <ブランチ名>
+```
+
+### 5b. Draft PR を作成
+
+`mcp__github__create_pull_request` で Draft PR を作成する（`draft: true` を指定）：
+- title: `WIP: <Issueタイトル>`
+- body: `Closes #<Issue番号>\n\n作業中...`
+- head: `<ブランチ名>`
+- base: main（または master）
+- draft: true
+
+**フォールバック:** `mcp__github__create_pull_request` が `draft` パラメータをサポートしない場合：
+
+```bash
+gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
+
+作業中..."
+```
+
 ### 6. 完了メッセージ
 
 以下の形式で出力する：
@@ -63,6 +90,7 @@ bash ~/.claude/skills/git-worktree-branch/create-worktree.sh <ブランチ名>
 
 Issue: #<Issue番号> - <Issueタイトル>
 ブランチ: <ブランチ名>
+Draft PR: #<PR番号>
 ```
 
 **これ以上何も出力しない。コード編集・次のステップの提案は一切しない。**
