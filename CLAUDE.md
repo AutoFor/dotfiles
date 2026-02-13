@@ -70,7 +70,7 @@
 
 ### 作業完了時の手順
 
-#### ステップ1: Draft PR を Ready for Review に変更 (`/github-pr-create`)
+#### ステップ1: PR 作成から承認・マージまで (`/github-pr-create`)
 
 **詳細は `/github-pr-create` スキルを参照してください。**
 
@@ -79,13 +79,13 @@
 1. ブランチ名から Issue 番号を検出
 2. Issue の存在を確認
 3. 既存の Draft PR を検索し、Ready for Review に変更（Draft PR がない場合は新規 PR を作成）
-4. ユーザーに確認を依頼
+4. 自動で `/github-pr-approve` を呼び出して承認・マージまで進む
 
-#### ステップ2: PR 承認・マージ (`/github-pr-approve`)
+#### （参考）PR 承認・マージ (`/github-pr-approve`)
 
 **詳細は `/github-pr-approve` スキルを参照してください。**
 
-ユーザー承認後に実行：
+`/github-pr-create` から自動で呼び出される：
 
 1. PR 承認とマージ
 2. Issue クローズ（自動）
