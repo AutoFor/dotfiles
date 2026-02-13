@@ -85,6 +85,64 @@ ls -la ~/.claude/CLAUDE.md  # → ~/dotfiles/claude/CLAUDE.md
 # 新しいターミナルを開いて動作確認
 ```
 
+## 日常の使い方（設定を変更したいとき）
+
+### シンボリックリンクの仕組み
+
+`install.sh` を実行すると、各設定ファイルに「ショートカット」（シンボリックリンク）が作られる。
+
+```
+~/.zshrc  →  ~/dotfiles/wsl/.zshrc
+（ショートカット）   （本体ファイル）
+```
+
+どちらを開いても同じファイルが表示されるが、**Git で管理されているのは `~/dotfiles/` の中**。
+
+### 編集するファイル
+
+設定を変えたいときは `~/dotfiles/` 内のファイルを編集する。
+
+```bash
+# 例: zshrc を編集
+vim ~/dotfiles/wsl/.zshrc
+
+# 例: WezTerm の設定を変更
+vim ~/dotfiles/windows/.wezterm.lua
+
+# 例: Claude Code の設定を変更
+vim ~/dotfiles/claude/CLAUDE.md
+```
+
+| 編集するファイル | 実際に効く場所 |
+|---|---|
+| `~/dotfiles/wsl/.zshrc` | `~/.zshrc` |
+| `~/dotfiles/wsl/.gitconfig` | `~/.gitconfig` |
+| `~/dotfiles/wsl/.bashrc` | `~/.bashrc` |
+| `~/dotfiles/windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
+| `~/dotfiles/windows/.gitconfig` | Windows の `~/.gitconfig` |
+| `~/dotfiles/claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
+| `~/dotfiles/claude/settings.json` | `~/.claude/settings.json` |
+
+### 変更を GitHub に保存する
+
+```bash
+cd ~/dotfiles
+git status                          # 変更を確認
+git add -A                          # 変更をステージング
+git commit -m "zshrc にエイリアスを追加"  # コミット
+git push                            # GitHub にプッシュ
+```
+
+### 別のPCに移すとき
+
+```bash
+git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh
+```
+
+この3行だけで全設定が復元される。
+
 ## 注意事項
 
 - WSL `.gitconfig` 内のパス（`/home/seiya-kawashima/...`）は別PCではユーザー名に合わせて変更が必要
