@@ -1,38 +1,34 @@
-# 秘密鍵（GitHub App）
+# ===== シークレット =====
 *.pem
-
-# タスク管理
-tasks/
-
-# Claude Code内部設定ファイル
-.claude/
 .credentials.json
+hosts.yml
+github-app-config.env
 settings.local.json
 
-# IDEとプラグイン
-ide/
-plugins/
-
-# プロジェクトファイル
-projects/
-
-# ログとスナップショット
+# ===== Claude Code ランタイム =====
+tasks/
+cache/
+debug/
+file-history/
+history.jsonl
+session-*
 shell-snapshots/
+paste-cache/
+plans/
+projects/
+plugins/
+ide/
 statsig/
 todos/
+stats-cache.json
+tags/
 prompts/
 session-commits.jsonl
 session-archives/
-debug/
+telemetry/
+.claude/
 
-# キャッシュと履歴
-cache/
-file-history/
-paste-cache/
-plans/
-history.jsonl
-stats-cache.json
-
+# ===== OS =====
 # Windows
 Thumbs.db
 Desktop.ini
@@ -43,38 +39,19 @@ $RECYCLE.BIN/
 .AppleDouble
 .LSOverride
 
-# ログファイル
-*.log
-*.warn.log
-*.err.log
-logs/
+# ===== エディタ =====
+.vscode/
+.idea/
+*.sublime-*
 
-# 一時ファイル
+# ===== 一時ファイル =====
 *.tmp
 *.temp
 *.bak
 *.swp
 *~
+*.log
 
-# エディタ設定
-.vscode/
-.idea/
-*.sublime-*
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-env/
-.env
-
-# クレデンシャルファイル（テンプレートの .example は追跡する）
-github-app-config.env
-mcp/mcp-config.json
+# ===== クレデンシャルのテンプレートは追跡（実ファイルは除外） =====
+# claude/github-app-config.env.example → 追跡する
+# claude/mcp/mcp-config.json.example → 追跡する

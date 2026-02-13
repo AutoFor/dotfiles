@@ -1,0 +1,16 @@
+[user]
+	name = AutoFor
+	email = seiya-kawashima@autofor.co.jp
+[safe]
+	directory = C:/Users/SeiyaKawashima/OneDrive - AutoFor/ドキュメント/UiPath/!Snippets_temp
+[color]
+	ui = always
+[filter "lfs"]
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+[core]
+	quotepath = false
+[credential "https://github.com"]
+	username = AutoFor
