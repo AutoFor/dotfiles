@@ -1,5 +1,5 @@
 ---
-name: git-worktree-branch
+name: gh-worktree-branch
 description: 新しい作業を開始するときに GitHub Issue を作成し、Git Worktree とブランチを作成する。
 disable-model-invocation: false
 user-invocable: true
@@ -14,8 +14,8 @@ allowed-tools:
 
 ## 引数の処理
 
-- **引数なし** (`/git-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
-- **引数あり** (`/git-worktree-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
+- **引数なし** (`/gh-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
+- **引数あり** (`/gh-worktree-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
 
 ## 実行フロー（引数ありの場合）
 
@@ -48,7 +48,7 @@ git remote -v
 ### 4. Worktree を作成
 
 ```bash
-bash ~/.claude/skills/git-worktree-branch/create-worktree.sh <ブランチ名>
+bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh <ブランチ名>
 ```
 
 ### 5. Worktree ディレクトリに移動

@@ -1,5 +1,5 @@
 ---
-name: git-branch-finish
+name: gh-branch-finish
 description: diff からブランチ作成・PR作成・承認・マージまで一気通貫で実行する。ユーザーが「ブランチ作成から全部やって」「diffから一気に完了させて」と言ったときに使用します。
 disable-model-invocation: false
 user-invocable: true
@@ -9,7 +9,7 @@ allowed-tools:
 
 # Git ブランチ作成〜マージ一気通貫スキル
 
-このスキルは、`/git-branch` → `/github-pr-create` → `/github-pr-approve` を順番に実行し、diff からブランチ作成・PR作成・承認・マージまでを一気に行います。
+このスキルは、`/gh-branch` → `/gh-pr-create` → `/gh-pr-approve` を順番に実行し、diff からブランチ作成・PR作成・承認・マージまでを一気に行います。
 
 ## 前提条件の確認
 
@@ -23,7 +23,7 @@ allowed-tools:
 
 このスキルは以下の3つのスキルを順番に呼び出します：
 
-### 1. `/git-branch` スキルを実行
+### 1. `/gh-branch` スキルを実行
 
 Issue 作成・ブランチ作成・smart-commit を行います。
 
@@ -33,7 +33,7 @@ Issue 作成・ブランチ作成・smart-commit を行います。
 - ブランチを作成
 - 未コミットの変更を smart-commit
 
-### 2. `/github-pr-create` スキルを実行
+### 2. `/gh-pr-create` スキルを実行
 
 PR の作成と Issue 紐付けを行います。
 
@@ -42,7 +42,7 @@ PR の作成と Issue 紐付けを行います。
 - プルリクエスト作成
 - PR と Issue を紐づけ
 
-### 3. `/github-pr-approve` スキルを実行
+### 3. `/gh-pr-approve` スキルを実行
 
 PR の承認・マージと後処理を行います。
 
@@ -55,9 +55,9 @@ PR の承認・マージと後処理を行います。
 
 ## 使い分け
 
-- **段階的に進めたい場合**: `/git-branch` → `/github-pr-create` → `/github-pr-approve`
-- **PR 作成以降を一気にやりたい場合**: `/github-finish`
-- **diff から全部一気に完了させたい場合**: `/git-branch-finish`（このスキル）
+- **段階的に進めたい場合**: `/gh-branch` → `/gh-pr-create` → `/gh-pr-approve`
+- **PR 作成以降を一気にやりたい場合**: `/gh-finish`
+- **diff から全部一気に完了させたい場合**: `/gh-branch-finish`（このスキル）
 
 ## 注意事項
 

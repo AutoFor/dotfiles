@@ -1,5 +1,5 @@
 ---
-name: git-worktree-from-issue
+name: gh-worktree-from-issue
 description: 既存の GitHub Issue から Git Worktree を使った作業ブランチを作成する。ユーザーが「Issue #123 から作業を開始したい」「既存のIssueで作業する」と言ったときに使用します。
 disable-model-invocation: false
 user-invocable: true
@@ -25,7 +25,7 @@ allowed-tools:
 
 ### 1. 引数の確認とIssue取得
 
-**引数がある場合（例: `/git-worktree-from-issue 123`）:**
+**引数がある場合（例: `/gh-worktree-from-issue 123`）:**
 - 指定されたIssue番号の詳細を取得
 - `mcp__github__issue_read` を使用
 
@@ -147,13 +147,13 @@ Issue: <タイトル>
 作業ディレクトリ: ../<プロジェクト名>-<ブランチ種別>
 Draft PR: #<PR番号>
 
-作業完了後は `/github-pr-create` で Draft PR を Ready for Review に変更してください。
+作業完了後は `/gh-pr-create` で Draft PR を Ready for Review に変更してください。
 ```
 
 ## 実行例
 
 ```bash
-# ユーザー入力: /git-worktree-from-issue 123
+# ユーザー入力: /gh-worktree-from-issue 123
 
 # 1. Issue #123 の情報を取得
 # タイトル: "プレビュー機能の追加"
@@ -197,7 +197,7 @@ git push -u origin feature/issue-123-preview-feature
 ## 次のステップ
 
 作業完了後は、以下のスキルを使用して Draft PR を Ready for Review に変更:
-- `/github-pr-create` - 既存 Draft PR を検出して Ready for Review に変更（Draft PR がない場合は新規作成）
+- `/gh-pr-create` - 既存 Draft PR を検出して Ready for Review に変更（Draft PR がない場合は新規作成）
 
 ## Worktree 一覧の確認
 

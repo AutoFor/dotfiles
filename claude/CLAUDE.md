@@ -16,17 +16,17 @@
 
 | スキル名 | 説明 | 呼び出し方法 |
 |---------|------|------------|
-| `/git-worktree-branch` | 新規 Issue + ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
-| `/git-worktree-from-issue` | **既存Issue**からブランチ作成 | 「Issue #123から作業したい」「既存のIssueで作業する」 |
-| `/git-branch-finish` | diff からブランチ作成→PR→マージまで一気通貫 | 「ブランチ作成から全部やって」「diffから一気に完了させて」 |
+| `/gh-worktree-branch` | 新規 Issue + ブランチ作成 | 「新しい機能を追加したい」「作業を開始したい」 |
+| `/gh-worktree-from-issue` | **既存Issue**からブランチ作成 | 「Issue #123から作業したい」「既存のIssueで作業する」 |
+| `/gh-branch-finish` | diff からブランチ作成→PR→マージまで一気通貫 | 「ブランチ作成から全部やって」「diffから一気に完了させて」 |
 
 #### GitHub PR スキル
 
 | スキル名 | 説明 | 呼び出し方法 |
 |---------|------|------------|
-| `/github-pr-create` | PR作成（ブランチ名からIssue検出） | 「作業が完了した」「PRを作成したい」 |
-| `/github-pr-approve` | PR の承認・マージと後処理 | 「PRを承認する」「マージして」 |
-| `/github-finish` | PR 作成から承認まで一気に実行 | 「全部やって」「一気に完了させて」 |
+| `/gh-pr-create` | PR作成（ブランチ名からIssue検出） | 「作業が完了した」「PRを作成したい」 |
+| `/gh-pr-approve` | PR の承認・マージと後処理 | 「PRを承認する」「マージして」 |
+| `/gh-finish` | PR 作成から承認まで一気に実行 | 「全部やって」「一気に完了させて」 |
 
 #### コーディングスキル
 
@@ -44,9 +44,9 @@
 
 #### パターン1: 既存Issueから作業を開始
 
-**`/git-worktree-from-issue` スキルを使用**
+**`/gh-worktree-from-issue` スキルを使用**
 
-1. Issue番号を指定（例: `/git-worktree-from-issue 123`）または対話的に選択
+1. Issue番号を指定（例: `/gh-worktree-from-issue 123`）または対話的に選択
 2. Issueタイトルから自動でブランチ名を生成（`feature/issue-123-xxx`形式）
 3. Git Worktreeを作成し、Draft PR を自動作成して作業開始
 
@@ -57,9 +57,9 @@
 
 #### パターン2: 新規作業から開始（Issue-first）
 
-**`/git-worktree-branch` スキルを使用**
+**`/gh-worktree-branch` スキルを使用**
 
-1. 作業内容を引数で指定（例: `/git-worktree-branch ダークモード追加`）
+1. 作業内容を引数で指定（例: `/gh-worktree-branch ダークモード追加`）
 2. GitHub Issue を自動作成
 3. ブランチ名 `issue-<番号>-<スラッグ>` で Git Worktree を作成し、Draft PR を自動作成して作業開始
 
@@ -70,22 +70,22 @@
 
 ### 作業完了時の手順
 
-#### ステップ1: PR 作成から承認・マージまで (`/github-pr-create`)
+#### ステップ1: PR 作成から承認・マージまで (`/gh-pr-create`)
 
-**詳細は `/github-pr-create` スキルを参照してください。**
+**詳細は `/gh-pr-create` スキルを参照してください。**
 
 作業完了時に実行：
 
 1. ブランチ名から Issue 番号を検出
 2. Issue の存在を確認
 3. 既存の Draft PR を検索し、Ready for Review に変更（Draft PR がない場合は新規 PR を作成）
-4. 自動で `/github-pr-approve` を呼び出して承認・マージまで進む
+4. 自動で `/gh-pr-approve` を呼び出して承認・マージまで進む
 
-#### （参考）PR 承認・マージ (`/github-pr-approve`)
+#### （参考）PR 承認・マージ (`/gh-pr-approve`)
 
-**詳細は `/github-pr-approve` スキルを参照してください。**
+**詳細は `/gh-pr-approve` スキルを参照してください。**
 
-`/github-pr-create` から自動で呼び出される：
+`/gh-pr-create` から自動で呼び出される：
 
 1. PR 承認とマージ
 2. Issue クローズ（自動）
