@@ -12,7 +12,12 @@ WORKTREE_DIR="../${PROJ}-${BRANCH}"
 
 git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 
+WORKTREE_ABSPATH="$(cd "$WORKTREE_DIR" && pwd)"
+
 echo ""
 echo "=== Worktree 作成完了 ==="
 echo "ブランチ: $BRANCH"
-echo "ディレクトリ: $(cd "$WORKTREE_DIR" && pwd)"
+echo "ディレクトリ: $WORKTREE_ABSPATH"
+
+# クリップボードにコピー
+bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd ${WORKTREE_ABSPATH} && claude" 2>&1 || true
