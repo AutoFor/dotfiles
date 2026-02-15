@@ -30,30 +30,38 @@ git status --short
 git log @{u}..HEAD --oneline 2>/dev/null
 ```
 
-- **未コミットの変更がある場合** → Skill ツールで `/smart-commit` を呼び出してコミットする
-- **未プッシュのコミットがある場合** → `git push` を実行する
-- **すべてコミット・プッシュ済みの場合** → ステップ1へ進む
+- **未コミットの変更がある場合** → ステップ 1 へ進む
+- **未プッシュのコミットがある場合** → `git push` を実行してからステップ 2 へ進む
+- **すべてコミット・プッシュ済みの場合** → ステップ 2 へ進む
 
-### 1. Skill ツールで `/gh-pr-create` を呼び出す
+### 1. Skill ツールで `/smart-commit` を呼び出す
 
-PR と Issue の作成、紐付けを行います。
+未コミットの変更がある場合のみ実行する。
 
-**実行内容:**
-- ブランチ名から Issue を検出
-- プルリクエスト作成
-- PR と Issue を紐づけ
+```
+Skill ツール: skill = "smart-commit"
+```
 
-### 2. Skill ツールで `/gh-pr-approve` を呼び出す
+smart-commit が完了したら、リモートにプッシュする：
 
-PR の承認・マージと後処理を行います。このスキルは内部で `approve-pr.sh`（GitHub App Bot）を使用して PR を承認する。
+```bash
+git push -u origin $(git branch --show-current)
+```
 
-**実行内容:**
-- GitHub App Bot による PR 承認（`approve-pr.sh` を使用）
-- PR マージ
-- Issue クローズ
-- master ブランチに戻る
-- リモートの最新状態を取得
-- Worktree 削除（使用時のみ）
+### 2. Skill ツールで `/gh-pr-create` を呼び出す
+
+```
+Skill ツール: skill = "gh-pr-create"
+```
+
+gh-pr-create が内部で以下を実行する：
+1. ブランチ名から Issue 番号を抽出
+2. Issue の存在を確認
+3. 既存 Draft PR があれば Ready for Review に変更、なければ新規 PR 作成
+4. PR と Issue を `Closes #<Issue番号>` で紐付け
+5. 自動で `/gh-pr-approve` を呼び出して承認・マージまで進む
+
+**注意:** gh-pr-create は内部で gh-pr-approve を自動呼び出しするため、このスキルからステップ 3 を別途実行する必要はない。gh-pr-create の完了を待てば全工程が終了する。
 
 ## 使い分け
 

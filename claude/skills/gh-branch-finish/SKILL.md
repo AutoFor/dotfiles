@@ -21,37 +21,41 @@ allowed-tools:
 
 ## 実行手順
 
-このスキルは以下の3つのスキルを順番に呼び出します：
+このスキルは以下のスキルを順番に Skill ツールで呼び出す。
 
-### 1. `/gh-branch` スキルを実行
+### 1. Skill ツールで `/gh-branch` を呼び出す
 
-Issue 作成・ブランチ作成・smart-commit を行います。
+```
+Skill ツール: skill = "gh-branch"
+```
 
-**実行内容:**
-- 変更内容を分析して Issue タイトルを自動生成
-- GitHub Issue を作成
-- ブランチを作成
-- 未コミットの変更を smart-commit
+gh-branch が内部で以下を実行する：
+1. `git remote -v` でリポジトリ情報を取得
+2. `git status --short` / `git diff` / `git diff --cached` で変更内容を収集
+3. 変更内容から日本語 Issue タイトルを自動生成
+4. `mcp__github__issue_write` で GitHub Issue を作成
+5. ブランチ名 `issue-<番号>-<スラッグ>` を生成
+6. `git checkout -b <ブランチ名>` でブランチを作成（main に未プッシュコミットがある場合は移植処理も実行）
+7. `/smart-commit` で未コミットの変更をコミット
+8. `git push -u origin <ブランチ名>` でプッシュし、Draft PR を作成
 
-### 2. `/gh-pr-create` スキルを実行
+gh-branch の完了を待ってからステップ 2 へ進む。
 
-PR の作成と Issue 紐付けを行います。
+### 2. Skill ツールで `/gh-pr-create` を呼び出す
 
-**実行内容:**
-- ブランチ名から Issue を検出
-- プルリクエスト作成
-- PR と Issue を紐づけ
+```
+Skill ツール: skill = "gh-pr-create"
+```
 
-### 3. `/gh-pr-approve` スキルを実行
+gh-pr-create が内部で以下を実行する：
+1. `git branch --show-current` でブランチ名から Issue 番号を抽出
+2. `mcp__github__issue_read` で Issue の存在を確認
+3. `gh pr list --head <ブランチ名>` で既存 Draft PR を検索
+4. Draft PR があれば Ready for Review に変更、なければ新規 PR を作成
+5. PR と Issue を `Closes #<Issue番号>` で紐付け
+6. 自動で `/gh-pr-approve` を呼び出して承認・マージまで進む
 
-PR の承認・マージと後処理を行います。
-
-**実行内容:**
-- PR 承認とマージ
-- Issue クローズ
-- デフォルトブランチに戻る
-- リモートの最新状態を取得
-- Worktree 削除（使用時のみ）
+**注意:** gh-pr-create は内部で gh-pr-approve を自動呼び出しするため、このスキルからステップ 3 を別途実行する必要はない。gh-pr-create の完了を待てば全工程が終了する。
 
 ## 使い分け
 
