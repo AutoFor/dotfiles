@@ -18,6 +18,3 @@ echo ""
 echo "=== Worktree 作成完了 ==="
 echo "ブランチ: $BRANCH"
 echo "ディレクトリ: $WORKTREE_ABSPATH"
-
-# クリップボードにコピー
-bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd ${WORKTREE_ABSPATH} && claude" 2>&1 || true
