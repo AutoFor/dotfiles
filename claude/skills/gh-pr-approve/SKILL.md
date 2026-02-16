@@ -90,54 +90,33 @@ PR に `Closes #XX` が含まれていれば自動でクローズされるが、
 gh issue close <Issue番号>
 ```
 
-### 3. master ブランチに戻る
+### 3. 後処理（master切替 + pull + Worktree/ブランチ削除）
 
-作業ブランチから master ブランチに戻る。
+**重要: 以下を単一のBashコマンドで実行すること。複数回に分けると、Worktree削除後にcwdが無効になり全コマンドが失敗する。**
 
-**まず Worktree を使用しているか判定する:**
+まず `git worktree list` でメインリポジトリのパスと現在のWorktreeパスを確認する：
 
 ```bash
 git worktree list
 ```
 
-- **出力が2行以上** → Worktree 使用中:
-  ```bash
-  cd ../<メインディレクトリ>  # メインリポジトリに戻る
-  git checkout master
-  ```
-- **出力が1行のみ** → 通常ブランチ:
-  ```bash
-  git checkout master
-  ```
-
-### 4. リモートの最新状態を取得と不要ブランチ削除
-
-master ブランチを最新に更新し、不要なリモートブランチ情報を削除する。
-
-```bash
-git pull
-git fetch --prune
+出力例:
+```
+/home/user/projects/repo                abc1234 [master]      ← メインリポジトリ
+/home/user/projects/repo-issue-159      def5678 [issue-159]   ← 現在のWorktree
 ```
 
-### 5. 後片付け（Worktree / ブランチの削除）
+**Worktree 使用中（出力が2行以上）の場合:**
+```bash
+bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <メインリポジトリの絶対パス> <Worktreeの絶対パス> master
+```
 
-Step 3 で判定した結果に基づいて後片付けを行う。
+**通常ブランチの場合:**
+```bash
+bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <リポジトリの絶対パス> none master <ブランチ名>
+```
 
-- **Worktree 使用中の場合:** Worktree を削除する
-  ```bash
-  git worktree remove ../<プロジェクト名>-<ブランチ種別>
-  ```
-  **例:**
-  ```bash
-  git worktree remove ../myproject-feature
-  ```
-
-- **通常ブランチの場合:** ローカルブランチを削除する
-  ```bash
-  git branch -d <ブランチ名>
-  ```
-
-### 6. 完了メッセージをユーザーに表示
+### 4. 完了メッセージをユーザーに表示
 
 以下のメッセージをユーザーに表示する：
 
@@ -167,16 +146,8 @@ gh pr merge 44 --squash
 # 2. Issueクローズ（通常は自動だが念のため）
 gh issue close 45
 
-# 3. masterブランチに戻る
-cd ../claude-config
-git checkout master
-
-# 4. 最新状態を取得と不要ブランチ削除
-git pull
-git fetch --prune
-
-# 5. Worktreeを削除（使用時のみ）
-git worktree remove ../claude-config-feature
+# 3. 後処理（master切替 + pull + Worktree/ブランチ削除）を単一コマンドで実行
+bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh /home/user/projects/claude-config /home/user/projects/claude-config-feature master
 ```
 
 ## 注意事項
