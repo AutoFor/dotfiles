@@ -39,3 +39,4 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 # zoxide（スマートcd）を有効化
 eval "$(zoxide init zsh)"
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.npm-global/bin:$PATH"
