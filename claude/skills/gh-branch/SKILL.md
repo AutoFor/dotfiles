@@ -112,6 +112,8 @@ git status --short
 
 変更がなければこのステップをスキップする。
 
+> ⚠️ **重要: smart-commit が完了しても、このスキル（gh-branch）の処理は終わっていない。必ず 7a（push・Draft PR 作成）→ 8（完了メッセージ）へ続行すること。**
+
 ### 7a. push して Draft PR を作成
 
 smart-commit で既にコミットがあるため空コミットは不要。
