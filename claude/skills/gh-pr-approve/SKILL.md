@@ -92,7 +92,7 @@ gh issue close <Issue番号>
 
 ### 3. 後処理（master切替 + pull + Worktree/ブランチ削除）
 
-**重要: 以下を単一のBashコマンドで実行すること。複数回に分けると、Worktree削除後にcwdが無効になり全コマンドが失敗する。**
+**重要: Worktree内からこのスクリプトを実行すると、Worktree削除後にBashツールのcwdが無効になり、以降の全コマンドが失敗する。必ず `cd <メインリポジトリ> &&` を先頭に付けて実行すること。**
 
 まず `git worktree list` でメインリポジトリのパスと現在のWorktreeパスを確認する：
 
@@ -108,12 +108,12 @@ git worktree list
 
 **Worktree 使用中（出力が2行以上）の場合:**
 ```bash
-bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <メインリポジトリの絶対パス> <Worktreeの絶対パス> master <ブランチ名>
+cd <メインリポジトリの絶対パス> && bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <メインリポジトリの絶対パス> <Worktreeの絶対パス> master <ブランチ名>
 ```
 
 **通常ブランチの場合:**
 ```bash
-bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <リポジトリの絶対パス> none master <ブランチ名>
+cd <リポジトリの絶対パス> && bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh <リポジトリの絶対パス> none master <ブランチ名>
 ```
 
 ### 4. 完了メッセージをユーザーに表示
@@ -147,8 +147,8 @@ gh pr merge 44 --squash
 # 2. Issueクローズ（通常は自動だが念のため）
 gh issue close 45
 
-# 3. 後処理（master切替 + pull + Worktree/ブランチ削除）を単一コマンドで実行
-bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh /home/user/projects/claude-config /home/user/projects/claude-config-feature master
+# 3. 後処理（master切替 + pull + Worktree/ブランチ削除）— 必ず cd でメインリポジトリに移動してから実行
+cd /home/user/projects/claude-config && bash ~/.claude/skills/gh-pr-approve/cleanup-after-merge.sh /home/user/projects/claude-config /home/user/projects/claude-config-feature master
 ```
 
 ## 注意事項
