@@ -51,7 +51,7 @@ gh-branch が以下を実行する：
 4. `/smart-commit` で変更をコミット
 5. プッシュして Draft PR を作成
 
-gh-branch の完了を待ってから A-2 へ進む。
+> ⚠️ **重要: gh-branch が完了しても、このスキル（gh-finish）の処理は終わっていない。必ず A-2 → ステップ 1 へ続行すること。**
 
 ### A-2. ステップ 1 へ合流
 
@@ -78,6 +78,8 @@ git log @{u}..HEAD --oneline 2>/dev/null
 Skill ツール: skill = "smart-commit"
 ```
 
+> ⚠️ **重要: smart-commit が完了しても、このスキル（gh-finish）の処理は終わっていない。必ず以下の push → ステップ 1 へ続行すること。**
+
 完了したらプッシュする：
 
 ```bash
@@ -89,6 +91,8 @@ git push -u origin $(git branch --show-current)
 ---
 
 ## ステップ 1（共通）: Skill ツールで `/gh-pr-create` を呼び出す
+
+> ⚠️ **重要: ここに到達したら、必ず以下の `/gh-pr-create` を呼び出すこと。前のサブスキルが完了しただけでは gh-finish は完了していない。**
 
 ```
 Skill ツール: skill = "gh-pr-create"
