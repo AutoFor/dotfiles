@@ -26,14 +26,35 @@ git -C "$MAIN_REPO" fetch --prune
 
 # Worktree/ブランチ削除
 if [ "$WORKTREE_PATH" != "none" ]; then
+  # Worktreeからブランチ名を検出（$4が未指定の場合）
+  if [ -z "$BRANCH_TO_DELETE" ]; then
+    BRANCH_TO_DELETE=$(git -C "$MAIN_REPO" worktree list --porcelain \
+      | awk -v wt="$WORKTREE_PATH" '$1=="worktree" && $2==wt {found=1} found && $1=="branch" {print $2; exit}' \
+      | sed 's|refs/heads/||')
+  fi
+
+  # Worktree削除
   git -C "$MAIN_REPO" worktree remove "$WORKTREE_PATH" 2>/dev/null || \
     git -C "$MAIN_REPO" worktree prune
   echo "Worktree removed: $WORKTREE_PATH"
-else
+
+  # ローカルブランチ削除
   if [ -n "$BRANCH_TO_DELETE" ]; then
     git -C "$MAIN_REPO" branch -d "$BRANCH_TO_DELETE" 2>/dev/null || true
-    echo "Branch deleted: $BRANCH_TO_DELETE"
+    echo "Local branch deleted: $BRANCH_TO_DELETE"
   fi
+else
+  # ローカルブランチ削除
+  if [ -n "$BRANCH_TO_DELETE" ]; then
+    git -C "$MAIN_REPO" branch -d "$BRANCH_TO_DELETE" 2>/dev/null || true
+    echo "Local branch deleted: $BRANCH_TO_DELETE"
+  fi
+fi
+
+# リモートブランチ削除
+if [ -n "$BRANCH_TO_DELETE" ]; then
+  git -C "$MAIN_REPO" push origin --delete "$BRANCH_TO_DELETE" 2>/dev/null || true
+  echo "Remote branch deleted: $BRANCH_TO_DELETE"
 fi
 
 echo "Cleanup completed successfully."
