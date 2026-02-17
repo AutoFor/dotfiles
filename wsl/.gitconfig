@@ -6,3 +6,6 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/home/seiya-kawashima/.local/bin/gh auth git-credential
+[user]
+	name = AutoFor
+	email = 145828201+AutoFor@users.noreply.github.com
