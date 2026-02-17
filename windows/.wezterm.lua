@@ -1,6 +1,25 @@
 local wezterm = require 'wezterm'
 local act = wezterm.action
 
+-- パスから末尾ディレクトリ名だけ取り出す
+local function basename(path)
+  path = path:gsub('^file://', '')
+  return path:gsub('(.*[/\\])(.*)', '%2')
+end
+
+-- ウィンドウタイトルにカレントディレクトリ名を表示
+wezterm.on('format-window-title', function(window, tab, panes, config)
+  if not tab then
+    return 'WezTerm'
+  end
+  local pane = tab.active_pane
+  if not pane then
+    return 'WezTerm'
+  end
+  local cwd = basename(tostring(pane.current_working_dir or ''))
+  return cwd .. ' - WezTerm'
+end)
+
 local config = wezterm.config_builder()
 
 -- WSL 関連
