@@ -38,5 +38,12 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # zoxide（スマートcd）を有効化
 eval "$(zoxide init zsh)"
+
+# fzf でカレントディレクトリ配下のフォルダを選択して cd
+cfd() {
+  local dir
+  dir=$(find . -maxdepth 1 -type d | sort | fzf --no-sort) || return
+  cd "$dir"
+}
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
