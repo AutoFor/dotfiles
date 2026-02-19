@@ -47,3 +47,9 @@ cfd() {
 }
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
+
+# WezTerm にカレントディレクトリを通知（OSC 7）
+__wezterm_osc7() {
+  printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
+}
+precmd_functions+=(__wezterm_osc7)
