@@ -53,3 +53,13 @@ __wezterm_osc7() {
   printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
 }
 precmd_functions+=(__wezterm_osc7)
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
+
+# Windows パスを WSL パスに変換して claude を起動
+wcd() {
+  local wsl_path
+  wsl_path=$(wslpath -u "$1") || return 1
+  cd "$wsl_path" && claude
+}
+export DOTNET_ROOT=$HOME/.dotnet
+export PATH=$PATH:$HOME/.dotnet
