@@ -17,6 +17,9 @@ wezterm.on('format-window-title', function(window, tab, panes, config)
     return 'WezTerm'
   end
   local cwd = basename(tostring(pane.current_working_dir or ''))
+  if cwd == '' then
+    return 'WezTerm'
+  end
   return cwd .. ' - WezTerm'
 end)
 
@@ -75,6 +78,17 @@ config.keys = {
     key = 'w',
     mods = 'CTRL',
     action = act.CloseCurrentPane { confirm = false },
+  },
+
+  -- Ctrl+Shift+A でスクロールバック全体をクリップボードにコピー
+  {
+    key = 'A',
+    mods = 'CTRL',
+    action = wezterm.action_callback(function(window, pane)
+      local dims = pane:get_dimensions()
+      local text = pane:get_lines_as_text(dims.scrollback_rows)
+      window:copy_to_clipboard(text, 'Clipboard')
+    end),
   },
 }
 
