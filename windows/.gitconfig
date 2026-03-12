@@ -1,8 +1,8 @@
 [user]
-	name = AutoFor
-	email = seiya-kawashima@autofor.co.jp
+	name = your-name
+	email = your-email@example.com
 [safe]
-	directory = C:/Users/SeiyaKawashima/OneDrive - AutoFor/ドキュメント/UiPath/!Snippets_temp
+	directory = C:/path/to/your/directory
 [color]
 	ui = always
 [filter "lfs"]

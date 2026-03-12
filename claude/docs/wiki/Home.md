@@ -16,7 +16,7 @@ Claude Code によるAI駆動開発のためのグローバル設定・スキル
 
 ## セットアップ
 
-詳しいセットアップ手順は [README.md](https://github.com/seiya-kawashima/dotfiles/blob/main/claude/README.md) を参照してください。
+詳しいセットアップ手順は [README.md](https://github.com/AutoFor/dotfiles/blob/main/claude/README.md) を参照してください。
 
 基本的な手順:
 

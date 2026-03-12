@@ -2,10 +2,10 @@
 	helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe
 [credential "https://github.com"]
 	helper = 
-	helper = !/home/seiya-kawashima/.local/bin/gh auth git-credential
+	helper = !/home/<username>/.local/bin/gh auth git-credential
 [credential "https://gist.github.com"]
-	helper = 
-	helper = !/home/seiya-kawashima/.local/bin/gh auth git-credential
+	helper =
+	helper = !/home/<username>/.local/bin/gh auth git-credential
 [user]
-	name = AutoFor
-	email = 145828201+AutoFor@users.noreply.github.com
+	name = your-name
+	email = your-id+your-name@users.noreply.github.com
