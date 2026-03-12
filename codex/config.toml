@@ -1,0 +1,54 @@
+model = "gpt-5.3-codex"
+model_reasoning_effort = "medium"
+
+[projects."/mnt/c/Users/SeiyaKawashima"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects/uipath-xaml-visualizer"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/.claude"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/AutoFor-docs"]
+trust_level = "trusted"
+
+[projects."/mnt/c/prj/ScrapingBKSI"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/dotfiles"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects/github-issue-outliner"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects/life"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects/kindle-ocr-markdown"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/projects/life-public"]
+trust_level = "trusted"
+
+[projects."/tmp"]
+trust_level = "trusted"
+
+[notice.model_migrations]
+"gpt-5.1-codex" = "gpt-5.2-codex"
+"gpt-5.2-codex" = "gpt-5.3-codex"
+"gpt-5.3-codex" = "gpt-5.4"
+
+[mcp_servers.github]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+
+[mcp_servers.drawio]
+command = "npx"
+args = ["-y", "@drawio/mcp"]

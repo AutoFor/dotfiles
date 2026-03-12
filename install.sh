@@ -71,5 +71,18 @@ for skill_dir in "$DOTFILES_DIR/claude/skills"/*/; do
 done
 
 echo ""
+echo "=== Codex 設定ファイルのリンク ==="
+
+CODEX_DIR="$HOME/.codex"
+mkdir -p "$CODEX_DIR/skills"
+
+link_file "$DOTFILES_DIR/codex/config.toml" "$CODEX_DIR/config.toml"
+
+for skill_dir in "$DOTFILES_DIR/codex/skills"/*/; do
+  skill_name="$(basename "$skill_dir")"
+  link_file "$DOTFILES_DIR/codex/skills/$skill_name" "$CODEX_DIR/skills/$skill_name"
+done
+
+echo ""
 echo "=== 完了 ==="
 echo "新しいターミナルを開いて設定が反映されていることを確認してください。"

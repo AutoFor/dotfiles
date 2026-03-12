@@ -1,0 +1,4 @@
+interface:
+  display_name: "GH Life Close"
+  short_description: "溜まった変更をIssue化してコミット後にまとめて閉じる"
+  default_prompt: "Use $gh-life-close to group my current changes into issues, commit them, and close them."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Qiita Publish"
+  short_description: "Qiita記事の公開、素材同期、失敗調査を安全に実行する"
+  default_prompt: "Use $qiita-publish to publish a Qiita article from this repo safely."
