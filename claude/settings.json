@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
+          }
+        ]
+      }
+    ]
+  }
+}

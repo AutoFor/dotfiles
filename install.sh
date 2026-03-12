@@ -40,9 +40,13 @@ link_file "$DOTFILES_DIR/wsl/.zshrc"     "$HOME/.zshrc"
 link_file "$DOTFILES_DIR/wsl/.bashrc"    "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/wsl/.gitconfig" "$HOME/.gitconfig"
 
+# --- WSL ホームディレクトリ直下（追加） ---
+link_file "$DOTFILES_DIR/wsl/.tmux.conf" "$HOME/.tmux.conf"
+
 # --- WSL .config 配下 ---
 link_file "$DOTFILES_DIR/wsl/.config/gh/config.yml" "$HOME/.config/gh/config.yml"
 link_file "$DOTFILES_DIR/wsl/.config/git/ignore"    "$HOME/.config/git/ignore"
+link_file "$DOTFILES_DIR/wsl/.config/nvim"          "$HOME/.config/nvim"
 
 echo ""
 echo "=== Claude Code 設定ファイルのリンク ==="

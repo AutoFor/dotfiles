@@ -1,0 +1,268 @@
+<mxfile host="65bd71144e">
+    <diagram name="スキルワークフロー" id="0">
+        <mxGraphModel dx="1991" dy="891" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1860" pageHeight="1230" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="bg_github" value="" style="rounded=0;fillColor=#e8eaf6;strokeColor=#5c6bc0;opacity=50;" parent="1" vertex="1">
+                    <mxGeometry y="50" width="160" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="bg_main" value="" style="rounded=0;fillColor=#fffde7;strokeColor=#d6b656;opacity=50;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="50" width="155" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="bg_branch" value="" style="rounded=0;fillColor=#fff8e1;strokeColor=#e6ac00;opacity=35;" parent="1" vertex="1">
+                    <mxGeometry x="315" y="50" width="155" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="bg_wt" value="" style="rounded=0;fillColor=#fce4ec;strokeColor=#c62828;opacity=25;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="50" width="165" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="bg_cc" value="" style="rounded=0;fillColor=#d5e8d4;strokeColor=#82b366;opacity=40;" parent="1" vertex="1">
+                    <mxGeometry x="635" y="50" width="235" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="bg_codex" value="" style="rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="50" width="985" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="vsep_gh" value="" style="fillColor=#5c6bc0;strokeColor=#5c6bc0;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="50" width="2" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="vsep1" value="" style="fillColor=#cccccc;strokeColor=#cccccc;" parent="1" vertex="1">
+                    <mxGeometry x="315" y="50" width="1" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="vsep2" value="" style="fillColor=#cccccc;strokeColor=#cccccc;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="50" width="1" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="vsep3" value="" style="fillColor=#888888;strokeColor=#888888;" parent="1" vertex="1">
+                    <mxGeometry x="635" y="50" width="2" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="vsep4" value="" style="fillColor=#888888;strokeColor=#888888;" parent="1" vertex="1">
+                    <mxGeometry x="870" y="50" width="2" height="1150" as="geometry"/>
+                </mxCell>
+                <mxCell id="rsep1" value="" style="rounded=0;fillColor=#888888;strokeColor=#888888;opacity=70;" parent="1" vertex="1">
+                    <mxGeometry y="375" width="1855" height="2" as="geometry"/>
+                </mxCell>
+                <mxCell id="rsep2" value="" style="rounded=0;fillColor=#888888;strokeColor=#888888;opacity=70;" parent="1" vertex="1">
+                    <mxGeometry y="730" width="1855" height="2" as="geometry"/>
+                </mxCell>
+                <mxCell id="hdr_github" value="GitHub" style="text;fontSize=13;fontStyle=1;align=center;fontColor=#3f51b5;" parent="1" vertex="1">
+                    <mxGeometry y="10" width="158" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="hdr_human" value="ローカル" style="text;fontSize=14;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="160" y="5" width="475" height="22" as="geometry"/>
+                </mxCell>
+                <mxCell id="sub_main" value="main" style="text;fontSize=11;fontStyle=1;align=center;fontColor=#7b5e00;" parent="1" vertex="1">
+                    <mxGeometry x="165" y="28" width="145" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="sub_branch" value="branch" style="text;fontSize=11;fontStyle=1;align=center;fontColor=#cc6600;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="28" width="145" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="sub_wt" value="worktree" style="text;fontSize=11;fontStyle=1;align=center;fontColor=#880000;" parent="1" vertex="1">
+                    <mxGeometry x="475" y="28" width="155" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="hdr_cc" value="Claude Code" style="text;fontSize=14;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="640" y="10" width="225" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="hdr_codex" value="Codex (MCP)" style="text;fontSize=14;fontStyle=1;align=center;" parent="1" vertex="1">
+                    <mxGeometry x="1060" y="10" width="400" height="28" as="geometry"/>
+                </mxCell>
+                <mxCell id="p1_lbl" value="◆ フェーズ 1: GitHub 準備" style="text;fontSize=11;fontStyle=1;fontColor=#7b4fc9;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="168" y="56" width="350" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="p2_lbl" value="◆ フェーズ 2: AI 駆動開発" style="text;fontSize=11;fontStyle=1;fontColor=#2e7d32;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="168" y="380" width="350" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="p3_lbl" value="◆ フェーズ 3: GitHub 統合（PR / マージ）" style="text;fontSize=11;fontStyle=1;fontColor=#7b4fc9;align=left;" parent="1" vertex="1">
+                    <mxGeometry x="168" y="736" width="450" height="18" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_start" value="作業開始" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="175" y="100" width="125" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="d1" value="Worktree&#xa;を作る？" style="rhombus;whiteSpace=wrap;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="168" width="115" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="d_pre_branch" value="先に&#xa;ブランチを&#xa;切る？" style="rhombus;whiteSpace=wrap;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="180" y="278" width="115" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_cc_wt" value="スキル受信&#xa;コンテキスト収集" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="650" y="183" width="200" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_wt_skill" value="/gh-worktree-branch&#xa;または /gh-worktree-from-issue" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" parent="1" vertex="1">
+                    <mxGeometry x="885" y="178" width="225" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh1_issue" value="Issue" style="rounded=1;whiteSpace=wrap;fillColor=#ffcdd2;strokeColor=#e57373;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="182" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh1_dpr" value="Draft PR" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#42a5f5;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="210" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_code_main" value="コーディング&#xa;(main)" style="rounded=0;whiteSpace=wrap;fillColor=#fffde7;strokeColor=#d6b656;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="435" width="135" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_code_branch" value="コーディング&#xa;(branch)" style="rounded=0;whiteSpace=wrap;fillColor=#fff8e1;strokeColor=#e6ac00;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="325" y="435" width="135" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_code_wt" value="コーディング&#xa;(worktree)" style="rounded=0;whiteSpace=wrap;fillColor=#fce4ec;strokeColor=#c62828;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="435" width="148" height="55" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="/gh-finish スキル受信&#xa;コンテキスト収集" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" parent="1" vertex="1">
+                    <mxGeometry x="652.5" y="600" width="200" height="42" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_finish_b" value="/gh-finish (フロー B)&#xa;commit → PR Ready → Merge" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="1210" y="750" width="245" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fb_pr" value="PR Ready" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#42a5f5;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="781" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fb_merge" value="Merge" style="rounded=1;whiteSpace=wrap;fillColor=#e8f5e9;strokeColor=#43a047;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="809" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fb_ic" value="Issue Close" style="rounded=1;whiteSpace=wrap;fillColor=#f3e5f5;strokeColor=#9c27b0;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="837" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fb_branch_del" value="Branch 削除" style="rounded=1;whiteSpace=wrap;fillColor=#ffccbc;strokeColor=#ff5722;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="865" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_finish_a" value="/gh-finish (フロー A)&#xa;Issue/Branch/PR/Merge 一気に" style="rounded=1;whiteSpace=wrap;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="885" y="750" width="245" height="52" as="geometry"/>
+                </mxCell>
+                <mxCell id="d_fa_is_main" value="今 main&#xa;ブランチか？" style="rhombus;whiteSpace=wrap;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="490" y="740" width="115" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_fa_branch_create" value="Branch 作成" style="rounded=0;whiteSpace=wrap;fillColor=#fff8e1;strokeColor=#e6ac00;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="170" y="838" width="135" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fa_issue" value="Issue" style="rounded=1;whiteSpace=wrap;fillColor=#ffcdd2;strokeColor=#e57373;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="900" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fa_pr" value="PR → Merge" style="rounded=1;whiteSpace=wrap;fillColor=#bbdefb;strokeColor=#42a5f5;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="928" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fa_ic" value="Issue Close" style="rounded=1;whiteSpace=wrap;fillColor=#f3e5f5;strokeColor=#9c27b0;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="956" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="gh3_fa_branch_del" value="Branch 削除" style="rounded=1;whiteSpace=wrap;fillColor=#ffccbc;strokeColor=#ff5722;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="12" y="984" width="135" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_local_branch_del_b" value="Branch 削除" style="rounded=1;whiteSpace=wrap;fillColor=#ffccbc;strokeColor=#ff5722;fontSize=11;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="200" y="918" width="390" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="d_is_flow_b" value="フローB&#xa;か？" style="rhombus;whiteSpace=wrap;fontSize=11;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="968" width="115" height="72" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_wt_cleanup" value="Worktree&#xa;フォルダ削除" style="rounded=0;whiteSpace=wrap;fillColor=#fce4ec;strokeColor=#c62828;fontSize=11;fontStyle=2;dashed=1;" parent="1" vertex="1">
+                    <mxGeometry x="477" y="1058" width="148" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="n_end" value="main に戻る" style="rounded=1;whiteSpace=wrap;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="175" y="1148" width="125" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="n_start" target="d1" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_d1_yes" value="Yes" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#6c8ebf;" parent="1" source="d1" target="n_cc_wt" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_cc_wt" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="n_cc_wt" target="n_wt_skill" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_wt_code" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="n_wt_skill" target="n_code_wt" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_d1_no" value="Worktree&#xa;を作らない" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#9673a6;" parent="1" source="d1" target="d_pre_branch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_dpb_yes" value="Yes" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#6c8ebf;" parent="1" source="d_pre_branch" target="n_code_branch" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_dpb_no" value="No" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#9673a6;" parent="1" source="d_pre_branch" target="n_code_main" edge="1">
+                    <mxGeometry x="0.4118" y="3" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="8" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_code_main" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="7" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_code_branch" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="5" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_code_wt" target="4" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_code_branch_finish" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="4" target="n_finish_b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_main_finish_a" style="edgeStyle=orthogonalEdgeStyle;exitX=1;exitY=0.5;exitDx=0;exitDy=0;" parent="1" source="4" target="n_finish_a" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fb_end" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="n_finish_b" target="n_local_branch_del_b" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="1333" y="888"/>
+                            <mxPoint x="395" y="888"/>
+                        </Array>
+                        <mxPoint x="1332.5" y="830" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e_branch_del_to_d" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="n_local_branch_del_b" target="d_is_flow_b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_d_yes_wt" value="Yes" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#6c8ebf;" parent="1" source="d_is_flow_b" target="n_wt_cleanup" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_d_no_end" value="No" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#9673a6;" parent="1" source="d_is_flow_b" target="n_end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_wt_cleanup_end" style="edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="n_wt_cleanup" target="n_end" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fa_end" style="edgeStyle=orthogonalEdgeStyle;" parent="1" source="n_finish_a" target="d_fa_is_main" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fa_is_main_yes" value="Yes" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#6c8ebf;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="d_fa_is_main" target="n_fa_branch_create" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e_fa_branch_to_del" style="edgeStyle=orthogonalEdgeStyle;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="n_fa_branch_create" target="n_local_branch_del_b" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="11" value="No" style="edgeStyle=orthogonalEdgeStyle;fontSize=11;fontStyle=1;fontColor=#9673a6;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="d_fa_is_main" target="n_local_branch_del_b" edge="1">
+                    <mxGeometry x="-0.2581" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="547" y="858"/>
+                            <mxPoint x="395" y="858"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="547.5" y="840" as="sourcePoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="ec_wt_issue" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_wt_skill" target="gh1_issue" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_wt_dpr" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_wt_skill" target="gh1_dpr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fb_pr" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_b" target="gh3_fb_pr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fb_merge" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_b" target="gh3_fb_merge" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fb_ic" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_b" target="gh3_fb_ic" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fb_bdel" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_b" target="gh3_fb_branch_del" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fa_issue" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_a" target="gh3_fa_issue" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fa_pr" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_a" target="gh3_fa_pr" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fa_ic" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_a" target="gh3_fa_ic" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ec_fa_bdel" style="edgeStyle=orthogonalEdgeStyle;dashed=1;strokeColor=#9c27b0;strokeWidth=1.5;endArrow=open;endFill=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="n_finish_a" target="gh3_fa_branch_del" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
