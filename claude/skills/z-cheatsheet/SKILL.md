@@ -45,6 +45,7 @@ allowed-tools:
 | ディレクトリ, 選択, インタラクティブ, zoxide | `zi` | zoxide: fzf で履歴からディレクトリ選択 |
 | 候補, 確認, 検索, query, zoxide | `zoxide query <キーワード>` | zoxide: ジャンプせずに候補リストだけ確認 |
 | フォルダ, サブディレクトリ, 選択, cd | `cfd` | fzf でカレント直下のフォルダを選択して cd |
+| リポジトリ, 作成, ghq, create | `ghq create myproj` | ghq: ローカルにリポジトリを新規作成（例: myproj） |
 
 ## 検索ロジック
 

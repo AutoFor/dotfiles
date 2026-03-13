@@ -8,11 +8,7 @@ local function basename(path)
 end
 
 -- ウィンドウタイトルにカレントディレクトリ名を表示
-wezterm.on('format-window-title', function(window, tab, panes, config)
-  if not tab then
-    return 'WezTerm'
-  end
-  local pane = tab.active_pane
+wezterm.on('format-window-title', function(tab, pane, tabs, panes, config)
   if not pane then
     return 'WezTerm'
   end
@@ -25,8 +21,14 @@ end)
 
 local config = wezterm.config_builder()
 
--- WSL 関連
-config.wsl_domains = wezterm.default_wsl_domains()
+-- WSL 関連（tmux 自動起動）
+local wsl_domains = wezterm.default_wsl_domains()
+for _, dom in ipairs(wsl_domains) do
+  if dom.name == 'WSL:Ubuntu' then
+    dom.default_prog = { 'tmux', 'new-session', '-A', '-s', 'main' }
+  end
+end
+config.wsl_domains = wsl_domains
 config.default_domain = 'WSL:Ubuntu'
 
 -- Leader キー（Ctrl+q）
@@ -49,28 +51,6 @@ config.keys = {
     key = 'a',
     mods = 'LEADER',
     action = act.SplitVertical { domain = 'CurrentPaneDomain' },
-  },
-
-  -- ペイン移動: Ctrl + 矢印
-  {
-    key = 'LeftArrow',
-    mods = 'CTRL',
-    action = act.ActivatePaneDirection 'Left',
-  },
-  {
-    key = 'RightArrow',
-    mods = 'CTRL',
-    action = act.ActivatePaneDirection 'Right',
-  },
-  {
-    key = 'UpArrow',
-    mods = 'CTRL',
-    action = act.ActivatePaneDirection 'Up',
-  },
-  {
-    key = 'DownArrow',
-    mods = 'CTRL',
-    action = act.ActivatePaneDirection 'Down',
   },
 
   -- Ctrl+w で現在のペインを即閉じる

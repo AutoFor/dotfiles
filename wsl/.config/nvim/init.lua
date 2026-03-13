@@ -55,14 +55,21 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- ターミナルモードを Alt+q で抜ける
-vim.keymap.set("t", "<A-q>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
+-- ターミナルモードを Alt×2（Esc×2）で抜ける
+vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
+vim.keymap.set("t", "<A-Left><A-Left>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
 
--- ウィンドウ移動を <leader> でショートカット
-vim.keymap.set("n", "<leader>h", "<C-w>h", { silent = true, desc = "Left window" })
-vim.keymap.set("n", "<leader>l", "<C-w>l", { silent = true, desc = "Right window" })
-vim.keymap.set("n", "<leader>j", "<C-w>j", { silent = true, desc = "Down window" })
-vim.keymap.set("n", "<leader>k", "<C-w>k", { silent = true, desc = "Up window" })
+-- ターミナルから Alt+hjkl でウィンドウ移動
+vim.keymap.set("t", "<A-h>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Terminal: Left window" })
+vim.keymap.set("t", "<A-l>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Terminal: Right window" })
+vim.keymap.set("t", "<A-j>", [[<C-\><C-n><C-w>j]], { silent = true, desc = "Terminal: Down window" })
+vim.keymap.set("t", "<A-k>", [[<C-\><C-n><C-w>k]], { silent = true, desc = "Terminal: Up window" })
+
+-- ウィンドウ移動を Alt+hjkl でショートカット（通常モード）
+vim.keymap.set("n", "<A-h>", "<C-w>h", { silent = true, desc = "Left window" })
+vim.keymap.set("n", "<A-l>", "<C-w>l", { silent = true, desc = "Right window" })
+vim.keymap.set("n", "<A-j>", "<C-w>j", { silent = true, desc = "Down window" })
+vim.keymap.set("n", "<A-k>", "<C-w>k", { silent = true, desc = "Up window" })
 vim.keymap.set("n", "<leader>w", "<C-w>w", { silent = true, desc = "Next window" })
 vim.keymap.set("n", "<leader>c", "<C-w>c", { silent = true, desc = "Close window" })
 
@@ -81,6 +88,15 @@ end, {})
 vim.api.nvim_create_user_command("Claude", function()
   vim.cmd("ClaudeCode")
 end, {})
+
+-- Claude Code ウィンドウに入ったら自動でターミナルモードへ
+vim.api.nvim_create_autocmd("BufEnter", {
+  callback = function()
+    if vim.bo.buftype == "terminal" and vim.fn.bufname():match("claude") then
+      vim.cmd("startinsert")
+    end
+  end,
+})
 
 -- 起動時に NvimTree と Claude を自動で開く
 vim.api.nvim_create_autocmd("VimEnter", {
