@@ -73,11 +73,6 @@ vim.keymap.set("n", "<A-k>", "<C-w>k", { silent = true, desc = "Up window" })
 vim.keymap.set("n", "<leader>w", "<C-w>w", { silent = true, desc = "Next window" })
 vim.keymap.set("n", "<leader>c", "<C-w>c", { silent = true, desc = "Close window" })
 
--- 外部でファイルが変更されたら自動で再読込（Claude Code 連携用）
-vim.o.autoread = true
-vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter" }, {
-  command = "checktime",
-})
 
 -- :Codex で CodexToggle を呼ぶエイリアス
 vim.api.nvim_create_user_command("Codex", function()
