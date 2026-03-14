@@ -1,0 +1,47 @@
+name: Sync Qiita Assets To Public
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '3_output/qiita/**'
+      - 'scripts/sync_qiita_public_assets.sh'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          path: life
+
+      - name: Checkout public repo
+        uses: actions/checkout@v4
+        with:
+          repository: AutoFor/life-public
+          token: ${{ secrets.LIFE_PUBLIC_PUSH_TOKEN }}
+          path: life-public
+
+      - name: Sync public assets
+        env:
+          LIFE_PUBLIC_DIR: ${{ github.workspace }}/life-public
+        run: |
+          chmod +x life/scripts/sync_qiita_public_assets.sh
+          cd life
+          ./scripts/sync_qiita_public_assets.sh
+
+      - name: Commit and push when changed
+        run: |
+          cd life-public
+          if git diff --quiet && git diff --cached --quiet && [[ -z "$(git status --short)" ]]; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add qiita
+          git commit -m "docs: sync qiita public assets from life"
+          git push origin main

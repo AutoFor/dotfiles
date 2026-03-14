@@ -1,0 +1,21 @@
+name: Publish to Qiita
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '3_output/qiita/**.md'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: noraworld/github-to-qiita@v1.0.1
+        with:
+          dir: 3_output/qiita
+          qiita_access_token: ${{ secrets.QIITA_TOKEN }}
