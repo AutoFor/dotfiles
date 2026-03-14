@@ -14,7 +14,10 @@ return {
         split_width_percentage = 0.3,
       },
       diff_opts = {
-        keep_terminal_focus = true, -- diff表示後もターミナル（Claude）にフォーカスを維持
+        auto_close_on_accept = true,  -- 承認時に diff ウィンドウを自動で閉じる
+        vertical_split = true,
+        open_in_current_tab = true,
+        keep_terminal_focus = false,
       },
     })
 

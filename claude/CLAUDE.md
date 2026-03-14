@@ -6,6 +6,14 @@
 
 ---
 
+## ショートカット集
+
+ショートカットや操作方法を追加・更新する場合は、必ず以下のファイルに記載する：
+
+- `docs/qiita/terminal-shortcuts.md`
+
+---
+
 ## Claude Code Skills
 
 繰り返し実行される作業は **Claude Code Skills** として定義されています。
