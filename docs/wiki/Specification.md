@@ -47,18 +47,22 @@
 
 ### Windows 設定ファイル
 
-#### .wezterm.lua
+#### .wezterm.lua / keybinds.lua
 
 | 機能 | キー / 説明 |
 |------|------------|
-| デフォルトドメイン | WSL:Ubuntu |
-| Leader キー | `Ctrl+q`（1秒タイムアウト） |
-| 左右分割 | `Ctrl+q` → `Ctrl+q` |
-| 上下分割 | `Ctrl+q` → `a` |
-| ペイン移動 | `Ctrl+矢印` |
-| ペイン閉じ | `Ctrl+w` |
-| スクロールバックコピー | `Ctrl+Shift+A` |
+| デフォルトドメイン | WSL:Ubuntu（tmux 自動起動） |
+| Leader キー | `Ctrl+q`（2秒タイムアウト） |
+| タブバー | 矢印型タブ・透過・境界線なし |
+| 透過 | `window_background_opacity = 0.85` |
+| 左右分割 | `Ctrl+q` → `r` |
+| 上下分割 | `Ctrl+q` → `d` |
+| ペイン移動 | `Ctrl+q` → `h/l/k/j` |
+| ペイン閉じ | `Ctrl+q` → `x` |
+| コピーモード | `Ctrl+q` → `[`（vi ライク） |
+| Workspace 切替 | `Ctrl+q` → `w` |
 | ウィンドウタイトル | カレントディレクトリ名を表示 |
+| キーバインド定義 | `windows/keybinds.lua`（インライン管理） |
 
 ### Claude Code 設定（サブモジュール）
 
