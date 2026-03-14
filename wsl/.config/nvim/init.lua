@@ -23,6 +23,10 @@ require("lazy").setup({
   },
 })
 
+-- 行番号
+vim.opt.number = true
+vim.opt.relativenumber = true
+
 vim.opt.clipboard = "unnamedplus"
 
 if vim.fn.has("wsl") == 1 then
