@@ -8,14 +8,7 @@ config.use_ime = true
 config.window_background_opacity = 0.85
 config.macos_window_background_blur = 20
 
--- WSL 関連（tmux 自動起動）
-local wsl_domains = wezterm.default_wsl_domains()
-for _, dom in ipairs(wsl_domains) do
-  if dom.name == "WSL:Ubuntu" then
-    dom.default_prog = { "tmux", "new-session", "-A", "-s", "main" }
-  end
-end
-config.wsl_domains = wsl_domains
+-- WSL 関連
 config.default_domain = "WSL:Ubuntu"
 
 -- ウィンドウタイトルにカレントディレクトリ名を表示
