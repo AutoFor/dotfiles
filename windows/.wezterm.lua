@@ -261,6 +261,7 @@ config.key_tables = {
     { key = "w", mods = "NONE", action = act.CopyMode("MoveForwardWord") },
     { key = "b", mods = "NONE", action = act.CopyMode("MoveBackwardWord") },
     { key = "e", mods = "NONE", action = act.CopyMode("MoveForwardWordEnd") },
+    { key = "E", mods = "NONE", action = act.CopyMode("MoveBackwardWordEnd") },
     { key = "t", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = true } }) },
     { key = "f", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = false } }) },
     { key = "T", mods = "NONE", action = act.CopyMode({ JumpBackward = { prev_char = true } }) },
