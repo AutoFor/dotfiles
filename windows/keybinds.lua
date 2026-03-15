@@ -155,6 +155,7 @@ return {
       { key = "w", mods = "NONE", action = act.CopyMode("MoveForwardWord") },
       { key = "b", mods = "NONE", action = act.CopyMode("MoveBackwardWord") },
       { key = "e", mods = "NONE", action = act.CopyMode("MoveForwardWordEnd") },
+      { key = "E", mods = "NONE", action = act.CopyMode("MoveBackwardWordEnd") },
       -- ジャンプ機能 t f
       { key = "t", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = true } }) },
       { key = "f", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = false } }) },
