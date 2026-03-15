@@ -35,8 +35,8 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
--- タブが一つの時は非表示
-config.hide_tab_bar_if_only_one_tab = true
+-- タブが一つの時も表示
+config.hide_tab_bar_if_only_one_tab = false
 -- falseにするとタブバーの透過が効かなくなる
 -- config.use_fancy_tab_bar = false
 
@@ -96,11 +96,13 @@ end)
 
 -- Show which key table is active in the status area
 wezterm.on("update-right-status", function(window, pane)
-  local name = window:active_key_table()
-  if name then
-    name = "TABLE: " .. name
+  local key_table = window:active_key_table()
+  local workspace = wezterm.mux.get_active_workspace()
+  local status = workspace
+  if key_table then
+    status = status .. "  TABLE: " .. key_table
   end
-  window:set_right_status(name or "")
+  window:set_right_status(status)
 end)
 
 config.disable_default_key_bindings = true
@@ -115,8 +117,8 @@ config.keys = {
   },
   {
     --workspaceの名前変更
-    key = "$",
-    mods = "LEADER",
+    key = "e",
+    mods = "ALT",
     action = act.PromptInputLine({
       description = "(wezterm) Set workspace title:",
       action = wezterm.action_callback(function(win, pane, line)
@@ -144,17 +146,17 @@ config.keys = {
     }),
   },
   -- コマンドパレット表示
-  { key = "p", mods = "SUPER", action = act.ActivateCommandPalette },
+  { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
   -- Tab移動
   { key = "Tab", mods = "CTRL", action = act.ActivateTabRelative(1) },
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
-  { key = "{", mods = "LEADER", action = act({ MoveTabRelative = -1 }) },
+  { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
   -- Tab新規作成
-  { key = "t", mods = "SUPER", action = act({ SpawnTab = "CurrentPaneDomain" }) },
+  { key = "t", mods = "CTRL", action = act({ SpawnTab = "CurrentPaneDomain" }) },
   -- Tabを閉じる
-  { key = "w", mods = "SUPER", action = act({ CloseCurrentTab = { confirm = true } }) },
-  { key = "}", mods = "LEADER", action = act({ MoveTabRelative = 1 }) },
+  { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
+  { key = ".", mods = "ALT", action = act({ MoveTabRelative = 1 }) },
 
   -- 画面フルスクリーン切り替え
   { key = "Enter", mods = "ALT", action = act.ToggleFullScreen },
@@ -162,20 +164,20 @@ config.keys = {
   -- コピーモード
   { key = "[", mods = "LEADER", action = act.ActivateCopyMode },
   -- コピー
-  { key = "c", mods = "SUPER", action = act.CopyTo("Clipboard") },
+  { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
   -- 貼り付け
-  { key = "v", mods = "SUPER", action = act.PasteFrom("Clipboard") },
+  { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
   -- Pane作成 leader + r or d
   { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
   { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
-  -- Pane移動 leader + hlkj
-  { key = "h", mods = "LEADER", action = act.ActivatePaneDirection("Left") },
-  { key = "l", mods = "LEADER", action = act.ActivatePaneDirection("Right") },
-  { key = "k", mods = "LEADER", action = act.ActivatePaneDirection("Up") },
-  { key = "j", mods = "LEADER", action = act.ActivatePaneDirection("Down") },
+  -- Pane移動 Alt + hjkl
+  { key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
+  { key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
+  { key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
+  { key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
   -- 選択中のPaneのみ表示
@@ -187,28 +189,28 @@ config.keys = {
   -- フォントサイズのリセット
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
-  -- タブ切替 Cmd + 数字
-  { key = "1", mods = "SUPER", action = act.ActivateTab(0) },
-  { key = "2", mods = "SUPER", action = act.ActivateTab(1) },
-  { key = "3", mods = "SUPER", action = act.ActivateTab(2) },
-  { key = "4", mods = "SUPER", action = act.ActivateTab(3) },
-  { key = "5", mods = "SUPER", action = act.ActivateTab(4) },
-  { key = "6", mods = "SUPER", action = act.ActivateTab(5) },
-  { key = "7", mods = "SUPER", action = act.ActivateTab(6) },
-  { key = "8", mods = "SUPER", action = act.ActivateTab(7) },
-  { key = "9", mods = "SUPER", action = act.ActivateTab(-1) },
+  -- タブ切替 Ctrl + 数字
+  { key = "1", mods = "CTRL", action = act.ActivateTab(0) },
+  { key = "2", mods = "CTRL", action = act.ActivateTab(1) },
+  { key = "3", mods = "CTRL", action = act.ActivateTab(2) },
+  { key = "4", mods = "CTRL", action = act.ActivateTab(3) },
+  { key = "5", mods = "CTRL", action = act.ActivateTab(4) },
+  { key = "6", mods = "CTRL", action = act.ActivateTab(5) },
+  { key = "7", mods = "CTRL", action = act.ActivateTab(6) },
+  { key = "8", mods = "CTRL", action = act.ActivateTab(7) },
+  { key = "9", mods = "CTRL", action = act.ActivateTab(-1) },
 
   -- コマンドパレット
   { key = "p", mods = "SHIFT|CTRL", action = act.ActivateCommandPalette },
   -- 設定再読み込み
   { key = "r", mods = "SHIFT|CTRL", action = act.ReloadConfiguration },
+  -- デバッグオーバーレイ（問題調査用）
+  { key = "l", mods = "SHIFT|CTRL", action = act.ShowDebugOverlay },
   -- キーテーブル用
   { key = "s", mods = "LEADER", action = act.ActivateKeyTable({ name = "resize_pane", one_shot = false }) },
-  {
-    key = "a",
-    mods = "LEADER",
-    action = act.ActivateKeyTable({ name = "activate_pane", timeout_milliseconds = 1000 }),
-  },
+  -- Pane入れ替え Alt + n/p
+  { key = "n", mods = "ALT", action = act.RotatePanes("Clockwise") },
+  { key = "p", mods = "ALT", action = act.RotatePanes("CounterClockwise") },
 }
 
 config.key_tables = {
