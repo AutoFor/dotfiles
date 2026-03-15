@@ -17,7 +17,7 @@ return {
         auto_close_on_accept = true,  -- 承認時に diff ウィンドウを自動で閉じる
         vertical_split = true,
         open_in_current_tab = true,
-        keep_terminal_focus = false,
+        keep_terminal_focus = true,
       },
     })
 
