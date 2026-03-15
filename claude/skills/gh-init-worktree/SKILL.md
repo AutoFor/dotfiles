@@ -13,22 +13,31 @@ allowed-tools:
 
 ## 変換イメージ
 
-**ビフォー（フラット構造）:**
+**ビフォー（ghq クローン）:**
 ```
-~/projects/my-project/
+~/ghq/github.com/owner/my-project/
   .git/
   readme.md
   src/
 ```
 
-**アフター（worktree ベース構造）:**
+**アフター（ghq クローンはそのまま維持 + ~/.git-worktrees/ に bare 構造を作成）:**
 ```
-~/projects/my-project/
-  .bare/              ← bare git repository
-  master/             ← worktree（デフォルトブランチ）
-    readme.md
-    src/
+~/.git-worktrees/
+  github.com/owner/my-project/    ← コンテナ（ghq 管理外）
+    .bare/                        ← bare git repository
+    main/                         ← worktree（デフォルトブランチ）
+      readme.md
+      src/
+    feature/issue-123-xxx/        ← フィーチャー worktree
+
+~/ghq/github.com/owner/my-project/  ← そのまま維持（触らない）
+  .git/
+  readme.md
+  src/
 ```
+
+ghq クローンは一切変更せず、`ghq list` / `ghq look` は引き続き正常に動作します。
 
 ## 引数の処理
 
@@ -55,9 +64,11 @@ bash ~/.claude/skills/gh-init-worktree/init-worktree.sh [対象パス]
 ```
 worktree 構造への変換が完了しました。
 
-bare リポジトリ: <パス>/.bare/
-デフォルトブランチ worktree: <パス>/<ブランチ名>/
+bare リポジトリ: ~/.git-worktrees/github.com/<owner>/<repo>/.bare/
+デフォルトブランチ worktree: ~/.git-worktrees/github.com/<owner>/<repo>/<ブランチ名>/
+
+ghq クローン（~/ghq/.../）は変更していません。ghq list / ghq look は引き続き正常に動作します。
 
 今後 `/gh-worktree-branch` や `/gh-worktree-from-issue` で作成される worktree は
-<パス>/<ブランチ名>/ のようにサブディレクトリとして作成されます。
+~/.git-worktrees/github.com/<owner>/<repo>/<ブランチ名>/ に作成されます。
 ```
