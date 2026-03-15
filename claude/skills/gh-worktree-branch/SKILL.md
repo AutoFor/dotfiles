@@ -9,87 +9,64 @@ allowed-tools:
 
 # Git Worktree ブランチ作成スキル（Issue-first）
 
-## 引数の処理
+引数を Issue タイトルとして使用し、以下のフローを実行する。
 
-- **引数なし** (`/gh-worktree-branch`): 「作業内容を伝えてください」と表示して **停止する。それ以上何もしない。**
-- **引数あり** (`/gh-worktree-branch ダークモード対応`): 引数を Issue タイトルとして使用し、以下のフローを実行する。
+## 実行フロー
 
-## 実行フロー（引数ありの場合）
-
-### 0. 古い Worktree の自動掃除
-
-前回のセッションで削除が遅延された Worktree がある場合、自動的に削除する:
+### 0. コンテキスト取得
 
 ```bash
-bash ~/.claude/skills/gh-pr-approve/cleanup-stale-worktrees.sh
+eval "$(bash ~/.claude/skills/_shared/detect-context.sh)"
 ```
 
-出力がない場合は掃除不要。
-
-### 1. リポジトリ情報を取得
+### 1. GitHub Issue を作成
 
 ```bash
-git remote -v
-```
-
-出力から `owner` と `repo` を特定する。
-
-### 2. GitHub Issue を作成
-
-```bash
-gh issue create --title "<ユーザーの引数>" --body "<作業の概要を簡潔に記載>"
+gh issue create --title "<ユーザーの引数をそのまま使用>" --body ""
 ```
 
 出力 URL から Issue 番号を抽出する（例: `https://github.com/owner/repo/issues/17` → `17`）。
 
-### 3. ブランチ名を生成
+ブランチ名: `issue-<Issue番号>`（例: `issue-17`）
 
-1. ユーザーの引数を英語スラッグに変換する
-   - 小文字、ハイフン区切り、英数字のみ
-   - 3〜5単語程度に簡潔にまとめる
-   - 例: `ダークモード追加` → `add-dark-mode`
-2. ブランチ名: `issue-<Issue番号>-<英語スラッグ>`
-   - 例: `issue-17-add-dark-mode`
-
-### 4. Worktree を作成
+### 2. Worktree を作成
 
 ```bash
-bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh <ブランチ名>
+bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh issue-<Issue番号>
 ```
 
-### 5. Worktree ディレクトリに移動
+### 3. Worktree ディレクトリに移動
 
 スクリプト出力のディレクトリに `cd` する。
 
-### 5a. 空コミットを作成して push
+### 3a. 空コミットを作成して push
 
 Worktree 作成直後は差分がないため、空コミットでブランチをリモートに push する：
 
 ```bash
 git commit --allow-empty -m "chore: start work on #<Issue番号>"
-git push -u origin <ブランチ名>
+git push -u origin issue-<Issue番号>
 ```
 
-### 5b. Draft PR を作成
+### 3b. Draft PR を作成
 
 ```bash
-gh pr create --draft --title "WIP: <Issueタイトル>" --body "Closes #<Issue番号>
+gh pr create --draft --title "WIP: <ユーザーの引数>" --body "Closes #<Issue番号>
 
 作業中..."
 ```
 
-### 6. クリップボードにコピー
-
-Worktree のパスをクリップボードにコピーする：
+### 4. 新しい pane で Claude Code を起動
 
 ```bash
-bash ~/.claude/skills/_shared/copy-to-clipboard.sh "cd <Worktreeの絶対パス> && claude"
+if [ -n "$TMUX" ]; then
+  tmux split-window -v -c "<Worktreeの絶対パス>" "claude"
+else
+  wezterm cli split-pane --cwd "<Worktreeの絶対パス>" -- claude
+fi
 ```
 
-- コマンドが **成功** した場合 → 完了メッセージに「📋 クリップボードにコピー済み」と表示
-- コマンドが **失敗** した場合 → 完了メッセージに「⚠ 手動でコピーしてください」と表示
-
-### 7. 完了メッセージ
+### 5. 完了メッセージ
 
 以下の形式で出力する：
 
@@ -100,8 +77,7 @@ Issue: #<Issue番号> - <Issueタイトル>
 ブランチ: <ブランチ名>
 Draft PR: #<PR番号>
 
-📋 クリップボードにコピー済み: cd <Worktreeの絶対パス> && claude
-新しいターミナルで貼り付けて作業を開始してください。
+新しい pane で Claude Code を起動しました。
 ```
 
 **これ以上何も出力しない。コード編集・次のステップの提案は一切しない。**

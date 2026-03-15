@@ -5,7 +5,7 @@ local config = wezterm.config_builder()
 config.automatically_reload_config = true
 config.font_size = 12.0
 config.use_ime = true
-config.window_background_opacity = 0.85
+config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
 
 -- WSL 関連
@@ -76,7 +76,8 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
     foreground = "#FFFFFF"
   end
   local edge_foreground = background
-  local title = "   " .. wezterm.truncate_right(tab.active_pane.title, max_width - 1) .. "   "
+  local raw = (tab.tab_title and #tab.tab_title > 0) and tab.tab_title or tab.active_pane.title
+  local title = "   " .. wezterm.truncate_right(raw, max_width - 1) .. "   "
   return {
     { Background = { Color = edge_background } },
     { Foreground = { Color = edge_foreground } },
@@ -102,7 +103,7 @@ wezterm.on("update-right-status", function(window, pane)
   if key_table then
     status = status .. "  TABLE: " .. key_table
   end
-  window:set_right_status(status)
+  window:set_right_status(status .. "  ")
 end)
 
 config.disable_default_key_bindings = true
@@ -117,13 +118,26 @@ config.keys = {
   },
   {
     --workspaceの名前変更
-    key = "e",
+    key = "E",
     mods = "ALT",
     action = act.PromptInputLine({
       description = "(wezterm) Set workspace title:",
       action = wezterm.action_callback(function(win, pane, line)
         if line then
           wezterm.mux.rename_workspace(wezterm.mux.get_active_workspace(), line)
+        end
+      end),
+    }),
+  },
+  {
+    -- タブ名変更
+    key = "e",
+    mods = "ALT",
+    action = act.PromptInputLine({
+      description = "タブ名を入力してください",
+      action = wezterm.action_callback(function(window, pane, line)
+        if line then
+          window:active_tab():set_title(line)
         end
       end),
     }),
@@ -211,6 +225,12 @@ config.keys = {
   -- Pane入れ替え Alt + n/p
   { key = "n", mods = "ALT", action = act.RotatePanes("Clockwise") },
   { key = "p", mods = "ALT", action = act.RotatePanes("CounterClockwise") },
+  {
+    -- ペインをオーバーレイ表示して選択（tmux display-panes 相当）
+    key = "p",
+    mods = "LEADER",
+    action = act.PaneSelect({ alphabet = "1234567890", show_pane_ids = true }),
+  },
 }
 
 config.key_tables = {
