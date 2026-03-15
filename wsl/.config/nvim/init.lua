@@ -59,21 +59,26 @@ vim.api.nvim_create_autocmd("FileType", {
   end,
 })
 
--- ターミナルモードを Alt×2（Esc×2）で抜ける
-vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
+-- ターミナルモードを Esc×2 で抜けて左ウィンドウへ移動
+vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal mode and move left" })
 vim.keymap.set("t", "<A-Left><A-Left>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
-
--- ターミナルから Alt+hjkl でウィンドウ移動
-vim.keymap.set("t", "<A-h>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Terminal: Left window" })
-vim.keymap.set("t", "<A-l>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Terminal: Right window" })
-vim.keymap.set("t", "<A-j>", [[<C-\><C-n><C-w>j]], { silent = true, desc = "Terminal: Down window" })
-vim.keymap.set("t", "<A-k>", [[<C-\><C-n><C-w>k]], { silent = true, desc = "Terminal: Up window" })
+-- Ctrl+Home で左、Ctrl+End で右ウィンドウへ移動（全モード対応）
+vim.keymap.set("n", "<C-Home>", "<C-w>h", { silent = true, desc = "Move to left window" })
+vim.keymap.set("n", "<C-End>", "<C-w>l", { silent = true, desc = "Move to right window" })
+vim.keymap.set("i", "<C-Home>", "<Esc><C-w>h", { silent = true, desc = "Move to left window" })
+vim.keymap.set("i", "<C-End>", "<Esc><C-w>l", { silent = true, desc = "Move to right window" })
+vim.keymap.set("t", "<C-Home>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal and move left" })
+vim.keymap.set("t", "<C-End>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Exit terminal and move right" })
 
 -- ウィンドウ移動を Alt+hjkl でショートカット（通常モード）
 vim.keymap.set("n", "<A-h>", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<A-l>", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<A-j>", "<C-w>j", { silent = true, desc = "Down window" })
 vim.keymap.set("n", "<A-k>", "<C-w>k", { silent = true, desc = "Up window" })
+vim.keymap.set("n", "<leader>h", "<C-w>h", { silent = true, desc = "Left window" })
+vim.keymap.set("n", "<leader>l", "<C-w>l", { silent = true, desc = "Right window" })
+vim.keymap.set("n", "<leader>j", "<C-w>j", { silent = true, desc = "Down window" })
+vim.keymap.set("n", "<leader>k", "<C-w>k", { silent = true, desc = "Up window" })
 vim.keymap.set("n", "<leader>w", "<C-w>w", { silent = true, desc = "Next window" })
 vim.keymap.set("n", "<leader>c", "<C-w>c", { silent = true, desc = "Close window" })
 
@@ -97,11 +102,10 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
--- 起動時に NvimTree と Claude を自動で開く
+-- 起動時に NvimTree を自動で開く
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
-    vim.cmd("ClaudeCode")
   end,
 })
 

@@ -97,36 +97,28 @@ git remote -v
 
 ### 4. Git Worktree コマンドの実行
 
-まず init モード（`.bare` 構造）かどうかを検出する:
+`create-worktree.sh` に委譲する（モード自動検出）:
 
 ```bash
-GIT_COMMON=$(git rev-parse --git-common-dir)
-if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
-  # init モード: コンテナ内にサブディレクトリとして作成
-  CONTAINER_DIR="$(dirname "$GIT_COMMON")"
-  WORKTREE_DIR="${CONTAINER_DIR}/<ブランチ種別>"
-else
-  # 従来モード: 隣接ディレクトリに作成
-  PROJ=$(basename "$(git rev-parse --show-toplevel)")
-  WORKTREE_DIR="../${PROJ}-<ブランチ種別>"
-fi
-git worktree add "$WORKTREE_DIR" -b <ブランチ名>
+bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh <ブランチ名>
 ```
 
-**具体例（従来モード）:**
-```bash
-git worktree add ../claude-config-feature -b feature/issue-123-preview-feature
-```
+スクリプトが以下の優先順位でモードを自動検出する:
+1. **モード1**: `.bare` worktree 内 → コンテナ内にサブディレクトリとして作成
+2. **モード2**: `~/.git-worktrees/github.com/<owner>/<repo>/.bare` が存在 → そちらに作成
+3. **モード3**: 従来通り隣接ディレクトリ（`../<proj>-<branch>`）に作成
 
-**具体例（init モード）:**
+出力の `ディレクトリ: ` 行から `WORKTREE_DIR` を取得する:
+
 ```bash
-# コンテナが ~/projects/my-project/ の場合
-git worktree add ~/projects/my-project/feature -b feature/issue-123-preview-feature
+OUTPUT=$(bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh <ブランチ名>)
+echo "$OUTPUT"
+WORKTREE_DIR=$(echo "$OUTPUT" | grep "^ディレクトリ: " | sed 's/^ディレクトリ: //')
 ```
 
 ### 5. 作業ディレクトリへの移動
 
-ステップ 4 で決定した `WORKTREE_DIR` に移動する:
+ステップ 4 で取得した `WORKTREE_DIR` に移動する:
 
 ```bash
 cd "$WORKTREE_DIR"
@@ -191,11 +183,13 @@ Draft PR: #<PR番号>
 # 2. ブランチ名を生成
 # → feature/issue-123-preview-feature
 
-# 3. Worktree を作成
-git worktree add ../claude-config-feature feature/issue-123-preview-feature
+# 3. Worktree を作成（create-worktree.sh に委譲）
+OUTPUT=$(bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh feature/issue-123-preview-feature)
+WORKTREE_DIR=$(echo "$OUTPUT" | grep "^ディレクトリ: " | sed 's/^ディレクトリ: //')
+# ~/.git-worktrees/... または ../claude-config-feature に作成される
 
 # 4. ディレクトリに移動
-cd ../claude-config-feature
+cd "$WORKTREE_DIR"
 
 # 5a. 空コミット + push
 git commit --allow-empty -m "chore: start work on #123"
