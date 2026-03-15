@@ -60,7 +60,9 @@
 | ペイン移動 | `Ctrl+q` → `h/l/k/j` |
 | ペイン閉じ | `Ctrl+q` → `x` |
 | コピーモード | `Ctrl+q` → `[`（vi ライク） |
-| Workspace 切替 | `Ctrl+q` → `w` |
+| Workspace 切替 | `leader → w` |
+| Workspace 名変更 | `Alt+e` |
+| ステータスバー | 現在の Workspace 名を右端に表示 |
 | ウィンドウタイトル | カレントディレクトリ名を表示 |
 | キーバインド定義 | `windows/keybinds.lua`（インライン管理） |
 
