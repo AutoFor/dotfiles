@@ -25,6 +25,7 @@ return {
     local opts = { silent = true, noremap = true }
 
     map("n", "<leader>ac", "<cmd>ClaudeCode<CR>", opts)
+    map("n", "<leader>af", "<cmd>ClaudeCodeFocus<CR>", opts)
     map("n", "<leader>ab", "<cmd>ClaudeCodeAdd %<CR>", opts)
     map("v", "<leader>as", function()
       vim.cmd("ClaudeCodeSend")

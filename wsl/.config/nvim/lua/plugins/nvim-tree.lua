@@ -58,6 +58,20 @@ return {
             vim.notify("Copied WIN: " .. win_path)
           end, opts("Copy Windows path to clipboard"))
 
+          -- フォルダ作成（カーソル位置の親ディレクトリに作成）
+          vim.keymap.set("n", "A", function()
+            local node = api.tree.get_node_under_cursor()
+            local parent_path = (node.type == "directory") and node.absolute_path
+              or vim.fn.fnamemodify(node.absolute_path, ":h")
+            vim.ui.input({ prompt = "New directory: " }, function(name)
+              if not name or name == "" then return end
+              local path = parent_path .. "/" .. name
+              vim.fn.mkdir(path, "p")
+              api.tree.reload()
+              vim.notify("Created: " .. path)
+            end)
+          end, opts("Create directory"))
+
           -- 相対パス → クリップボード
           vim.keymap.set("n", "gr", function()
             local node = api.tree.get_node_under_cursor()
@@ -72,6 +86,13 @@ return {
       vim.keymap.set("n", "<C-n>", ":NvimTreeToggle<CR>", { silent = true })
 
       local api = require("nvim-tree.api")
+
+      -- Explorer フォーカス移動
+      vim.keymap.set("n", "<leader>ef", function()
+        api.tree.focus()
+      end, { silent = true, desc = "Explorer: focus" })
+      vim.keymap.set("n", "<leader>ee", "<C-w>l", { silent = true, desc = "Explorer: back to editor" })
+
       vim.keymap.set("n", "<leader>er", function()
         api.tree.change_root_to_node()
         api.tree.close()

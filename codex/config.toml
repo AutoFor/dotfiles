@@ -1,4 +1,4 @@
-model = "gpt-5.3-codex"
+model = "gpt-5.4"
 model_reasoning_effort = "medium"
 
 [projects."/mnt/c/Users/SeiyaKawashima"]
@@ -41,6 +41,9 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/home/seiya-kawashima/ghq/github.com/AutoFor/life"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/.git-worktrees/github.com/seiya-kawashima/hotlaunch"]
 trust_level = "trusted"
 
 [notice.model_migrations]

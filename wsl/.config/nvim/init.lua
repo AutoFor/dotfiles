@@ -27,6 +27,12 @@ require("lazy").setup({
 vim.opt.number = true
 vim.opt.relativenumber = true
 
+-- Fold (Treesitter ベース)
+vim.opt.foldmethod = "expr"
+vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+vim.opt.foldlevel = 99
+vim.opt.foldlevelstart = 99
+
 vim.opt.clipboard = "unnamedplus"
 
 if vim.fn.has("wsl") == 1 then

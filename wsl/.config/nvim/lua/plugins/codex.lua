@@ -11,9 +11,15 @@ return {
       desc = "Toggle Codex",
       mode = { "n", "t" },
     },
+    {
+      "<leader>cf",
+      function() require("codex").open() end,
+      desc = "Focus Codex",
+      mode = "n",
+    },
   },
   opts = {
     autoinstall = true,  -- codex CLI が無ければ自動インストール
-    panel = false,       -- true にするとサイドパネル表示
+    panel = true,        -- true にするとサイドパネル表示
   },
 }
