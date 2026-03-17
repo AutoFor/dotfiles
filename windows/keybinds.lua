@@ -84,6 +84,14 @@ return {
     { key = "j", mods = "LEADER", action = act.ActivatePaneDirection("Down") },
     -- Pane選択
     { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
+    -- Paneを新規タブに移動 leader + !
+    {
+      key = "!",
+      mods = "LEADER",
+      action = wezterm.action_callback(function(win, pane)
+        pane:move_to_new_tab()
+      end),
+    },
     -- 選択中のPaneのみ表示
     { key = "z", mods = "LEADER", action = act.TogglePaneZoomState },
 
