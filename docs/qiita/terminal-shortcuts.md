@@ -1,5 +1,5 @@
 ---
-title: 自分専用ショートカット＆コマンドメモ（WezTerm / Zsh）
+title: GUIをぐいぐい使ってた人間がVimmerになるためのショートカット＆コマンド集
 topics:
   - WezTerm
   - Zsh
@@ -9,9 +9,20 @@ topics:
 published: true
 ---
 
-# 自分専用ショートカット＆コマンドメモ（WezTerm / Zsh）
+# GUIをぐいぐい使ってた人間がVimmerになるためのショートカット＆コマンド集
 
 WSL2 + WezTerm + Zsh 環境で使っている、自分がよく忘れるショートカットとコマンドをまとめたメモです。
+
+---
+
+> このショートカット集やプラグイン構成は、以下の方々の記事・動画を大変参考にさせていただいております。
+> 多大なる影響を受けました。ありがとうございます。
+>
+> - **ryoppippi** ([@ryoppippi](https://x.com/ryoppippi))
+> - **mozumasu** ([@mozumasu](https://x.com/mozumasu)) — [WezTerm をカスタマイズして開発体験を向上させる](https://zenn.dev/mozumasu/articles/mozumasu-wezterm-customization)
+> - **TECH WORLD** ([YouTube チャンネル](https://www.youtube.com/@TECHWORLD111)) — [【WezTerm】モテたい人のためのターミナル設定入門](https://www.youtube.com/watch?v=zShNd2J5oMI) / [【外資ITエンジニアの開発環境】VimmerによるVimmer(になりたい人)のためのVim動画](https://www.youtube.com/watch?v=XsAlXYWzcv4)
+
+---
 
 ## 環境
 
@@ -62,6 +73,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+n` / `Alt+p` | ペインを次/前に回転して入れ替え | Emacs 由来（**n**ext / **p**revious） |
 | `<leader> →p` | ペインをオーバーレイ表示して番号で選択（tmux display-panes 相当） | **p**ane |
 | `<leader> →q` | ペイン一覧をオーバーレイ表示（`Esc` で閉じる） | **q**uery（一覧照会） |
+| `<leader> →!` | 現在のペインを新規タブに切り出す | tmux の `!`（break-pane）由来 |
 
 ### コピーモード（vi ライク）
 
