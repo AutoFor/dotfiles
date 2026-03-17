@@ -515,3 +515,4 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `Ctrl+Alt+Shift+C` | コードブロック | **C**ode block（修飾キーを増やして区別） |
 | `Ctrl+Shift+7` | 番号付きリスト | Slack 独自（`7` に特定の意味なし） |
 | `Ctrl+Shift+8` | 箇条書きリスト | `Shift+8` = `*`（アスタリスク＝箇条書き記号） |
+
