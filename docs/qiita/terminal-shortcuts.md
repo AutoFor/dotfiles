@@ -5,7 +5,7 @@ topics:
   - Zsh
   - Neovim
   - WSL
-  - Slack
+  - ClaudeCode
 published: true
 ---
 
