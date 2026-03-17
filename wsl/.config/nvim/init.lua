@@ -33,6 +33,14 @@ vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
 vim.opt.foldlevel = 99
 vim.opt.foldlevelstart = 99
 
+-- 外部変更の自動リロード
+vim.opt.autoread = true
+vim.api.nvim_create_autocmd("FileChangedShell", {
+  callback = function()
+    vim.v.fcs_choice = "reload"
+  end,
+})
+
 vim.opt.clipboard = "unnamedplus"
 
 if vim.fn.has("wsl") == 1 then
