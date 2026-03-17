@@ -290,4 +290,22 @@ config.key_tables = {
   },
 }
 
+----------------------------------------------------
+-- フォーカス時 IME OFF
+----------------------------------------------------
+-- 他アプリからWezTermにフォーカスが移った瞬間だけIMEをOFFにする。
+-- WezTerm内のタブ・ペイン移動では window-focus-changed は発火しないため、
+-- その場合はIME状態を変更しない。
+wezterm.on('window-focus-changed', function(window, pane)
+  if window:is_focused() then
+    -- VK_DBE_ALPHANUMERIC (0xF0): トグルではなく「常にアルファベットモードへ」
+    wezterm.run_child_process({
+      'powershell.exe',
+      '-NoLogo', '-NonInteractive', '-WindowStyle', 'Hidden',
+      '-Command',
+      [[Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class Ime{[DllImport("user32.dll")]public static extern void keybd_event(byte v,byte s,uint f,IntPtr e);public static void Off(){keybd_event(0xF0,0,0,IntPtr.Zero);keybd_event(0xF0,0,2,IntPtr.Zero);}}';[Ime]::Off()]],
+    })
+  end
+end)
+
 return config
