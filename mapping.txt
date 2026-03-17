@@ -1,0 +1,1 @@
+docs/qiita/terminal-shortcuts.md, ee1c336247b6d0fa9b17
