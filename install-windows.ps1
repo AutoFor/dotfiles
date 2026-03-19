@@ -5,10 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$WslDistro = "Ubuntu-22.04"
-$WslUser = & wsl.exe -d $WslDistro -- whoami
-$WslUser = $WslUser.Trim()
-$DotfilesWindows = "\\wsl.localhost\$WslDistro\home\$WslUser\ghq\github.com\AutoFor\dotfiles\windows"
+$DotfilesWindows = Join-Path $PSScriptRoot "windows"
 $WinHome = $env:USERPROFILE
 $BackupSuffix = ".backup." + (Get-Date -Format "yyyyMMdd")
 
