@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $WslDistro = "Ubuntu"
 $WslUser = & wsl.exe -d $WslDistro -- whoami
 $WslUser = $WslUser.Trim()
-$DotfilesWindows = "\\wsl$\$WslDistro\home\$WslUser\dotfiles\windows"
+$DotfilesWindows = "\\wsl$\$WslDistro\home\$WslUser\ghq\github.com\AutoFor\dotfiles\windows"
 $WinHome = $env:USERPROFILE
 $BackupSuffix = ".backup." + (Get-Date -Format "yyyyMMdd")
 
@@ -52,6 +52,7 @@ if (-not (Test-Path $WeztermConfigDir)) {
 Link-File -Source "$DotfilesWindows\.wezterm.lua" -Destination "$WinHome\.wezterm.lua"
 Link-File -Source "$DotfilesWindows\keybinds.lua"  -Destination "$WeztermConfigDir\keybinds.lua"
 Link-File -Source "$DotfilesWindows\.gitconfig"   -Destination "$WinHome\.gitconfig"
+Link-File -Source "$DotfilesWindows\.wslconfig"   -Destination "$WinHome\.wslconfig"
 Link-File -Source "$DotfilesWindows\.bashrc"      -Destination "$WinHome\.bashrc"
 
 Write-Host ""
