@@ -27,7 +27,7 @@ config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
 
 -- WSL 関連
-config.default_domain = "WSL:Ubuntu"
+config.default_domain = "WSL:Ubuntu-22.04"
 
 -- ウィンドウタイトルにカレントディレクトリ名を表示
 local function basename(path)
