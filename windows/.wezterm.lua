@@ -2,6 +2,24 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
+----------------------------------------------------
+-- resurrect.wezterm: セッション自動保存・復元
+----------------------------------------------------
+local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
+
+-- update-status イベントで定期的に自動保存（約5分間隔）
+local last_save_time = 0
+wezterm.on("update-right-status", function(window, pane)
+  local now = os.time()
+  if now - last_save_time >= 300 then
+    last_save_time = now
+    local ok, ws = pcall(resurrect.workspace_state.get_workspace_state)
+    if ok and ws then
+      resurrect.save_state(ws)
+    end
+  end
+end)
+
 config.automatically_reload_config = true
 config.font_size = 12.0
 config.use_ime = true
@@ -261,7 +279,6 @@ config.key_tables = {
     { key = "w", mods = "NONE", action = act.CopyMode("MoveForwardWord") },
     { key = "b", mods = "NONE", action = act.CopyMode("MoveBackwardWord") },
     { key = "e", mods = "NONE", action = act.CopyMode("MoveForwardWordEnd") },
-    { key = "E", mods = "NONE", action = act.CopyMode("MoveBackwardWordEnd") },
     { key = "t", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = true } }) },
     { key = "f", mods = "NONE", action = act.CopyMode({ JumpForward = { prev_char = false } }) },
     { key = "T", mods = "NONE", action = act.CopyMode({ JumpBackward = { prev_char = true } }) },
