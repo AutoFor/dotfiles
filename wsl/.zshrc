@@ -74,8 +74,8 @@ function ghq-fzf() {
 zle -N ghq-fzf
 bindkey '^G' ghq-fzf
 
-# ~/.git-worktrees 以下の worktree を fzf で選択して cd（4〜5階層のみ、.bare 除外）
-gw() {
+# ~/.git-worktrees 以下の worktree を fzf で選択して cd（4〜5階層のみ、.bare 除外）Alt+W
+function worktree-fzf() {
   local base="$HOME/.git-worktrees"
 
   local target
@@ -87,7 +87,10 @@ gw() {
   ) || return
 
   cd "$target"
+  zle reset-prompt
 }
+zle -N worktree-fzf
+bindkey '\ew' worktree-fzf
 
 # WSL_INTEROP をサブプロセスに引き継ぐ
 if [ -z "$WSL_INTEROP" ]; then

@@ -112,13 +112,8 @@ end)
 ----------------------------------------------------
 -- IME OFF ユーティリティ
 ----------------------------------------------------
--- VK_DBE_ALPHANUMERIC (0xF0): トグルではなく「常にアルファベットモードへ」
-local IME_OFF_CMD = {
-  'powershell.exe',
-  '-NoLogo', '-NonInteractive', '-WindowStyle', 'Hidden',
-  '-Command',
-  [[Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class Ime{[DllImport("user32.dll")]public static extern void keybd_event(byte v,byte s,uint f,IntPtr e);public static void Off(){keybd_event(0xF0,0,0,IntPtr.Zero);keybd_event(0xF0,0,2,IntPtr.Zero);}}';[Ime]::Off()]],
-}
+-- ime-off.exe: keybd_event(VK_DBE_ALPHANUMERIC) でGoogle日本語入力をOFF
+local IME_OFF_CMD = { 'C:/Users/SeiyaKawashima/bin/ime-off.exe' }
 
 -- アクション実行前にIMEをOFFにするラッパー
 local function with_ime_off(action)
