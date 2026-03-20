@@ -2,23 +2,6 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
-----------------------------------------------------
--- resurrect.wezterm: セッション自動保存・復元
-----------------------------------------------------
-local resurrect = wezterm.plugin.require("https://github.com/MLFlexer/resurrect.wezterm")
-
--- update-status イベントで定期的に自動保存（約5分間隔）
-local last_save_time = 0
-wezterm.on("update-right-status", function(window, pane)
-  local now = os.time()
-  if now - last_save_time >= 300 then
-    last_save_time = now
-    local ok, ws = pcall(resurrect.workspace_state.get_workspace_state)
-    if ok and ws then
-      resurrect.save_state(ws)
-    end
-  end
-end)
 
 config.automatically_reload_config = true
 config.font_size = 12.0
@@ -128,7 +111,15 @@ end
 ----------------------------------------------------
 
 -- Show which key table is active in the status area
+local last_pane_id = nil
 wezterm.on("update-right-status", function(window, pane)
+  -- ペインが切り替わったら IME OFF（ペイン切り替え後に実行）
+  local pane_id = pane:pane_id()
+  if pane_id ~= last_pane_id then
+    last_pane_id = pane_id
+    wezterm.run_child_process(IME_OFF_CMD)
+  end
+
   local key_table = window:active_key_table()
   local workspace = wezterm.mux.get_active_workspace()
   local status = workspace
