@@ -143,7 +143,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 |---------|------|------|
 | `cfd` | カレントディレクトリ直下のフォルダを fzf で選んで `cd` | **c**d + **f**zf + **d**irectory |
 | `wcd "C:\..."` | Windows パスを WSL パスに変換して `cd` + Claude Code 起動 | **W**indows **cd** |
-| `gw` | `~/.git-worktrees/` 以下の worktree を fzf で選択して `cd` | **g**it **w**orktrees |
+| `Alt+W` | `~/.git-worktrees/` 以下の worktree を fzf で選択して `cd` | **W**orktree |
 
 ---
 
