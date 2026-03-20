@@ -2,11 +2,12 @@
 set -euo pipefail
 
 if [ $# -lt 1 ]; then
-  echo "Usage: $0 <branch-name>" >&2
+  echo "Usage: $0 <branch-name> [r|d]" >&2
   exit 1
 fi
 
 BRANCH="$1"
+SPLIT_DIR="${2:-d}"
 
 # モード1: .bare ディレクトリがある場合はコンテナ内にサブディレクトリとして作成
 GIT_COMMON=$(git rev-parse --git-common-dir)
@@ -56,6 +57,10 @@ elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
 fi
 
 if [ -n "$_wezterm_cmd" ]; then
-  "$_wezterm_cmd" cli split-pane --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude"
+  if [ "$SPLIT_DIR" = "r" ]; then
+    "$_wezterm_cmd" cli split-pane --right --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude"
+  else
+    "$_wezterm_cmd" cli split-pane --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude"
+  fi
   echo "WezTerm: 新しいペインで Claude を起動しました。"
 fi
