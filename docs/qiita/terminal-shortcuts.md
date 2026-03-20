@@ -110,6 +110,22 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
 | `Alt+Enter` | フルスクリーン切り替え | Enter = 確定・最大化 |
 
+### SSH（Tailscale 経由）
+
+外出先から Tailscale 経由でリモートマシンに接続するとき、通常の `ssh` コマンドの代わりに `wezterm ssh` を使うと、WezTerm のペイン分割などのローカル機能がそのまま使える。
+
+```bash
+# 通常の SSH（WezTerm の機能は使えない）
+ssh user@tailscale-hostname
+
+# WezTerm SSH（リモート側に WEZTERM_PANE が自動でセットされる）
+wezterm ssh user@tailscale-hostname
+```
+
+Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
+
+**なぜ動くか：** `wezterm ssh` は SSH 接続時に WezTerm のマルチプレクサをセットアップし、リモート側に `WEZTERM_PANE` と `WEZTERM_UNIX_SOCKET` を自動でセットする。これにより `wezterm cli split-pane` などのコマンドがリモートからでも動作する。
+
 ---
 
 ## Zsh キーバインド
