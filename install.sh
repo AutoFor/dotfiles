@@ -68,6 +68,15 @@ for skill_dir in "$DOTFILES_DIR/claude/skills"/*/; do
 done
 
 echo ""
+echo "=== ~/.local/bin スクリプトのリンク ==="
+
+mkdir -p "$HOME/.local/bin"
+for bin_file in "$DOTFILES_DIR/wsl/.local/bin"/*; do
+  bin_name="$(basename "$bin_file")"
+  link_file "$bin_file" "$HOME/.local/bin/$bin_name"
+done
+
+echo ""
 echo "=== Codex 設定ファイルのリンク ==="
 
 CODEX_DIR="$HOME/.codex"
