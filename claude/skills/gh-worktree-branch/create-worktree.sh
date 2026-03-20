@@ -42,3 +42,20 @@ echo ""
 echo "=== Worktree 作成完了 ==="
 echo "ブランチ: $BRANCH"
 echo "ディレクトリ: $WORKTREE_ABSPATH"
+
+# WezTerm で新しいペインを開いて Claude を起動
+# ネイティブ: wezterm + WEZTERM_PANE が必要
+# WSL2: wezterm.exe で代替（WEZTERM_PANE 不要）
+_wezterm_cmd=""
+if command -v wezterm &>/dev/null && [ -n "${WEZTERM_PANE:-}" ]; then
+  _wezterm_cmd="wezterm"
+elif command -v wezterm.exe &>/dev/null; then
+  _wezterm_cmd="wezterm.exe"
+elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
+  _wezterm_cmd="/mnt/c/Program Files/WezTerm/wezterm.exe"
+fi
+
+if [ -n "$_wezterm_cmd" ]; then
+  "$_wezterm_cmd" cli split-pane --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude"
+  echo "WezTerm: 新しいペインで Claude を起動しました。"
+fi
