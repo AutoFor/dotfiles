@@ -92,6 +92,17 @@ function worktree-fzf() {
 zle -N worktree-fzf
 bindkey '\ew' worktree-fzf
 
+# gh worktree branch: Issue作成 + worktree作成 + WezTermペイン分割
+# gwb r → 右分割、gwb d → 下分割（デフォルト）
+gwb() {
+  local dir="${1:-d}"
+  local url
+  url=$(gh issue create --title "WIP" --body "") || return 1
+  local num
+  num=$(echo "$url" | grep -oE '[0-9]+$')
+  bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$dir"
+}
+
 # WSL_INTEROP をサブプロセスに引き継ぐ
 if [ -z "$WSL_INTEROP" ]; then
   export WSL_INTEROP=$(ls -t /run/WSL/*_interop 2>/dev/null | head -1)
