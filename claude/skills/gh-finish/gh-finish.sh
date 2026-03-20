@@ -87,7 +87,7 @@ detect_context() {
   CURRENT_BRANCH=$(git branch --show-current)
 
   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
-    | sed 's@^refs/remotes/origin/@@')
+    | sed 's@^refs/remotes/origin/@@' || true)
   if [ -z "$DEFAULT_BRANCH" ]; then
     DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | grep "HEAD branch" | awk '{print $NF}')
   fi
@@ -304,6 +304,16 @@ ready_for_review() {
     "このブランチの変更から以下を生成。1行目: PR タイトル（日本語20文字以内）。2行目以降: PR 説明文（Markdown、## 変更内容 と ## テスト方法 セクション含む）。余計な前置き不要。")
   pr_title=$(echo "$claude_out" | head -1 | tr -d '\r\n')
   pr_body=$(echo "$claude_out" | tail -n +2)
+
+  # Issue タイトル・本文を更新（WIP から実際の内容に）
+  local issue_title_current
+  issue_title_current=$(gh issue view "$issue_num" --repo "$OWNER/$REPO" --json title --jq '.title' 2>/dev/null || echo "")
+  if [ "$issue_title_current" = "WIP" ] || [ -z "$issue_title_current" ]; then
+    echo "Issue #$issue_num を更新中..."
+    gh issue edit "$issue_num" --repo "$OWNER/$REPO" \
+      --title "$pr_title" \
+      --body "$(echo "$pr_body" | sed 's/## テスト方法.*//' | sed '/^$/N;/^\n$/d')" 2>/dev/null || true
+  fi
 
   # 既存 Draft PR を検索
   local draft_pr_json pr_num
