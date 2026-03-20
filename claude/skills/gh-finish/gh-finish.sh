@@ -87,7 +87,11 @@ detect_context() {
   CURRENT_BRANCH=$(git branch --show-current)
 
   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null \
-    | sed 's@^refs/remotes/origin/@@' || echo "main")
+    | sed 's@^refs/remotes/origin/@@')
+  if [ -z "$DEFAULT_BRANCH" ]; then
+    DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | grep "HEAD branch" | awk '{print $NF}')
+  fi
+  DEFAULT_BRANCH="${DEFAULT_BRANCH:-main}"
 
   # OWNER/REPO
   local remote_url
