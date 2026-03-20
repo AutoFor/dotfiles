@@ -88,3 +88,8 @@ gw() {
 
   cd "$target"
 }
+
+# WSL_INTEROP をサブプロセスに引き継ぐ
+if [ -z "$WSL_INTEROP" ]; then
+  export WSL_INTEROP=$(ls -t /run/WSL/*_interop 2>/dev/null | head -1)
+fi
