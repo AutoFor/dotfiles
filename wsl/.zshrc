@@ -92,6 +92,9 @@ function worktree-fzf() {
 zle -N worktree-fzf
 bindkey '\ew' worktree-fzf
 
+# gh finish: Issue作成〜PRマージまで一括実行
+alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
+
 # gh worktree branch: Issue作成 + worktree作成 + WezTermペイン分割
 # gwb r → 右分割、gwb d → 下分割（デフォルト）
 gwb() {
