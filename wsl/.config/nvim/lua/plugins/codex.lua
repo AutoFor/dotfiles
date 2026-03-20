@@ -21,5 +21,6 @@ return {
   opts = {
     autoinstall = true,  -- codex CLI が無ければ自動インストール
     panel = true,        -- true にするとサイドパネル表示
+    width = 0.3,         -- Claude Code と同様に右 30% のパネル幅
   },
 }
