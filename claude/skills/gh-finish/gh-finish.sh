@@ -291,13 +291,15 @@ ready_for_review() {
     git push -u origin "$branch"
   fi
 
-  # [claude -p #3] PR body 生成
-  echo "PR 説明文を生成中..."
-  local log diff pr_body
+  # [claude -p #3] PR タイトル + 本文を diff から生成（Issue タイトルに依存しない）
+  echo "PR タイトル・説明文を生成中..."
+  local log diff claude_out pr_title pr_body
   log=$(git log "origin/$DEFAULT_BRANCH..HEAD" --oneline 2>/dev/null || echo "")
   diff=$(git diff "origin/$DEFAULT_BRANCH...HEAD" 2>/dev/null || echo "")
-  pr_body=$(printf "commits:\n%s\n\ndiff:\n%s" "$log" "$diff" | claude -p \
-    "このブランチの変更から PR 説明文を日本語 Markdown で生成。## 変更内容 と ## テスト方法 セクションを含める。")
+  claude_out=$(printf "commits:\n%s\n\ndiff:\n%s" "$log" "$diff" | claude -p \
+    "このブランチの変更から以下を生成。1行目: PR タイトル（日本語20文字以内）。2行目以降: PR 説明文（Markdown、## 変更内容 と ## テスト方法 セクション含む）。余計な前置き不要。")
+  pr_title=$(echo "$claude_out" | head -1 | tr -d '\r\n')
+  pr_body=$(echo "$claude_out" | tail -n +2)
 
   # 既存 Draft PR を検索
   local draft_pr_json pr_num
@@ -307,10 +309,6 @@ ready_for_review() {
 
   if [ -n "$pr_num" ]; then
     echo "既存 PR #$pr_num を更新中..."
-    local pr_title
-    pr_title=$(gh pr view "$pr_num" --repo "$OWNER/$REPO" --json title -q '.title' \
-      | sed 's/^WIP: //')
-
     gh api "repos/$OWNER/$REPO/pulls/$pr_num" -X PATCH \
       -f title="$pr_title" \
       -f body="$(printf 'Closes #%s\n\n%s' "$issue_num" "$pr_body")"
@@ -318,10 +316,6 @@ ready_for_review() {
     echo "  PR #$pr_num を Ready for Review に変更しました。"
   else
     echo "新規 PR を作成中..."
-    local pr_title
-    pr_title=$(gh issue view "$issue_num" --repo "$OWNER/$REPO" --json title -q '.title' \
-      2>/dev/null || echo "$branch")
-
     local pr_url
     pr_url=$(gh pr create \
       --title "$pr_title" \
