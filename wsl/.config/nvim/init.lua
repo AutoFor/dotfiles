@@ -44,6 +44,11 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
 vim.opt.clipboard = "unnamedplus"
 
 if vim.fn.has("wsl") == 1 then
+  -- WSL では vim.ui.open を wslview に向ける
+  vim.ui.open = function(uri)
+    vim.fn.jobstart({ "wslview", uri }, { detach = true })
+  end
+
   vim.g.clipboard = {
     name = "win32yank-wsl",
     copy = {

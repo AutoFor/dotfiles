@@ -53,8 +53,10 @@ return {
               return
             end
             local win_path = result:gsub("\n$", "")
-            vim.fn.setreg("+", win_path, "c")
-            vim.fn.system("printf '%s' " .. vim.fn.shellescape(win_path) .. " | clip.exe")
+            -- OSC 52 でターミナル（WezTerm）経由でクリップボードに書き込む（SSH対応）
+            local encoded = vim.fn.system({ "base64", "--wrap=0" }, win_path)
+            io.write("\x1b]52;c;" .. encoded .. "\x07")
+            io.flush()
             vim.notify("Copied WIN: " .. win_path)
           end, opts("Copy Windows path to clipboard"))
 
@@ -71,6 +73,19 @@ return {
               vim.notify("Created: " .. path)
             end)
           end, opts("Create directory"))
+
+          -- ファイル/フォルダを削除（確認あり・完全削除）
+          vim.keymap.set("n", "dd", function()
+            local node = api.tree.get_node_under_cursor()
+            if not node or not node.absolute_path then return end
+            vim.ui.input({
+              prompt = "Delete '" .. node.name .. "'? (y/N): ",
+            }, function(input)
+              if input == "y" or input == "Y" then
+                api.fs.remove(node)
+              end
+            end)
+          end, opts("Delete file/directory (permanent)"))
 
           -- 相対パス → クリップボード
           vim.keymap.set("n", "gr", function()

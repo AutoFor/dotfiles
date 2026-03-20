@@ -9,3 +9,6 @@
 [user]
 	name = your-name
 	email = your-id+your-name@users.noreply.github.com
+
+[ghq]
+	user = AutoFor
