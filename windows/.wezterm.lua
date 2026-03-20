@@ -110,6 +110,25 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
 end)
 
 ----------------------------------------------------
+-- IME OFF ユーティリティ
+----------------------------------------------------
+-- VK_DBE_ALPHANUMERIC (0xF0): トグルではなく「常にアルファベットモードへ」
+local IME_OFF_CMD = {
+  'powershell.exe',
+  '-NoLogo', '-NonInteractive', '-WindowStyle', 'Hidden',
+  '-Command',
+  [[Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class Ime{[DllImport("user32.dll")]public static extern void keybd_event(byte v,byte s,uint f,IntPtr e);public static void Off(){keybd_event(0xF0,0,0,IntPtr.Zero);keybd_event(0xF0,0,2,IntPtr.Zero);}}';[Ime]::Off()]],
+}
+
+-- アクション実行前にIMEをOFFにするラッパー
+local function with_ime_off(action)
+  return wezterm.action_callback(function(window, pane)
+    wezterm.run_child_process(IME_OFF_CMD)
+    window:perform_action(action, pane)
+  end)
+end
+
+----------------------------------------------------
 -- keybinds
 ----------------------------------------------------
 
@@ -179,9 +198,9 @@ config.keys = {
   },
   -- コマンドパレット表示
   { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
-  -- Tab移動
-  { key = "Tab", mods = "CTRL", action = act.ActivateTabRelative(1) },
-  { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
+  -- Tab移動（IME OFF）
+  { key = "Tab", mods = "CTRL", action = with_ime_off(act.ActivateTabRelative(1)) },
+  { key = "Tab", mods = "SHIFT|CTRL", action = with_ime_off(act.ActivateTabRelative(-1)) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
   -- Tab新規作成
@@ -205,11 +224,11 @@ config.keys = {
   { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
-  -- Pane移動 Alt + hjkl
-  { key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
-  { key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
-  { key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
-  { key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
+  -- Pane移動 Alt + hjkl（IME OFF）
+  { key = "h", mods = "ALT", action = with_ime_off(act.ActivatePaneDirection("Left")) },
+  { key = "l", mods = "ALT", action = with_ime_off(act.ActivatePaneDirection("Right")) },
+  { key = "k", mods = "ALT", action = with_ime_off(act.ActivatePaneDirection("Up")) },
+  { key = "j", mods = "ALT", action = with_ime_off(act.ActivatePaneDirection("Down")) },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
   -- 選択中のPaneのみ表示
@@ -221,16 +240,16 @@ config.keys = {
   -- フォントサイズのリセット
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
-  -- タブ切替 Ctrl + 数字
-  { key = "1", mods = "CTRL", action = act.ActivateTab(0) },
-  { key = "2", mods = "CTRL", action = act.ActivateTab(1) },
-  { key = "3", mods = "CTRL", action = act.ActivateTab(2) },
-  { key = "4", mods = "CTRL", action = act.ActivateTab(3) },
-  { key = "5", mods = "CTRL", action = act.ActivateTab(4) },
-  { key = "6", mods = "CTRL", action = act.ActivateTab(5) },
-  { key = "7", mods = "CTRL", action = act.ActivateTab(6) },
-  { key = "8", mods = "CTRL", action = act.ActivateTab(7) },
-  { key = "9", mods = "CTRL", action = act.ActivateTab(-1) },
+  -- タブ切替 Ctrl + 数字（IME OFF）
+  { key = "1", mods = "CTRL", action = with_ime_off(act.ActivateTab(0)) },
+  { key = "2", mods = "CTRL", action = with_ime_off(act.ActivateTab(1)) },
+  { key = "3", mods = "CTRL", action = with_ime_off(act.ActivateTab(2)) },
+  { key = "4", mods = "CTRL", action = with_ime_off(act.ActivateTab(3)) },
+  { key = "5", mods = "CTRL", action = with_ime_off(act.ActivateTab(4)) },
+  { key = "6", mods = "CTRL", action = with_ime_off(act.ActivateTab(5)) },
+  { key = "7", mods = "CTRL", action = with_ime_off(act.ActivateTab(6)) },
+  { key = "8", mods = "CTRL", action = with_ime_off(act.ActivateTab(7)) },
+  { key = "9", mods = "CTRL", action = with_ime_off(act.ActivateTab(-1)) },
 
   -- コマンドパレット
   { key = "p", mods = "SHIFT|CTRL", action = act.ActivateCommandPalette },
@@ -307,21 +326,10 @@ config.key_tables = {
   },
 }
 
-----------------------------------------------------
--- フォーカス時 IME OFF
-----------------------------------------------------
--- 他アプリからWezTermにフォーカスが移った瞬間だけIMEをOFFにする。
--- WezTerm内のタブ・ペイン移動では window-focus-changed は発火しないため、
--- その場合はIME状態を変更しない。
+-- 他アプリからWezTermにフォーカスが移った時もIME OFF
 wezterm.on('window-focus-changed', function(window, pane)
   if window:is_focused() then
-    -- VK_DBE_ALPHANUMERIC (0xF0): トグルではなく「常にアルファベットモードへ」
-    wezterm.run_child_process({
-      'powershell.exe',
-      '-NoLogo', '-NonInteractive', '-WindowStyle', 'Hidden',
-      '-Command',
-      [[Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public class Ime{[DllImport("user32.dll")]public static extern void keybd_event(byte v,byte s,uint f,IntPtr e);public static void Off(){keybd_event(0xF0,0,0,IntPtr.Zero);keybd_event(0xF0,0,2,IntPtr.Zero);}}';[Ime]::Off()]],
-    })
+    wezterm.run_child_process(IME_OFF_CMD)
   end
 end)
 
