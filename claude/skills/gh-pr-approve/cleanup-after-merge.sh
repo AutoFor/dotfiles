@@ -36,10 +36,10 @@ git -C "$MAIN_REPO" checkout "$DEFAULT_BRANCH"
 # ローカル変更がある場合はstashしてpull
 if ! git -C "$MAIN_REPO" diff --quiet 2>/dev/null; then
   git -C "$MAIN_REPO" stash
-  git -C "$MAIN_REPO" pull
+  git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
   git -C "$MAIN_REPO" stash pop || git -C "$MAIN_REPO" checkout --theirs . && git -C "$MAIN_REPO" stash drop 2>/dev/null || true
 else
-  git -C "$MAIN_REPO" pull
+  git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
 fi
 
 # prune
