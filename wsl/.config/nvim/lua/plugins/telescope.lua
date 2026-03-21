@@ -1,18 +1,28 @@
 return {
   {
     "nvim-telescope/telescope.nvim",
-    tag = "0.1.8",
-    dependencies = {
+dependencies = {
       "nvim-lua/plenary.nvim",
       { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
     },
     config = function()
       local telescope = require("telescope")
       local builtin = require("telescope.builtin")
+      local actions = require("telescope.actions")
+
+      -- ファイルを開いた後に nvim-tree でそのファイルを選択状態にする
+      local function open_and_reveal(prompt_bufnr)
+        actions.select_default(prompt_bufnr)
+        require("nvim-tree.api").tree.find_file({ open = true, focus = false })
+      end
 
       telescope.setup({
         defaults = {
           file_ignore_patterns = { "node_modules", ".git/" },
+          mappings = {
+            i = { ["<CR>"] = open_and_reveal },
+            n = { ["<CR>"] = open_and_reveal },
+          },
         },
         extensions = {
           fzf = {},
