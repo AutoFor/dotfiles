@@ -95,9 +95,9 @@ bindkey '\ew' worktree-fzf
 # gh finish: Issue作成〜PRマージまで一括実行
 alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
 
-# claude -d: --dangerously-skip-permissions の短縮
+# claude da: --dangerously-skip-permissions の短縮
 claude() {
-  if [[ "$1" == "-d" ]]; then
+  if [[ "$1" == "da" ]]; then
     shift
     command claude --dangerously-skip-permissions "$@"
   else

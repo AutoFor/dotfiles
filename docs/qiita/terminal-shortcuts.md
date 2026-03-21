@@ -375,6 +375,8 @@ Leader キーは `Space`。
 | `<leader>ee` | エディタにフォーカスを戻す | **e**xplorer **e**xit |
 | `<leader>er` | カーソル下のディレクトリをルートに変更して再表示 | **e**xplorer **r**oot |
 | `Ctrl+]` | フォルダを nvim-tree 内部のルートに変更（`:pwd` は変わらない） | `]` = 深く潜る（vim 慣習） |
+| `W` | ツリー全体を折りたたむ（collapse all） | 大文字で全体操作 |
+| `E` | ツリー全体を再帰的に展開（expand all） | 大文字で全体操作 |
 
 ##### 絞り込み
 
@@ -491,6 +493,7 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `exit` または `Ctrl+D` | Claude Code セッションを終了 | exit / EOF（**D** = end of file） |
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
+| `claude da` | 権限確認をスキップして起動（danger mode） | **da**nger の略 |
 
 #### Claude Code プロンプト入力
 
