@@ -121,10 +121,19 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
--- 起動時に NvimTree を自動で開く
+-- wezterm.exe のパス（WSL から Windows の wezterm CLI を叩く）
+local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
+
+-- 起動時: 左に NvimTree、右にターミナルを開く
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
+    vim.schedule(function()
+      vim.cmd("wincmd l")
+      vim.cmd("terminal")
+      vim.cmd("vertical resize " .. math.floor(vim.o.columns * 0.3))
+      require("nvim-tree.api").tree.focus()
+    end)
   end,
 })
 
@@ -150,4 +159,34 @@ vim.api.nvim_create_autocmd("FileType", {
     )
   end,
 })
+
+-- ビジュアル選択中の「相対パス:開始行-終了行」をクリップボードにコピー
+local function visual_file_location()
+  local file = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":.")
+  local start_line = vim.fn.line("v")
+  local end_line   = vim.fn.line(".")
+  if start_line > end_line then
+    start_line, end_line = end_line, start_line
+  end
+  if start_line == end_line then
+    return string.format("%s:%d", file, start_line)
+  else
+    return string.format("%s:%d-%d", file, start_line, end_line)
+  end
+end
+
+-- <leader>y : 右隣の WezTerm ペインに送信
+vim.keymap.set("v", "<leader>y", function()
+  local s = visual_file_location()
+  local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
+  if pane_id == "" then
+    print("no right pane: " .. s)
+    return
+  end
+  -- ビジュアルモードを抜けてから送信・フォーカス移動
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
+  vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, s .. "\n" })
+  vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
+  print("sent: " .. s)
+end, { desc = "Send file:line to WezTerm right pane (visual)" })
 

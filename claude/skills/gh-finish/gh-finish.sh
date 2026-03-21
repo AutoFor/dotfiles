@@ -360,7 +360,21 @@ approve_and_merge() {
     echo "Warning: approve-pr.sh が見つかりません。承認をスキップ。" >&2
   fi
 
-  gh pr merge "$pr_num" --squash --repo "$OWNER/$REPO"
+  local merge_output merge_exit
+  merge_output=$(gh pr merge "$pr_num" --squash --repo "$OWNER/$REPO" 2>&1) && merge_exit=0 || merge_exit=$?
+  if [ $merge_exit -ne 0 ]; then
+    echo "$merge_output" >&2
+    if echo "$merge_output" | grep -q "not mergeable\|merge conflict\|cannot be cleanly created"; then
+      echo "" >&2
+      echo "Error: コンフリクトが発生しています。" >&2
+      echo "  手動でコンフリクトを解決してから再実行してください。" >&2
+      echo "  1. git rebase origin/$DEFAULT_BRANCH" >&2
+      echo "  2. コンフリクトを解決" >&2
+      echo "  3. git push --force-with-lease origin $FEATURE_BRANCH" >&2
+      echo "  4. gf を再実行" >&2
+    fi
+    exit $merge_exit
+  fi
   echo "  PR #$pr_num マージ完了。"
 
   local issue_state
