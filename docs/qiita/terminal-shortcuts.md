@@ -164,6 +164,17 @@ Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 | `gwb r` | 同上・右分割 | **r**ight |
 | `gwb d` | 同上・下分割（`gwb` と同じ） | **d**own |
 
+### pptx-meiryo（PowerPoint フォント変換）
+
+| コマンド | 動作 |
+|---------|------|
+| `pptx-meiryo <file.pptx>` | 指定した .pptx のすべてのフォントを Meiryo UI に変換（元ファイルを上書き・`.bak` 自動作成） |
+| `pptx-meiryo <file.pptx> --output <out.pptx>` | 変換結果を別ファイルに出力 |
+| `pptx-meiryo <file.pptx> --no-backup` | バックアップなしで上書き |
+
+WSL パス（`/mnt/c/...`）・Windows パス（`C:\...` / `C:/...`）どちらも受け付ける。
+実体は `C:\tools\pptx-meiryo\pptx-meiryo.exe`（PowerPoint COM Interop、要 PowerPoint インストール済み）。
+
 ---
 
 ## Neovim
@@ -494,6 +505,13 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
 | `claude da` | 権限確認をスキップして起動（danger mode） | **da**nger の略 |
+
+#### Claude Code ゾンビプロセス防止
+
+| コマンド / 操作 | 目的 |
+|---------------|------|
+| `Ctrl+D`（セッション終了時） | 明示的に閉じてゾンビプロセスを防ぐ |
+| `ps aux \| grep claude` | 残存する不要な claude プロセスを確認 |
 
 #### Claude Code プロンプト入力
 
