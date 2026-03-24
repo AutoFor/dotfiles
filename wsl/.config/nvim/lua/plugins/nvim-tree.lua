@@ -15,6 +15,9 @@ return {
       require("nvim-tree").setup({
         sync_root_with_cwd = true,
         respect_buf_cwd = true,
+        filters = {
+          git_ignored = false,
+        },
         on_attach = function(bufnr)
           local api = require("nvim-tree.api")
 
@@ -86,6 +89,22 @@ return {
               end
             end)
           end, opts("Delete file/directory (permanent)"))
+
+          -- ファイルパスを右 WezTerm ペイン（Claude Code）に送信
+          vim.keymap.set("n", "<leader>y", function()
+            local node = api.tree.get_node_under_cursor()
+            if not node or not node.absolute_path then return end
+            local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
+            local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
+            if pane_id == "" then
+              vim.notify("no right pane: " .. node.absolute_path)
+              return
+            end
+            local rel = vim.fn.fnamemodify(node.absolute_path, ":.")
+            vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, rel .. "\n" })
+            vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
+            vim.notify("sent: " .. rel)
+          end, opts("Send file path to WezTerm right pane"))
 
           -- 相対パス → クリップボード
           vim.keymap.set("n", "gr", function()

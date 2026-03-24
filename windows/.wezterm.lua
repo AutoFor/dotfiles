@@ -5,12 +5,35 @@ local config = wezterm.config_builder()
 
 config.automatically_reload_config = true
 config.font_size = 12.0
+-- 最大化→元に戻す時のクラッシュ対策（WebGPU の GPU ドライバ相性問題）
+config.front_end = "OpenGL"
 config.use_ime = true
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
 
 -- WSL 関連
+-- wsl_domains を明示することで ConPTY を経由せず WezTerm ネイティブ統合を使用する
+-- → リサイズ時に Claude Code が固まる問題の軽減
+config.wsl_domains = {
+  {
+    name = "WSL:Ubuntu",
+    distribution = "Ubuntu",
+    default_cwd = "/home/seiya-kawashima",
+  },
+}
 config.default_domain = "WSL:Ubuntu"
+
+-- ランチャーメニュー（LEADER + l で表示）
+config.launch_menu = {
+  {
+    label = "PowerShell",
+    args = { "pwsh.exe" },
+  },
+  {
+    label = "WSL: Ubuntu",
+    domain = { DomainName = "WSL:Ubuntu" },
+  },
+}
 
 -- ウィンドウタイトルにカレントディレクトリ名を表示
 local function basename(path)
@@ -232,6 +255,18 @@ config.keys = {
     key = "p",
     mods = "LEADER",
     action = act.PaneSelect({ alphabet = "1234567890", show_pane_ids = true }),
+  },
+  {
+    -- ランチャーメニュー表示（PowerShell / WSL 切り替えなど）
+    key = "l",
+    mods = "LEADER",
+    action = act.ShowLauncherArgs({ flags = "LAUNCH_MENU_ITEMS", title = "Launch" }),
+  },
+  {
+    -- PowerShell を新規タブで開く
+    key = "p",
+    mods = "LEADER|SHIFT",
+    action = act.SpawnCommandInNewTab({ args = { "pwsh.exe" } }),
   },
 }
 

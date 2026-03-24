@@ -120,3 +120,11 @@ gwb() {
 if [ -z "$WSL_INTEROP" ]; then
   export WSL_INTEROP=$(ls -t /run/WSL/*_interop 2>/dev/null | head -1)
 fi
+
+# pptx-meiryo: PowerPoint フォントを Meiryo UI に変換
+pptx-meiryo() {
+    /mnt/c/tools/pptx-meiryo/pptx-meiryo.exe "$@"
+}
+
+# claude: メモリ上限 12GB で起動
+alias claude='systemd-run --user --scope -p MemoryMax=12G claude'

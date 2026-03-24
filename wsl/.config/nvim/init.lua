@@ -124,15 +124,12 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -- wezterm.exe のパス（WSL から Windows の wezterm CLI を叩く）
 local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
 
--- 起動時: 左に NvimTree、右にターミナルを開く
+-- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して開く
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
     vim.schedule(function()
-      vim.cmd("wincmd l")
-      vim.cmd("terminal")
-      vim.cmd("vertical resize " .. math.floor(vim.o.columns * 0.3))
-      require("nvim-tree.api").tree.focus()
+      vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30" })
     end)
   end,
 })

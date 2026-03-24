@@ -59,6 +59,9 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+.` | タブを右に移動 | `.` = `>`（右向き）と同キー |
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 
+| `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
+| `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+
 ### Pane
 
 | ショートカット | 動作 | 由来 |
@@ -109,6 +112,24 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Ctrl+p` / `Ctrl+Shift+p` | コマンドパレットを開く | **p**alette（VS Code 由来） |
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
 | `Alt+Enter` | フルスクリーン切り替え | Enter = 確定・最大化 |
+
+### WSL ドメイン設定（リサイズ安定化）
+
+WezTerm は `wsl_domains` を明示設定することで、ConPTY 経由ではなく WezTerm ネイティブ WSL 統合を使用できる。
+これにより、ウィンドウのリサイズ時に Claude Code などの TUI アプリが固まる問題が軽減される。
+
+```lua
+config.wsl_domains = {
+  {
+    name = "WSL:Ubuntu",
+    distribution = "Ubuntu",
+    default_cwd = "/home/yourname",
+  },
+}
+config.default_domain = "WSL:Ubuntu"
+```
+
+なお、リサイズによる一時的な黒画面が起きた際は `<leader> →z`（ペインズーム）で回避しやすい。
 
 ### SSH（Tailscale 経由）
 
@@ -163,6 +184,17 @@ Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 | `gwb` | GitHub Issue 作成 + worktree 作成 + WezTerm 下分割で Claude 起動 | **g**it **w**orktree **b**ranch |
 | `gwb r` | 同上・右分割 | **r**ight |
 | `gwb d` | 同上・下分割（`gwb` と同じ） | **d**own |
+
+### pptx-meiryo（PowerPoint フォント変換）
+
+| コマンド | 動作 |
+|---------|------|
+| `pptx-meiryo <file.pptx>` | 指定した .pptx のすべてのフォントを Meiryo UI に変換（元ファイルを上書き・`.bak` 自動作成） |
+| `pptx-meiryo <file.pptx> --output <out.pptx>` | 変換結果を別ファイルに出力 |
+| `pptx-meiryo <file.pptx> --no-backup` | バックアップなしで上書き |
+
+WSL パス（`/mnt/c/...`）・Windows パス（`C:\...` / `C:/...`）どちらも受け付ける。
+実体は `C:\tools\pptx-meiryo\pptx-meiryo.exe`（PowerPoint COM Interop、要 PowerPoint インストール済み）。
 
 ---
 
@@ -494,6 +526,13 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
 | `claude da` | 権限確認をスキップして起動（danger mode） | **da**nger の略 |
+
+#### Claude Code ゾンビプロセス防止
+
+| コマンド / 操作 | 目的 |
+|---------------|------|
+| `Ctrl+D`（セッション終了時） | 明示的に閉じてゾンビプロセスを防ぐ |
+| `ps aux \| grep claude` | 残存する不要な claude プロセスを確認 |
 
 #### Claude Code プロンプト入力
 
