@@ -2,6 +2,27 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
+-- WSL の ~/.last_dir から直近のディレクトリを取得
+local function get_last_dir()
+  local success, stdout = wezterm.run_child_process({
+    "wsl.exe", "-e", "cat", "/home/seiya-kawashima/.last_dir",
+  })
+  if success and stdout and stdout ~= "" then
+    return stdout:gsub("%s+$", "")
+  end
+  return nil
+end
+
+-- WezTerm 起動時に直近のディレクトリで開く
+wezterm.on("gui-startup", function(cmd)
+  local last_dir = get_last_dir()
+  local args = cmd or {}
+  if last_dir then
+    args.cwd = last_dir
+  end
+  wezterm.mux.spawn_window(args)
+end)
+
 
 config.automatically_reload_config = true
 config.font_size = 12.0
@@ -191,8 +212,23 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成
-  { key = "t", mods = "CTRL", action = act({ SpawnTab = "CurrentPaneDomain" }) },
+  -- Tab新規作成（現在のペインのCWD → ~/.last_dir の順でフォールバック）
+  {
+    key = "t",
+    mods = "CTRL",
+    action = wezterm.action_callback(function(window, pane)
+      local cwd_uri = pane:get_current_working_dir()
+      local cwd = cwd_uri and cwd_uri.file_path or get_last_dir()
+      if cwd then
+        window:perform_action(
+          act.SpawnCommandInNewTab({ cwd = cwd, domain = "CurrentPaneDomain" }),
+          pane
+        )
+      else
+        window:perform_action(act.SpawnTab("CurrentPaneDomain"), pane)
+      end
+    end),
+  },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
   { key = ".", mods = "ALT", action = act({ MoveTabRelative = 1 }) },
