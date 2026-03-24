@@ -16,6 +16,9 @@ if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
   WORKTREE_DIR="${CONTAINER_DIR}/${BRANCH}"
   echo "origin から最新を取得中..."
   git fetch origin
+  git worktree list --porcelain \
+    | awk '/^worktree /{print $2}' | grep -v '\.bare$' \
+    | while IFS= read -r wt; do [ -d "$wt" ] && git -C "$wt" restore . 2>/dev/null || true; done
   git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 else
   # モード2: remote URL から ~/.git-worktrees/... の .bare が存在するか確認
@@ -33,6 +36,9 @@ else
     fi
     echo "origin から最新を取得中..."
     GIT_DIR="${CANDIDATE}/.bare" git fetch origin
+    GIT_DIR="${CANDIDATE}/.bare" git worktree list --porcelain \
+      | awk '/^worktree /{print $2}' | grep -v '\.bare$' \
+      | while IFS= read -r wt; do [ -d "$wt" ] && git -C "$wt" restore . 2>/dev/null || true; done
     WORKTREE_DIR="${CANDIDATE}/${BRANCH}"
     GIT_DIR="${CANDIDATE}/.bare" git worktree add -b "$BRANCH" "$WORKTREE_DIR"
   else
@@ -47,6 +53,10 @@ echo ""
 echo "=== Worktree 作成完了 ==="
 echo "ブランチ: $BRANCH"
 echo "ディレクトリ: $WORKTREE_ABSPATH"
+
+# worktree を強制的にクリーンな状態にする（削除済み追跡ファイルの復元・未追跡ファイルの削除）
+git -C "$WORKTREE_ABSPATH" restore . 2>/dev/null || true
+git -C "$WORKTREE_ABSPATH" clean -fd 2>/dev/null || true
 
 # WezTerm で新しいペインを開いて Claude を起動
 # ネイティブ: wezterm + WEZTERM_PANE が必要
