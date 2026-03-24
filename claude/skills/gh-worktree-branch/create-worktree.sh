@@ -56,7 +56,7 @@ elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
   _wezterm_cmd="/mnt/c/Program Files/WezTerm/wezterm.exe"
 fi
 
-if [ -n "$_wezterm_cmd" ]; then
+if [ "$SPLIT_DIR" != "none" ] && [ -n "$_wezterm_cmd" ]; then
   if [ "$SPLIT_DIR" = "r" ]; then
     "$_wezterm_cmd" cli split-pane --right --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude; exit 0"
   else

@@ -109,15 +109,33 @@ claude() {
   fi
 }
 
-# gh worktree branch: Issue作成 + worktree作成 + WezTermペイン分割
-# gwb r → 右分割、gwb d → 下分割（デフォルト）
+# gh worktree branch: Issue作成 + worktree作成
+# gwb   → worktree作成してcd "path"をクリップボードにコピー
+# gwb r → 右分割、gwb d → 下分割
 gwb() {
-  local dir="${1:-d}"
   local url
   url=$(gh issue create --title "WIP" --body "") || return 1
   local num
   num=$(echo "$url" | grep -oE '[0-9]+$')
-  bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$dir"
+  if [[ $# -eq 0 ]]; then
+    local output
+    output=$(bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "none") || return 1
+    echo "$output"
+    local path line
+    while IFS= read -r line; do
+      [[ "$line" == ディレクトリ:* ]] && path="${line#ディレクトリ: }" && break
+    done <<< "$output"
+    if [[ -n "$path" ]]; then
+      local cd_cmd="cd \"$path\""
+      printf '%s' "$cd_cmd" | /mnt/c/Windows/System32/clip.exe
+      echo "クリップボードにコピーしました: $cd_cmd"
+    else
+      echo "警告: ディレクトリパスの取得に失敗しました"
+      echo "スクリプト出力: $output"
+    fi
+  else
+    bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$1"
+  fi
 }
 
 # WSL_INTEROP をサブプロセスに引き継ぐ
