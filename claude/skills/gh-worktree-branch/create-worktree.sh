@@ -16,15 +16,15 @@ if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
   WORKTREE_DIR="${CONTAINER_DIR}/${BRANCH}"
   echo "origin から最新を取得中..."
   git fetch origin
-  git worktree list --porcelain \
-    | awk '/^worktree /{print $2}' | grep -v '\.bare$' \
-    | while IFS= read -r wt; do [ -d "$wt" ] && git -C "$wt" restore . 2>/dev/null || true; done
   git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 else
   # モード2: remote URL から ~/.git-worktrees/... の .bare が存在するか確認
   # なければ init-worktree.sh で自動作成してから worktree を追加
   REMOTE_URL=$(git remote get-url origin 2>/dev/null || true)
   WORKTREE_DIR=""
+
+  # ソース（現在のgitリポジトリ）で削除済みの追跡ファイルを記録
+  DELETED_FILES=$(git status --porcelain 2>/dev/null | awk '/^[ D]D /{print $NF}' || true)
 
   if [ -n "$REMOTE_URL" ]; then
     REPO_PATH=$(echo "$REMOTE_URL" | sed -E 's|.*github\.com[:/]||; s|\.git$||')
@@ -36,9 +36,6 @@ else
     fi
     echo "origin から最新を取得中..."
     GIT_DIR="${CANDIDATE}/.bare" git fetch origin
-    GIT_DIR="${CANDIDATE}/.bare" git worktree list --porcelain \
-      | awk '/^worktree /{print $2}' | grep -v '\.bare$' \
-      | while IFS= read -r wt; do [ -d "$wt" ] && git -C "$wt" restore . 2>/dev/null || true; done
     WORKTREE_DIR="${CANDIDATE}/${BRANCH}"
     GIT_DIR="${CANDIDATE}/.bare" git worktree add -b "$BRANCH" "$WORKTREE_DIR"
   else
@@ -54,8 +51,13 @@ echo "=== Worktree 作成完了 ==="
 echo "ブランチ: $BRANCH"
 echo "ディレクトリ: $WORKTREE_ABSPATH"
 
-# worktree を強制的にクリーンな状態にする（削除済み追跡ファイルの復元・未追跡ファイルの削除）
-git -C "$WORKTREE_ABSPATH" restore . 2>/dev/null || true
+# ソースの削除済みファイルを新規 worktree にも伝播
+if [ -n "${DELETED_FILES:-}" ]; then
+  while IFS= read -r f; do
+    rm -f "${WORKTREE_ABSPATH}/${f}"
+  done <<< "$DELETED_FILES"
+fi
+# 未追跡ファイルを削除
 git -C "$WORKTREE_ABSPATH" clean -fd 2>/dev/null || true
 
 # WezTerm で新しいペインを開いて Claude を起動
