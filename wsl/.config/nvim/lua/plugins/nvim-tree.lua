@@ -127,6 +127,10 @@ return {
       end, { silent = true, desc = "Explorer: focus" })
       vim.keymap.set("n", "<leader>ee", "<C-w>l", { silent = true, desc = "Explorer: back to editor" })
 
+      vim.keymap.set("n", "<leader>eR", function()
+        api.tree.reload()
+      end, { silent = true, desc = "Explorer: reload" })
+
       vim.keymap.set("n", "<leader>er", function()
         api.tree.change_root_to_node()
         api.tree.close()

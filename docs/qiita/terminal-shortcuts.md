@@ -405,6 +405,7 @@ Leader キーは `Space`。
 | `Ctrl+n` | ファイルツリーを開閉 | **n**vim-tree |
 | `<leader>ef` | nvim-tree にフォーカス（閉じていれば開く） | **e**xplorer **f**ocus |
 | `<leader>ee` | エディタにフォーカスを戻す | **e**xplorer **e**xit |
+| `<leader>eR` | ツリーを最新状態に更新 | **e**xplorer **R**eload（大文字＝更新） |
 | `<leader>er` | カーソル下のディレクトリをルートに変更して再表示 | **e**xplorer **r**oot |
 | `Ctrl+]` | フォルダを nvim-tree 内部のルートに変更（`:pwd` は変わらない） | `]` = 深く潜る（vim 慣習） |
 | `W` | ツリー全体を折りたたむ（collapse all） | 大文字で全体操作 |
