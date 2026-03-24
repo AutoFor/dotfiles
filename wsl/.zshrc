@@ -53,6 +53,10 @@ __wezterm_osc7() {
   printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
 }
 precmd_functions+=(__wezterm_osc7)
+
+# 最後に訪れたディレクトリを保存（WezTerm の新規タブ/ウィンドウで使用）
+__save_last_dir() { echo "$PWD" > ~/.last_dir }
+chpwd_functions+=(__save_last_dir)
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
 
 # Windows パスを WSL パスに変換して claude を起動
