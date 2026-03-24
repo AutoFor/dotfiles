@@ -125,3 +125,6 @@ fi
 pptx-meiryo() {
     /mnt/c/tools/pptx-meiryo/pptx-meiryo.exe "$@"
 }
+
+# claude: メモリ上限 12GB で起動
+alias claude='systemd-run --user --scope -p MemoryMax=12G claude'
