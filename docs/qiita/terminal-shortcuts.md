@@ -59,6 +59,9 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+.` | タブを右に移動 | `.` = `>`（右向き）と同キー |
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 
+| `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
+| `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+
 ### Pane
 
 | ショートカット | 動作 | 由来 |
@@ -109,6 +112,24 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Ctrl+p` / `Ctrl+Shift+p` | コマンドパレットを開く | **p**alette（VS Code 由来） |
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
 | `Alt+Enter` | フルスクリーン切り替え | Enter = 確定・最大化 |
+
+### WSL ドメイン設定（リサイズ安定化）
+
+WezTerm は `wsl_domains` を明示設定することで、ConPTY 経由ではなく WezTerm ネイティブ WSL 統合を使用できる。
+これにより、ウィンドウのリサイズ時に Claude Code などの TUI アプリが固まる問題が軽減される。
+
+```lua
+config.wsl_domains = {
+  {
+    name = "WSL:Ubuntu",
+    distribution = "Ubuntu",
+    default_cwd = "/home/yourname",
+  },
+}
+config.default_domain = "WSL:Ubuntu"
+```
+
+なお、リサイズによる一時的な黒画面が起きた際は `<leader> →z`（ペインズーム）で回避しやすい。
 
 ### SSH（Tailscale 経由）
 
