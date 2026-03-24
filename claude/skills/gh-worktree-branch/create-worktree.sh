@@ -14,6 +14,8 @@ GIT_COMMON=$(git rev-parse --git-common-dir)
 if [ "$(basename "$GIT_COMMON")" = ".bare" ]; then
   CONTAINER_DIR="$(dirname "$GIT_COMMON")"
   WORKTREE_DIR="${CONTAINER_DIR}/${BRANCH}"
+  echo "origin から最新を取得中..."
+  git fetch origin
   git worktree add -b "$BRANCH" "$WORKTREE_DIR"
 else
   # モード2: remote URL から ~/.git-worktrees/... の .bare が存在するか確認
@@ -29,6 +31,8 @@ else
       SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
       bash "${SCRIPT_DIR}/../gh-init-worktree/init-worktree.sh" "$(git rev-parse --show-toplevel)"
     fi
+    echo "origin から最新を取得中..."
+    GIT_DIR="${CANDIDATE}/.bare" git fetch origin
     WORKTREE_DIR="${CANDIDATE}/${BRANCH}"
     GIT_DIR="${CANDIDATE}/.bare" git worktree add -b "$BRANCH" "$WORKTREE_DIR"
   else
