@@ -129,7 +129,8 @@ vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
     vim.schedule(function()
-      vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30" })
+      local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
+      vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
     end)
   end,
 })
