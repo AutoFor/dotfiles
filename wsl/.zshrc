@@ -150,3 +150,9 @@ pptx-meiryo() {
 
 # claude: メモリ上限 12GB で起動
 alias claude='systemd-run --user --scope -p MemoryMax=12G claude'
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/path.zsh.inc' ]; then . '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/completion.zsh.inc'; fi
