@@ -55,6 +55,12 @@ trust_level = "trusted"
 [projects."/home/seiya-kawashima/ghq/github.com/seiya-kawashima/excel-bas-runner"]
 trust_level = "trusted"
 
+[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/video-whisper-transcriber"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/im8-svm-demand-forecast"]
+trust_level = "trusted"
+
 [notice.model_migrations]
 "gpt-5.1-codex" = "gpt-5.2-codex"
 "gpt-5.2-codex" = "gpt-5.3-codex"
@@ -67,3 +73,6 @@ args = ["-y", "@modelcontextprotocol/server-github"]
 [mcp_servers.drawio]
 command = "npx"
 args = ["-y", "@drawio/mcp"]
+
+[plugins."github@openai-curated"]
+enabled = true
