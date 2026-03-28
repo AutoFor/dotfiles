@@ -90,5 +90,32 @@ for skill_dir in "$DOTFILES_DIR/codex/skills"/*/; do
 done
 
 echo ""
+echo "=== WSL システム設定 (sudo 必要) ==="
+
+# /etc/wsl.conf のコピー（シンボリックリンク不可のためコピー）
+WSL_CONF_SRC="$DOTFILES_DIR/wsl/etc/wsl.conf"
+WSL_CONF_DEST="/etc/wsl.conf"
+if [ -f "$WSL_CONF_SRC" ]; then
+  if sudo diff -q "$WSL_CONF_SRC" "$WSL_CONF_DEST" > /dev/null 2>&1; then
+    echo "  [skip] $WSL_CONF_DEST → 既に最新"
+  else
+    sudo cp "$WSL_CONF_SRC" "$WSL_CONF_DEST"
+    echo "  [copy] $WSL_CONF_DEST"
+  fi
+fi
+
+# SSH 自動起動を有効化（systemd が有効な場合のみ）
+if systemctl is-system-running --quiet 2>/dev/null || [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
+  if ! systemctl is-enabled ssh --quiet 2>/dev/null; then
+    sudo systemctl enable ssh
+    echo "  [enable] SSH 自動起動を有効化しました"
+  else
+    echo "  [skip] SSH 自動起動 → 既に有効"
+  fi
+else
+  echo "  [skip] SSH 自動起動 → systemd が無効のためスキップ"
+fi
+
+echo ""
 echo "=== 完了 ==="
 echo "新しいターミナルを開いて設定が反映されていることを確認してください。"
