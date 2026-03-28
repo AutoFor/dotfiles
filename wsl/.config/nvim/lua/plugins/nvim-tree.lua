@@ -17,6 +17,13 @@ return {
         respect_buf_cwd = true,
         filters = {
           git_ignored = false,
+          custom = {
+            "\\.mp4$", "\\.mov$", "\\.avi$", "\\.mkv$", "\\.webm$",
+            "\\.mp3$", "\\.wav$", "\\.flac$", "\\.aac$",
+            "\\.png$", "\\.jpg$", "\\.jpeg$", "\\.gif$", "\\.webp$", "\\.svg$",
+            "\\.pdf$",
+            "\\.zip$", "\\.tar$", "\\.gz$", "\\.7z$",
+          },
         },
         on_attach = function(bufnr)
           local api = require("nvim-tree.api")
