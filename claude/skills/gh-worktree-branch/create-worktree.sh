@@ -75,6 +75,8 @@ fi
 if [ "$SPLIT_DIR" != "none" ] && [ -n "$_wezterm_cmd" ]; then
   if [ "$SPLIT_DIR" = "r" ]; then
     "$_wezterm_cmd" cli split-pane --right --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude; exit 0"
+  elif [ "$SPLIT_DIR" = "t" ]; then
+    "$_wezterm_cmd" cli spawn --cwd "$WORKTREE_ABSPATH"
   else
     "$_wezterm_cmd" cli split-pane --cwd "$WORKTREE_ABSPATH" -- zsh -l -c "export PATH=\"\$HOME/.local/bin:\$PATH\"; ~/.local/bin/claude; exit 0"
   fi

@@ -110,8 +110,9 @@ claude() {
 }
 
 # gh worktree branch: Issue作成 + worktree作成
-# gwb   → worktree作成してcd "path"をクリップボードにコピー
-# gwb r → 右分割、gwb d → 下分割
+# gwb     → worktree作成してcd "path"をクリップボードにコピー
+# gwb r   → 右分割、gwb d → 下分割
+# gwb t   → 新規タブで開く
 gwb() {
   local url
   url=$(gh issue create --title "WIP" --body "") || return 1
@@ -152,7 +153,7 @@ pptx-meiryo() {
 alias claude='systemd-run --user --scope -p MemoryMax=12G claude'
 
 # The next line updates PATH for the Google Cloud SDK.
-if [ -f '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/path.zsh.inc' ]; then . '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/path.zsh.inc'; fi
+if [ -f '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc' ]; then . '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc'; fi
 
 # The next line enables shell command completion for gcloud.
-if [ -f '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map/issue-15/! exec -l /usr/bin/zsh/google-cloud-sdk/completion.zsh.inc'; fi
+if [ -f '/home/seiya-kawashima/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/seiya-kawashima/google-cloud-sdk/completion.zsh.inc'; fi
