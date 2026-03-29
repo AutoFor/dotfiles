@@ -41,7 +41,14 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
   end,
 })
 
-vim.opt.clipboard = "unnamedplus"
+-- ヤンクのみシステムクリップボードへ同期（d/x は独立）
+vim.api.nvim_create_autocmd("TextYankPost", {
+  callback = function()
+    if vim.v.event.operator == "y" then
+      vim.fn.setreg("+", vim.fn.getreg('"'))
+    end
+  end,
+})
 
 if vim.fn.has("wsl") == 1 then
   -- WSL では vim.ui.open を wslview に向ける
