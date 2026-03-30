@@ -179,18 +179,19 @@ local function visual_file_location()
   end
 end
 
--- <leader>y : 右隣の WezTerm ペインに送信
+-- <leader>y : 右隣の WezTerm ペインに送信 + クリップボードにコピー
 vim.keymap.set("v", "<leader>y", function()
   local s = visual_file_location()
+  vim.fn.setreg("+", s)
   local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
   if pane_id == "" then
-    print("no right pane: " .. s)
+    print("copied (no right pane): " .. s)
     return
   end
   -- ビジュアルモードを抜けてから送信・フォーカス移動
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
   vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, s .. "\n" })
   vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
-  print("sent: " .. s)
-end, { desc = "Send file:line to WezTerm right pane (visual)" })
+  print("sent & copied: " .. s)
+end, { desc = "Send file:line to WezTerm right pane + copy to clipboard (visual)" })
 

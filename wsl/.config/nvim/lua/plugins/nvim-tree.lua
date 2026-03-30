@@ -108,9 +108,10 @@ return {
               return
             end
             local rel = vim.fn.fnamemodify(node.absolute_path, ":.")
+            vim.fn.setreg("+", rel)
             vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, rel .. "\n" })
             vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
-            vim.notify("sent: " .. rel)
+            vim.notify("sent & copied: " .. rel)
           end, opts("Send file path to WezTerm right pane"))
 
           -- 相対パス → クリップボード
@@ -134,15 +135,15 @@ return {
       end, { silent = true, desc = "Tree: focus" })
       vim.keymap.set("n", "<leader>ef", "<C-w>l", { silent = true, desc = "Editor: focus" })
 
-      vim.keymap.set("n", "<leader>eR", function()
+      vim.keymap.set("n", "<leader>tR", function()
         api.tree.reload()
-      end, { silent = true, desc = "Explorer: reload" })
+      end, { silent = true, desc = "Tree: reload" })
 
-      vim.keymap.set("n", "<leader>er", function()
+      vim.keymap.set("n", "<leader>tr", function()
         api.tree.change_root_to_node()
         api.tree.close()
         api.tree.open()
-      end, { silent = true, noremap = true, desc = "NvimTree: re-root & reopen" })
+      end, { silent = true, noremap = true, desc = "Tree: re-root & reopen" })
     end,
   },
 }
