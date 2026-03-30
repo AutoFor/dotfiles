@@ -233,6 +233,14 @@ Leader キーは `Space`。
 | `:q` | 閉じる | **q**uit |
 | `:wq` | 保存して閉じる | **w**rite + **q**uit |
 
+#### WezTerm ペインへの送信
+
+ビジュアル選択中に右隣の WezTerm ペイン（Claude Code 等）へファイルパスと行番号を送信する。
+
+| キー | モード | 動作 | 由来 |
+|-----|--------|------|------|
+| `<leader>y` | ビジュアル | 選択範囲の `ファイル:行` または `ファイル:開始行-終了行` を右ペインに送信 | **y**ank to pane |
+
 #### 元に戻す／やり直す
 
 | キー | 動作 | 由来 |
@@ -424,10 +432,10 @@ Leader キーは `Space`。
 | キー | 動作 | 由来 |
 |-----|------|------|
 | `Ctrl+n` | ファイルツリーを開閉 | **n**vim-tree |
-| `<leader>ef` | nvim-tree にフォーカス（閉じていれば開く） | **e**xplorer **f**ocus |
-| `<leader>ee` | エディタにフォーカスを戻す | **e**xplorer **e**xit |
-| `<leader>eR` | ツリーを最新状態に更新 | **e**xplorer **R**eload（大文字＝更新） |
-| `<leader>er` | カーソル下のディレクトリをルートに変更して再表示 | **e**xplorer **r**oot |
+| `<leader>tf` | nvim-tree にフォーカス（閉じていれば開く） | **t**ree **f**ocus |
+| `<leader>ef` | エディタにフォーカスを戻す | **e**ditor **f**ocus |
+| `<leader>tR` | ツリーを最新状態に更新 | **t**ree **R**eload（大文字＝更新） |
+| `<leader>tr` | カーソル下のディレクトリをルートに変更して再表示 | **t**ree **r**oot |
 | `Ctrl+]` | フォルダを nvim-tree 内部のルートに変更（`:pwd` は変わらない） | `]` = 深く潜る（vim 慣習） |
 | `W` | ツリー全体を折りたたむ（collapse all） | 大文字で全体操作 |
 | `E` | ツリー全体を再帰的に展開（expand all） | 大文字で全体操作 |
@@ -474,6 +482,7 @@ Leader キーは `Space`。
 | `gy` | 絶対パス（Linux）をクリップボードにコピー | **g**et **y**ank |
 | `gW` | Windows パスをクリップボードにコピー（WSL2用） | **g**et **W**indows path |
 | `gr` | 相対パスをクリップボードにコピー | **g**et **r**elative path |
+| `<leader>y` | ノードのパスを右 WezTerm ペイン（Claude Code 等）に送信 | **y**ank to pane |
 
 #### glow
 
