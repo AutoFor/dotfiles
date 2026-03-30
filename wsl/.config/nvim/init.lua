@@ -41,14 +41,13 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
   end,
 })
 
--- ヤンクのみシステムクリップボードへ同期（d/x は独立）
-vim.api.nvim_create_autocmd("TextYankPost", {
-  callback = function()
-    if vim.v.event.operator == "y" then
-      vim.fn.setreg("+", vim.fn.getreg('"'))
-    end
-  end,
-})
+vim.opt.clipboard = "unnamedplus"
+
+-- d/x は黒穴レジスタに捨てる（クリップボードを汚さない）
+vim.keymap.set({"n", "v"}, "d", '"_d', { silent = true })
+vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
+vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
+vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
 
 if vim.fn.has("wsl") == 1 then
   -- WSL では vim.ui.open を wslview に向ける
