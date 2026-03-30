@@ -128,11 +128,11 @@ return {
 
       local api = require("nvim-tree.api")
 
-      -- Explorer フォーカス移動
-      vim.keymap.set("n", "<leader>ef", function()
+      -- フォーカス移動
+      vim.keymap.set("n", "<leader>tf", function()
         api.tree.focus()
-      end, { silent = true, desc = "Explorer: focus" })
-      vim.keymap.set("n", "<leader>ee", "<C-w>l", { silent = true, desc = "Explorer: back to editor" })
+      end, { silent = true, desc = "Tree: focus" })
+      vim.keymap.set("n", "<leader>ef", "<C-w>l", { silent = true, desc = "Editor: focus" })
 
       vim.keymap.set("n", "<leader>eR", function()
         api.tree.reload()
