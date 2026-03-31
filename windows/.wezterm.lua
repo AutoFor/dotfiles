@@ -363,7 +363,5 @@ config.key_tables = {
 }
 
 
--- SSH 越しの OSC 52 クリップボード転送を許可
-config.enable_osc52 = true
 
 return config
