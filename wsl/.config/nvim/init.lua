@@ -49,7 +49,21 @@ vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
 vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
 vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
 
-if vim.fn.has("wsl") == 1 then
+if os.getenv("SSH_TTY") or os.getenv("SSH_CLIENT") then
+  -- SSH 接続時は OSC 52 でローカルクリップボードに転送
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = osc52.paste("+"),
+      ["*"] = osc52.paste("*"),
+    },
+  }
+elseif vim.fn.has("wsl") == 1 then
   -- WSL では vim.ui.open を wslview に向ける
   vim.ui.open = function(uri)
     vim.fn.jobstart({ "wslview", uri }, { detach = true })
