@@ -59,10 +59,22 @@ __save_last_dir() { echo "$PWD" > ~/.last_dir }
 chpwd_functions+=(__save_last_dir)
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
 
-# Windows パスを WSL パスに変換して claude を起動
+# Windows パスを WSL パスに変換して出力 + クリップボードにコピー
+# 使い方: wpath 'G:\パス\ファイル.txt'  ← シングルクォート必須
+wpath() {
+  local wsl_path
+  wsl_path=$(wslpath -u "$*") || return 1
+  echo -n "'$wsl_path'" | clip.exe
+  echo "'$wsl_path'"
+}
+
+# Windows パスを WSL パスに変換して claude を起動（ファイルパスは親ディレクトリに cd）
+# 使い方: wcd 'G:\パス\スペース含む パス'  ← シングルクォート必須
 wcd() {
   local wsl_path
-  wsl_path=$(wslpath -u "$1") || return 1
+  wsl_path=$(wslpath -u "$*") || return 1
+  [[ -f "$wsl_path" ]] && wsl_path=$(dirname "$wsl_path")
+  echo -n "'$wsl_path'" | clip.exe
   cd "$wsl_path" && claude
 }
 export DOTNET_ROOT=$HOME/.dotnet

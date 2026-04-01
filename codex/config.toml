@@ -61,6 +61,15 @@ trust_level = "trusted"
 [projects."/home/seiya-kawashima/ghq/github.com/AutoFor/im8-svm-demand-forecast"]
 trust_level = "trusted"
 
+[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/short-term-prepaid-expenses"]
+trust_level = "trusted"
+
+[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/ThreeSixMonthCheck"]
+trust_level = "trusted"
+
+[notice]
+hide_rate_limit_model_nudge = true
+
 [notice.model_migrations]
 "gpt-5.1-codex" = "gpt-5.2-codex"
 "gpt-5.2-codex" = "gpt-5.3-codex"

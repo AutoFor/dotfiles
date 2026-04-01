@@ -41,16 +41,29 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
   end,
 })
 
--- ヤンクのみシステムクリップボードへ同期（d/x は独立）
-vim.api.nvim_create_autocmd("TextYankPost", {
-  callback = function()
-    if vim.v.event.operator == "y" then
-      vim.fn.setreg("+", vim.fn.getreg('"'))
-    end
-  end,
-})
+vim.opt.clipboard = "unnamedplus"
 
-if vim.fn.has("wsl") == 1 then
+-- d/x は黒穴レジスタに捨てる（クリップボードを汚さない）
+vim.keymap.set({"n", "v"}, "d", '"_d', { silent = true })
+vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
+vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
+vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
+
+if os.getenv("SSH_TTY") or os.getenv("SSH_CLIENT") then
+  -- SSH 接続時は OSC 52 でローカルクリップボードに転送
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "OSC 52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = osc52.paste("+"),
+      ["*"] = osc52.paste("*"),
+    },
+  }
+elseif vim.fn.has("wsl") == 1 then
   -- WSL では vim.ui.open を wslview に向ける
   vim.ui.open = function(uri)
     vim.fn.jobstart({ "wslview", uri }, { detach = true })
@@ -180,18 +193,19 @@ local function visual_file_location()
   end
 end
 
--- <leader>y : 右隣の WezTerm ペインに送信
+-- <leader>y : 右隣の WezTerm ペインに送信 + クリップボードにコピー
 vim.keymap.set("v", "<leader>y", function()
   local s = visual_file_location()
+  vim.fn.setreg("+", s)
   local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
   if pane_id == "" then
-    print("no right pane: " .. s)
+    print("copied (no right pane): " .. s)
     return
   end
   -- ビジュアルモードを抜けてから送信・フォーカス移動
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
   vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, s .. "\n" })
   vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
-  print("sent: " .. s)
-end, { desc = "Send file:line to WezTerm right pane (visual)" })
+  print("sent & copied: " .. s)
+end, { desc = "Send file:line to WezTerm right pane + copy to clipboard (visual)" })
 

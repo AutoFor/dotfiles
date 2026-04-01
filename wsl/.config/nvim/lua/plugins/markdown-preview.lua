@@ -5,7 +5,7 @@ return {
     ft = { "markdown" },
     build = "cd app && npm install",
     init = function()
-      vim.g.mkdp_port = "8080"
+      vim.g.mkdp_port = ""
       vim.g.mkdp_open_to_the_world = 1
       vim.g.mkdp_echo_preview_url = 1  -- URLをコマンドラインに表示
       vim.g.mkdp_open_browser_preview = 0  -- ブラウザ自動起動しない
