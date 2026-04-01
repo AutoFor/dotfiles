@@ -179,11 +179,12 @@ Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 | コマンド | 動作 | 由来 |
 |---------|------|------|
 | `cfd` | カレントディレクトリ直下のフォルダを fzf で選んで `cd` | **c**d + **f**zf + **d**irectory |
-| `wslpath -u "C:\..."` | Windows パスを WSL パス（`/mnt/c/...`）に変換 | WSL path **u**nix |
-| `wslpath -w "/mnt/c/..."` | WSL パスを Windows パス（`C:\...`）に変換 | WSL path **w**indows |
-| `wcd "C:\..."` | Windows パスを WSL パスに変換して `cd` + Claude Code 起動 | **W**indows **cd** |
+| `wslpath -u 'C:\...'` | Windows パスを WSL パス（`/mnt/c/...`）に変換 | WSL path **u**nix |
+| `wslpath -w '/mnt/c/...'` | WSL パスを Windows パス（`C:\...`）に変換 | WSL path **w**indows |
+| `wpath 'C:\...'` | Windows パスを WSL パスに変換して出力 + クリップボードにコピー | **W**indows **path** |
+| `wcd 'C:\...'` | Windows パスを WSL パスに変換して `cd` + Claude Code 起動（ファイルパスは親ディレクトリに cd）+ クリップボードにコピー | **W**indows **cd** |
 
-> **注意**: Windows パスを引数に渡す場合は必ずダブルクォートで囲む（例: `wcd "C:\Temp"`）。クォートなしだとシェルがバックスラッシュを消費してパス変換に失敗する。
+> **注意**: Windows パスを引数に渡す場合は必ずシングルクォートで囲む（例: `wcd 'C:\Temp'`）。バックスラッシュをシェルに解釈させないためシングルクォートが必須。
 
 ### Git Worktree
 
@@ -232,6 +233,8 @@ Leader キーは `Space`。
 | `:w` | 保存 | **w**rite |
 | `:q` | 閉じる | **q**uit |
 | `:wq` | 保存して閉じる | **w**rite + **q**uit |
+| `:!cp -r /path/to/src /path/to/dst` | 絶対パスでディレクトリを再帰コピー | `!` = シェルコマンド実行、`-r` = 再帰 |
+| `:!cp -r /path/to/src .` | カレントディレクトリ直下に同名でコピー | `.` = カレントディレクトリ |
 
 #### WezTerm ペインへの送信
 
@@ -643,3 +646,31 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `Ctrl+Alt+Shift+C` | コードブロック | **C**ode block（修飾キーを増やして区別） |
 | `Ctrl+Shift+7` | 番号付きリスト | Slack 独自（`7` に特定の意味なし） |
 | `Ctrl+Shift+8` | 箇条書きリスト | `Shift+8` = `*`（アスタリスク＝箇条書き記号） |
+
+## Azure CLI
+
+### Azure Key Vault
+
+| 操作 | コマンド |
+|------|---------|
+| Key Vault 一覧 | `az keyvault list --output table` |
+| Key Vault の URL 確認 | `az keyvault show --name <vault-name> --query properties.vaultUri --output tsv` |
+| シークレット一覧 | `az keyvault secret list --vault-name <vault-name> --output table` |
+| シークレット追加・更新 | `az keyvault secret set --vault-name <vault-name> --name <key> --value <value>` |
+| シークレット値を取得 | `az keyvault secret show --vault-name <vault-name> --name <key> --query value --output tsv` |
+| シークレット削除 | `az keyvault secret delete --vault-name <vault-name> --name <key>` |
+
+#### このプロジェクトの Key Vault
+
+| 項目 | 値 |
+|------|-----|
+| Vault 名 | `autofor-kv` |
+| URL | `https://autofor-kv.vault.azure.net/` |
+
+```bash
+# シークレット追加の例
+az keyvault secret set --vault-name autofor-kv --name my-api-key --value "my-secret-value"
+
+# シークレット値を取得する例
+az keyvault secret show --vault-name autofor-kv --name my-api-key --query value --output tsv
+```
