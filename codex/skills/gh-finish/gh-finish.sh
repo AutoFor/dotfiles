@@ -328,7 +328,7 @@ ready_for_review() {
 
   # [codex exec #3] PR タイトル + 本文を diff から生成（Issue タイトルに依存しない）
   echo "PR タイトル・説明文を生成中..."
-  local log diff claude_out pr_title pr_body pr_body_file
+  local log diff claude_out pr_title pr_body pr_body_file pr_payload_file
   log=$(git log "origin/$DEFAULT_BRANCH..HEAD" --oneline 2>/dev/null || echo "")
   diff=$(git diff "origin/$DEFAULT_BRANCH...HEAD" 2>/dev/null || echo "")
   claude_out=$(printf "commits:\n%s\n\ndiff:\n%s" "$log" "$diff" | codex exec \
@@ -337,6 +337,7 @@ ready_for_review() {
   pr_body=$(echo "$claude_out" | tail -n +2)
   pr_body_file=$(mktemp)
   printf 'Closes #%s\n\n%s\n' "$issue_num" "$pr_body" > "$pr_body_file"
+  pr_payload_file=$(mktemp)
 
   # Issue タイトル・本文を更新（WIP から実際の内容に）
   local issue_title_current
@@ -356,9 +357,14 @@ ready_for_review() {
 
   if [ -n "$pr_num" ]; then
     echo "既存 PR #$pr_num を更新中..."
+    python3 - "$pr_title" "$pr_body_file" "$pr_payload_file" <<'PY'
+import json, pathlib, sys
+title = sys.argv[1]
+body = pathlib.Path(sys.argv[2]).read_text()
+pathlib.Path(sys.argv[3]).write_text(json.dumps({"title": title, "body": body}))
+PY
     gh api "repos/$OWNER/$REPO/pulls/$pr_num" -X PATCH \
-      -f title="$pr_title" \
-      -F body@"$pr_body_file"
+      --input "$pr_payload_file"
     gh pr ready "$pr_num" --repo "$OWNER/$REPO"
     echo "  PR #$pr_num を Ready for Review に変更しました。"
   else
@@ -375,6 +381,7 @@ ready_for_review() {
   fi
 
   rm -f "$pr_body_file"
+  rm -f "$pr_payload_file"
 
   approve_and_merge "$pr_num" "$issue_num"
 }
