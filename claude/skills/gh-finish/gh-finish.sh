@@ -113,8 +113,8 @@ detect_context() {
   if [ "$worktree_count" -le 1 ]; then
     MAIN_REPO="$toplevel"
     WORKTREE_PATH="none"
-  elif [ -d "$toplevel/../.bare" ]; then
-    # .bare ディレクトリがある worktree 構造
+  else
+    # worktree 構造: デフォルトブランチの worktree を MAIN_REPO とする
     MAIN_REPO=$(echo "$worktree_list" | grep "\[$DEFAULT_BRANCH\]" | awk '{print $1}' | head -1)
     MAIN_REPO="${MAIN_REPO:-$toplevel}"
     if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
@@ -122,9 +122,6 @@ detect_context() {
     else
       WORKTREE_PATH="none"
     fi
-  else
-    MAIN_REPO="$toplevel"
-    WORKTREE_PATH="none"
   fi
 }
 
