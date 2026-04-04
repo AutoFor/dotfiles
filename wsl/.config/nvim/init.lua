@@ -121,7 +121,6 @@ vim.keymap.set("n", "<leader>k", "<C-w>k", { silent = true, desc = "Up window" }
 vim.keymap.set("n", "<leader>w", "<C-w>w", { silent = true, desc = "Next window" })
 vim.keymap.set("n", "<leader>c", "<C-w>c", { silent = true, desc = "Close window" })
 
-
 -- :Codex で CodexToggle を呼ぶエイリアス
 vim.api.nvim_create_user_command("Codex", function()
   vim.cmd("CodexToggle")
@@ -208,4 +207,3 @@ vim.keymap.set("v", "<leader>y", function()
   vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
   print("sent & copied: " .. s)
 end, { desc = "Send file:line to WezTerm right pane + copy to clipboard (visual)" })
-

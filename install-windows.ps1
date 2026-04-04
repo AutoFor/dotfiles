@@ -39,15 +39,7 @@ function Link-File {
 
 Write-Host "=== Windows 設定ファイルのリンク ==="
 
-# WezTerm が require("keybinds") で探すディレクトリを作成
-$WeztermConfigDir = "$WinHome\.config\wezterm"
-if (-not (Test-Path $WeztermConfigDir)) {
-    New-Item -ItemType Directory -Path $WeztermConfigDir | Out-Null
-    Write-Host "  [mkdir] $WeztermConfigDir"
-}
-
 Link-File -Source "$DotfilesWindows\.wezterm.lua" -Destination "$WinHome\.wezterm.lua"
-Link-File -Source "$DotfilesWindows\keybinds.lua"  -Destination "$WeztermConfigDir\keybinds.lua"
 Link-File -Source "$DotfilesWindows\.gitconfig"   -Destination "$WinHome\.gitconfig"
 Link-File -Source "$DotfilesWindows\.wslconfig"   -Destination "$WinHome\.wslconfig"
 Link-File -Source "$DotfilesWindows\.bashrc"      -Destination "$WinHome\.bashrc"
