@@ -90,15 +90,15 @@ function ghq-fzf() {
 zle -N ghq-fzf
 bindkey '^G' ghq-fzf
 
-# ~/.git-worktrees 以下の worktree を fzf で選択して cd（4〜5階層のみ、.bare 除外）Alt+W
+# ~/.git-worktrees 以下の worktree ルートを fzf で選択して cd（.bare 除外）Alt+W
 function worktree-fzf() {
   local base="$HOME/.git-worktrees"
 
   local target
   target=$(
-    zoxide query -l \
-    | rg "^$base(/[^/]+){4,5}$" \
+    find "$base" -mindepth 4 -maxdepth 4 -type d \
     | rg -v '/\.bare$' \
+    | sort \
     | fzf --height=40% --reverse --prompt='worktree> '
   ) || return
 

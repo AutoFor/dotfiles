@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # 前回セッションで遅延されたWorktree削除を実行する
-PENDING_FILE="${CODEX_HOME:-$HOME/.codex}/pending-worktree-cleanup.txt"
+PENDING_FILE="$HOME/.codex/pending-worktree-cleanup.txt"
 
 [ -f "$PENDING_FILE" ] || exit 0
 

@@ -36,10 +36,10 @@ git -C "$MAIN_REPO" checkout "$DEFAULT_BRANCH"
 # ローカル変更がある場合はstashしてpull
 if ! git -C "$MAIN_REPO" diff --quiet 2>/dev/null; then
   git -C "$MAIN_REPO" stash
-  git -C "$MAIN_REPO" pull
+  git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
   git -C "$MAIN_REPO" stash pop || git -C "$MAIN_REPO" checkout --theirs . && git -C "$MAIN_REPO" stash drop 2>/dev/null || true
 else
-  git -C "$MAIN_REPO" pull
+  git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
 fi
 
 # prune
@@ -55,7 +55,7 @@ if [ "$WORKTREE_PATH" != "none" ]; then
   fi
 
   # Worktree削除を遅延（CWDが削除済みディレクトリになりStop hookがENOENTで失敗するため）
-  echo "$MAIN_REPO|$WORKTREE_PATH|$BRANCH_TO_DELETE" >> "${CODEX_HOME:-$HOME/.codex}/pending-worktree-cleanup.txt"
+  echo "$MAIN_REPO|$WORKTREE_PATH|$BRANCH_TO_DELETE" >> ~/.codex/pending-worktree-cleanup.txt
   echo "Worktree cleanup deferred: $WORKTREE_PATH (will be cleaned up on next worktree creation)"
 else
   # Worktree未使用時はローカルブランチを即座に削除

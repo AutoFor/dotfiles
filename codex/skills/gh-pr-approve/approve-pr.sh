@@ -16,7 +16,7 @@ REPO="$2"
 PR_NUMBER="$3"
 
 # --- 設定ファイル読み込み ---
-CONFIG_FILE="${CODEX_HOME:-$HOME/.codex}/github-app-config.env"
+CONFIG_FILE="$HOME/.codex/github-app-config.env"
 if [ ! -f "$CONFIG_FILE" ]; then
   echo "Error: Config file not found: $CONFIG_FILE" >&2
   echo "Run the GitHub App setup first." >&2
