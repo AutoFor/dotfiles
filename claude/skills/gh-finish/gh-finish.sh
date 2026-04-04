@@ -146,7 +146,7 @@ smart_commit() {
   diff=$(git diff; git diff --cached)
 
   commit_plan=$(printf "files:\n%s\n\ndiff:\n%s" "$files" "$diff" | claude -p \
-    "ファイルをテーマ別にグループ化し、コミット計画をJSON配列のみ出力（説明不要）。形式: [{\"files\":[\"path\"],\"message\":\"feat: 日本語説明\"}]")
+    "ファイルをテーマ別にグループ化し、コミット計画をJSON配列のみ出力（説明不要）。形式: [{\"files\":[\"path\"],\"message\":\"feat: 日本語説明\"}]。注意: .gitignoreの追加・変更、git rm --cachedなどのgit追跡管理操作は絶対に提案しないこと。現在の変更ファイルのみを対象にすること。")
 
   # JSON 配列部分を抽出（余分なテキストを除去）
   if echo "$commit_plan" | json_is_array; then
