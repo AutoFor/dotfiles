@@ -8,7 +8,8 @@
 ├── install-windows.ps1     # Windows 用インストーラ
 ├── wsl/                    # WSL Ubuntu 設定ファイル
 ├── windows/                # Windows 設定ファイル
-└── claude/                 # Claude Code 設定（サブモジュール）
+├── claude/                 # Claude Code 設定（サブモジュール）
+└── wsl/.local/bin/         # WSL 補助スクリプト
 ```
 
 ![アーキテクチャ図](./images/architecture.svg)
@@ -45,26 +46,39 @@
 | cfd() | fzf でカレントディレクトリ配下のフォルダを選択して cd |
 | OSC 7 | WezTerm にカレントディレクトリを通知 |
 
+### WSL 補助スクリプト
+
+#### backup-wsl-full
+
+| 項目 | 内容 |
+|------|------|
+| 動作 | `wsl.exe --export` でディストリ全体を `.tar` 化し、`rclone` でクラウドへ転送 |
+| 一時置き場 | `C:\Users\<WindowsUser>\AppData\Local\WSLBackups\tmp` |
+| 保存先 | `gdrive:WSL-FullBackups/<distro>/` |
+| 保持 | 30 日より古い `.tar` を削除 |
+| 失敗時 | upload 失敗時はローカル `.tar` を保持 |
+| 制約 | 実行中の現在ディストリ自身は WSL 内から terminate せず、そのまま export |
+
 ### Windows 設定ファイル
 
-#### .wezterm.lua / keybinds.lua
+#### .wezterm.lua
 
 | 機能 | キー / 説明 |
 |------|------------|
 | デフォルトドメイン | WSL:Ubuntu |
 | Leader キー | `Ctrl+q`（2秒タイムアウト） |
 | タブバー | 矢印型タブ・透過・境界線なし |
-| 透過 | `window_background_opacity = 0.85` |
+| 透過 | `window_background_opacity = 1.0` |
 | 左右分割 | `Ctrl+q` → `r` |
 | 上下分割 | `Ctrl+q` → `d` |
-| ペイン移動 | `Ctrl+q` → `h/l/k/j` |
+| ペイン移動 | `Alt+h/l/k/j` |
 | ペイン閉じ | `Ctrl+q` → `x` |
 | コピーモード | `Ctrl+q` → `[`（vi ライク） |
 | Workspace 切替 | `leader → w` |
-| Workspace 名変更 | `Alt+e` |
+| Workspace 名変更 | `Alt+E` |
 | ステータスバー | 現在の Workspace 名を右端に表示 |
 | ウィンドウタイトル | カレントディレクトリ名を表示 |
-| キーバインド定義 | `windows/keybinds.lua`（インライン管理） |
+| キーバインド定義 | `windows/.wezterm.lua`（インライン管理） |
 
 ### Claude Code 設定（サブモジュール）
 
@@ -85,6 +99,7 @@ Git サブモジュールとして管理される外部リポジトリ。
 - zoxide（スマート cd）
 - fzf（ファジーファインダー）
 - gh（GitHub CLI）
+- rclone（クラウド転送）
 - Claude Code
 
 ### Windows 側
@@ -101,6 +116,8 @@ Git サブモジュールとして管理される外部リポジトリ。
 | `wsl/.gitconfig` | `~/.gitconfig` |
 | `wsl/.config/gh/config.yml` | `~/.config/gh/config.yml` |
 | `wsl/.config/git/ignore` | `~/.config/git/ignore` |
+| `wsl/.local/bin/backup-wsl-full` | `~/.local/bin/backup-wsl-full` |
+| `wsl/.local/bin/gf` | `~/.local/bin/gf` |
 | `claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `claude/settings.json` | `~/.claude/settings.json` |
 | `claude/skills/*` | `~/.claude/skills/*` |
