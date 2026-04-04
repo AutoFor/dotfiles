@@ -15,6 +15,7 @@
 | **fzf** | `sudo apt install fzf` | ファジーファインダー（`cfd()` で使用） |
 | **gh (GitHub CLI)** | `sudo apt install gh && gh auth login` | GitHub 操作 |
 | **Git** | `sudo apt install git` | バージョン管理（通常はプリインストール済み） |
+| **rclone** | `sudo apt install rclone && rclone config` | WSL フルバックアップのクラウド転送 |
 
 ### WSL 側（Claude Code を使う場合）
 
@@ -59,6 +60,7 @@ chmod +x install.sh
 **実行結果:**
 - 各設定ファイルのシンボリックリンクが作成される
 - 既存ファイルがある場合は `*.backup.YYYYMMDD` にバックアップされる
+- `~/.local/bin/backup-wsl-full` などの補助スクリプトがリンクされる
 - 何度実行しても安全（冪等）
 
 ### ステップ 3: Windows 設定をインストール
@@ -111,12 +113,22 @@ claude
 
 初回起動時に API キーまたは認証の設定を求められます。
 
+### rclone の認証
+
+```bash
+rclone config
+```
+
+Google Drive などの remote を作成してください。`backup-wsl-full` の既定値は `gdrive:WSL-FullBackups`。
+
 ## トラブルシューティング
 
 | 症状 | 原因 | 対処法 |
 |------|------|--------|
 | `zsh: command not found: z` | zoxide 未インストール | zoxide をインストールする |
 | `cfd()` が動かない | fzf 未インストール | `sudo apt install fzf` |
+| `backup-wsl-full: command not found` | `install.sh` 未実行 or 新しいシェル未起動 | `./install.sh` 実行後にシェルを再起動 |
+| `didn't find section in config file` | `rclone` remote 未設定 | `rclone config` で `gdrive:` を作成 |
 | Windows でシンボリックリンクエラー | Developer Mode が無効 | 設定から Developer Mode を有効化 |
 | `claude/` が空 | サブモジュール未取得 | `git submodule update --init --recursive` |
 | WezTerm が WSL に接続しない | WSL 未インストール or 停止中 | `wsl --install` または `wsl --shutdown && wsl` |

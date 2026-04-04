@@ -1,54 +1,88 @@
 ---
 name: gh-init-wiki
-description: プロジェクトに docs/wiki/ ディレクトリと GitHub Actions ワークフローを作成し、Wiki 自動同期の土台をセットアップする。ユーザーが「Wiki を初期化して」「Wiki 作って」「gh-init-wiki」と言ったときに使用する。
+description: プロジェクトに docs/wiki/ と GitHub Actions ワークフローを作成し、Wiki 自動同期の土台をセットアップする。
+disable-model-invocation: false
+user-invocable: true
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Glob
+  - Grep
+  - Skill
 ---
 
 # Wiki 初期化スキル
 
-`docs/wiki/` ディレクトリと GitHub Actions ワークフローを作成し、Wiki 自動同期の土台をセットアップする。
+プロジェクトに `docs/wiki/` ディレクトリと GitHub Actions ワークフローを作成し、Wiki 自動同期の土台をセットアップする。
 
 ## 絶対禁止事項
 
-- Wiki リポジトリ（`.wiki.git`）に直接 push しない（GitHub Actions が同期する）
+- Wiki リポジトリ（`.wiki.git`）に直接 push しないこと（GitHub Actions が同期する）
+- サブスキル（`/smart-commit`）の処理を自分で再実装しないこと
 
 ## 実行手順
 
 ### ステップ 1: 既存チェック
 
-`docs/wiki/` が既に存在する場合は「既にセットアップ済みです」と表示して終了する。
+`docs/wiki/` が既に存在するか確認する。
+
+- **存在する場合**: 「既にセットアップ済みです。`/gh-wiki-update` で更新できます。」と表示して **終了**
+- **存在しない場合**: ステップ 2 へ進む
 
 ### ステップ 2: プロジェクト分析
 
-以下を読み取りプロジェクトの概要を把握する:
-- `README.md`
-- `package.json`, `Cargo.toml`, `go.mod` 等の主要設定ファイル
-- ソースコードのディレクトリ構造
+以下のファイルを読み取り、プロジェクトの概要を把握する:
+
+- `README.md`（プロジェクト説明）
+- `package.json`、`Cargo.toml`、`go.mod` 等の主要設定ファイル
+- ソースコードのディレクトリ構造（Glob で把握）
+- 主要なソースファイル（エントリポイント、設定ファイル等）
 
 ### ステップ 3: `docs/wiki/` 作成
+
+ディレクトリを作成し、プロジェクト分析に基づいて初期ページとダイアグラムを生成する。
 
 ```bash
 mkdir -p docs/wiki/images
 ```
 
-生成するページ:
-- `Home.md`: プロジェクト概要（非エンジニア向け、平易な日本語）
-- `Specification.md`: 仕様書（機能一覧、全体像）
-- `_Sidebar.md`: ナビゲーション（全ページへのリンク）
+#### 生成するページ
 
-ダイアグラム生成:
-1. `docs/wiki/images/<name>.drawio` を XML 形式で作成する
-2. SVG にエクスポート:
+| ページ | 対象読者 | 内容 |
+|--------|---------|------|
+| `Home.md` | 全員（非エンジニア含む） | プロジェクト概要、目的、できること |
+| `Specification.md` | 全員 | 仕様書: 機能一覧、全体像 |
+| `_Sidebar.md` | 全員 | ナビゲーション（全ページへのリンク） |
+
+#### 各ページの書き方ルール
+
+- **Home.md**: 平易な日本語、専門用語は避けるか注釈付き、非エンジニアが読んで理解できる
+- **Specification.md**: 仕様ベース、「何ができるか」を中心に記述、フローチャートやテーブルを活用
+- **_Sidebar.md**: 全ページへのリンク一覧
+
+#### ダイアグラム生成
+
+プロジェクト分析に基づいて、`docs/wiki/images/` にアーキテクチャ図等の初期ダイアグラムを作成する。
+
+1. Write ツールで `.drawio` XML ファイルを作成する（例: `docs/wiki/images/architecture.drawio`）
+2. draw.io CLI で SVG にエクスポートする:
 
 ```bash
-xvfb-run drawio --export --format svg --embed-svg-fonts true \
-  --output docs/wiki/images/<name>.svg docs/wiki/images/<name>.drawio
+xvfb-run drawio --export --format svg --embed-svg-fonts true --output docs/wiki/images/<name>.svg docs/wiki/images/<name>.drawio
 ```
 
-3. Wiki ページ内で参照: `![説明](./images/<name>.svg)`
+3. Wiki ページ内で SVG を参照する:
 
-`.drawio`（ソース）と `.svg`（出力）の両方をコミットする。
+```markdown
+![アーキテクチャ図](./images/architecture.svg)
+```
+
+`.drawio`（ソース）と `.svg`（出力）の両方をリポジトリにコミットする。
 
 ### ステップ 4: `.github/workflows/wiki-sync.yml` 作成
+
+既に存在する場合はスキップする。存在しない場合は以下の内容で作成:
 
 ```yaml
 name: Sync Wiki
@@ -75,14 +109,11 @@ jobs:
 
 ### ステップ 5: コミット
 
-変更ファイルをグループ化してコミット:
-
-```bash
-git add docs/wiki/ .github/workflows/wiki-sync.yml
-git commit -m "feat: Wiki 初期セットアップ"
-git push
-```
+Skill ツールで `/smart-commit` を呼び出してコミットする。
 
 ### ステップ 6: 完了メッセージ
 
-生成したファイルの一覧と、初回は GitHub リポジトリの Wiki タブで手動初期ページ作成が必要な旨を表示する。
+以下の情報を表示する:
+
+1. 生成したファイルの一覧
+2. **注意**: 初回は GitHub リポジトリの Settings → Pages セクション横の Wiki タブで、Wiki を有効化し初期ページを手動作成する必要がある（GitHub Actions による同期はその後から機能する）

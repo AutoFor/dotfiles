@@ -1,4 +1,0 @@
-interface:
-  display_name: "GH Life Save"
-  short_description: "作業途中の変更をIssue化してコミット保存しておく"
-  default_prompt: "Use $gh-life-save to group my current changes into issues and save progress."

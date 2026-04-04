@@ -1,0 +1,166 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: backup-wsl-full [options]
+
+Export a WSL distro to a temporary Windows-side tarball, upload it with rclone,
+and delete cloud backups older than the retention period.
+
+Options:
+  --distro NAME            Target distro name (default: $WSL_DISTRO_NAME)
+  --remote REMOTE          rclone remote base path (default: $RCLONE_REMOTE)
+  --retention-days DAYS    Delete remote backups older than DAYS (default: 30)
+  --keep-local             Keep the exported tarball after a successful upload
+  --dry-run                Print commands without executing them
+  -h, --help               Show this help
+
+Environment:
+  WSL_DISTRO_NAME          Default distro name
+  RCLONE_REMOTE            Default remote base path (default: gdrive:WSL-FullBackups)
+  RETENTION_DAYS           Default retention in days (default: 30)
+  WSL_BACKUP_TMP_WIN       Temporary Windows directory override
+  WSL_BACKUP_TMP_WSL       Temporary WSL directory override
+EOF
+}
+
+log() {
+  printf '[INFO] %s\n' "$*"
+}
+
+warn() {
+  printf '[WARN] %s\n' "$*" >&2
+}
+
+die() {
+  printf '[ERROR] %s\n' "$*" >&2
+  exit 1
+}
+
+trim_cr() {
+  tr -d '\r'
+}
+
+require_cmd() {
+  command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+run() {
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf '+'
+    printf ' %q' "$@"
+    printf '\n'
+    return 0
+  fi
+
+  "$@"
+}
+
+DRY_RUN=0
+KEEP_LOCAL=0
+DISTRO_NAME="${WSL_DISTRO_NAME:-}"
+RCLONE_REMOTE="${RCLONE_REMOTE:-gdrive:WSL-FullBackups}"
+RETENTION_DAYS="${RETENTION_DAYS:-30}"
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --distro)
+      [[ $# -ge 2 ]] || die "--distro requires a value"
+      DISTRO_NAME="$2"
+      shift 2
+      ;;
+    --remote)
+      [[ $# -ge 2 ]] || die "--remote requires a value"
+      RCLONE_REMOTE="$2"
+      shift 2
+      ;;
+    --retention-days)
+      [[ $# -ge 2 ]] || die "--retention-days requires a value"
+      RETENTION_DAYS="$2"
+      shift 2
+      ;;
+    --keep-local)
+      KEEP_LOCAL=1
+      shift
+      ;;
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      die "unknown option: $1"
+      ;;
+  esac
+done
+
+[[ -n "$DISTRO_NAME" ]] || die "distro name is required; pass --distro or set WSL_DISTRO_NAME"
+[[ "$RETENTION_DAYS" =~ ^[0-9]+$ ]] || die "--retention-days must be a non-negative integer"
+
+require_cmd cmd.exe
+require_cmd wsl.exe
+require_cmd wslpath
+require_cmd rclone
+
+LOCAL_APPDATA_WIN="$(cmd.exe /c echo %LOCALAPPDATA% | trim_cr)"
+[[ -n "$LOCAL_APPDATA_WIN" ]] || die "failed to resolve %LOCALAPPDATA%"
+
+TMP_DIR_WIN="${WSL_BACKUP_TMP_WIN:-${LOCAL_APPDATA_WIN}\\WSLBackups\\tmp}"
+TMP_DIR_WSL="${WSL_BACKUP_TMP_WSL:-$(wslpath -u "$TMP_DIR_WIN")}"
+
+[[ -n "$TMP_DIR_WSL" ]] || die "failed to resolve temporary WSL path"
+
+DATE="$(date +%F-%H%M%S)"
+FILE_NAME="${DISTRO_NAME}_full_${DATE}.tar"
+TMP_FILE_WSL="${TMP_DIR_WSL}/${FILE_NAME}"
+TMP_FILE_WIN="$(wslpath -w "$TMP_FILE_WSL" | trim_cr)"
+REMOTE_BASE="${RCLONE_REMOTE%/}"
+REMOTE_DIR="${REMOTE_BASE}/${DISTRO_NAME}"
+REMOTE_FILE="${REMOTE_DIR}/${FILE_NAME}"
+CURRENT_DISTRO="${WSL_DISTRO_NAME:-}"
+
+log "distro: ${DISTRO_NAME}"
+log "temp dir (Windows): ${TMP_DIR_WIN}"
+log "temp dir (WSL): ${TMP_DIR_WSL}"
+log "remote file: ${REMOTE_FILE}"
+log "retention: ${RETENTION_DAYS}d"
+
+run mkdir -p "$TMP_DIR_WSL"
+
+if [[ -n "$CURRENT_DISTRO" && "$DISTRO_NAME" == "$CURRENT_DISTRO" ]]; then
+  warn "skipping 'wsl.exe --terminate ${DISTRO_NAME}' because this shell is running inside that distro"
+else
+  log "terminating distro before export"
+  if ! run wsl.exe --terminate "$DISTRO_NAME"; then
+    warn "terminate failed for ${DISTRO_NAME}; continuing with export"
+  fi
+fi
+
+log "exporting distro"
+run wsl.exe --export "$DISTRO_NAME" "$TMP_FILE_WIN"
+
+log "uploading backup"
+if ! run rclone copyto "$TMP_FILE_WSL" "$REMOTE_FILE"; then
+  warn "upload failed; keeping local export at ${TMP_FILE_WSL}"
+  exit 1
+fi
+
+if [[ "$KEEP_LOCAL" == "1" ]]; then
+  log "keeping local export: ${TMP_FILE_WSL}"
+else
+  log "removing local export"
+  run rm -f "$TMP_FILE_WSL"
+fi
+
+log "applying retention policy"
+if ! run rclone delete "$REMOTE_DIR" --min-age "${RETENTION_DAYS}d" --include '*.tar'; then
+  warn "backup uploaded, but retention cleanup failed for ${REMOTE_DIR}"
+else
+  log "retention cleanup completed"
+fi
+
+log "backup completed"

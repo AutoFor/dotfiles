@@ -33,6 +33,29 @@ link_file() {
   echo "  [link] $dest → $src"
 }
 
+sync_dir_links() {
+  local src_root="$1"
+  local dest_root="$2"
+
+  mkdir -p "$dest_root"
+
+  for existing in "$dest_root"/*; do
+    [ -e "$existing" ] || [ -L "$existing" ] || continue
+    local name
+    name="$(basename "$existing")"
+    if [ ! -d "$src_root/$name" ]; then
+      echo "  [remove] $existing → ソースに存在しないため削除"
+      rm -rf "$existing"
+    fi
+  done
+
+  for src_dir in "$src_root"/*/; do
+    local name
+    name="$(basename "$src_dir")"
+    link_file "$src_root/$name" "$dest_root/$name"
+  done
+}
+
 echo "=== WSL 設定ファイルのリンク ==="
 
 # --- WSL ホームディレクトリ直下 ---
@@ -61,11 +84,7 @@ link_file "$DOTFILES_DIR/claude/github-app-config.env.example"  "$CLAUDE_DIR/git
 link_file "$DOTFILES_DIR/claude/mcp" "$CLAUDE_DIR/mcp"
 
 # --- Claude skills（ディレクトリ単位） ---
-mkdir -p "$CLAUDE_DIR/skills"
-for skill_dir in "$DOTFILES_DIR/claude/skills"/*/; do
-  skill_name="$(basename "$skill_dir")"
-  link_file "$DOTFILES_DIR/claude/skills/$skill_name" "$CLAUDE_DIR/skills/$skill_name"
-done
+sync_dir_links "$DOTFILES_DIR/claude/skills" "$CLAUDE_DIR/skills"
 
 echo ""
 echo "=== ~/.local/bin スクリプトのリンク ==="
@@ -84,10 +103,7 @@ mkdir -p "$CODEX_DIR/skills"
 
 link_file "$DOTFILES_DIR/codex/config.toml" "$CODEX_DIR/config.toml"
 
-for skill_dir in "$DOTFILES_DIR/codex/skills"/*/; do
-  skill_name="$(basename "$skill_dir")"
-  link_file "$DOTFILES_DIR/codex/skills/$skill_name" "$CODEX_DIR/skills/$skill_name"
-done
+sync_dir_links "$DOTFILES_DIR/codex/skills" "$CODEX_DIR/skills"
 
 echo ""
 echo "=== WSL システム設定 (sudo 必要) ==="

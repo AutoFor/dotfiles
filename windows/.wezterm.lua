@@ -212,7 +212,7 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成（現在のペインのCWD → ~/.last_dir の順でフォールバック）
+  -- Tab新規作成（常に WSL:Ubuntu で開く）
   {
     key = "t",
     mods = "CTRL",
@@ -221,11 +221,11 @@ config.keys = {
       local cwd = cwd_uri and cwd_uri.file_path or get_last_dir()
       if cwd then
         window:perform_action(
-          act.SpawnCommandInNewTab({ cwd = cwd, domain = "CurrentPaneDomain" }),
+          act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL:Ubuntu" } }),
           pane
         )
       else
-        window:perform_action(act.SpawnTab("CurrentPaneDomain"), pane)
+        window:perform_action(act.SpawnTab({ DomainName = "WSL:Ubuntu" }), pane)
       end
     end),
   },
@@ -300,9 +300,12 @@ config.keys = {
   },
   {
     -- PowerShell を新規タブで開く
-    key = "p",
+    key = "P",
     mods = "LEADER|SHIFT",
-    action = act.SpawnCommandInNewTab({ args = { "pwsh.exe" } }),
+    action = act.SpawnCommandInNewTab({
+      domain = { DomainName = "local" },
+      args = { "pwsh.exe", "-NoLogo" },
+    }),
   },
 }
 
