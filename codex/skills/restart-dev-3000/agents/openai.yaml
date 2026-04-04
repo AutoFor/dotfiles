@@ -1,3 +1,0 @@
-interface:
-  display_name: "Restart Dev 3000"
-  short_description: "Free port 3000 and restart Next.js dev server safely"
