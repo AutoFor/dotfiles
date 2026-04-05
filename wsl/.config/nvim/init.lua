@@ -143,13 +143,23 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -- wezterm.exe のパス（WSL から Windows の wezterm CLI を叩く）
 local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
 
--- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して開く
+-- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して Claude Code を開く
+-- SSH 経由など wezterm cli が使えない場合は nvim 内で ClaudeCode を起動する
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
     vim.schedule(function()
-      local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
-      vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+      if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
+        -- WezTerm ネイティブ接続: 右ペインを分割して Claude Code を起動
+        local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
+        vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+      else
+        -- SSH 経由など WezTerm ソケットがない場合: nvim 内で ClaudeCode を起動
+        vim.cmd("ClaudeCode")
+        vim.defer_fn(function()
+          vim.cmd("wincmd p")
+        end, 200)
+      end
     end)
   end,
 })
