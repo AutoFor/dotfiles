@@ -275,10 +275,47 @@ config.keys = {
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
-  { key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
-  { key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
-  { key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
-  { key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
+  -- WezTermペインが複数あればペイン移動、1つだけ（SSH接続など）なら nvim に転送
+  {
+    key = "h", mods = "ALT",
+    action = wezterm.action_callback(function(win, pane)
+      if #win:active_tab():panes() > 1 then
+        win:perform_action(act.ActivatePaneDirection("Left"), pane)
+      else
+        win:perform_action(act.SendKey({ key = "h", mods = "ALT" }), pane)
+      end
+    end),
+  },
+  {
+    key = "l", mods = "ALT",
+    action = wezterm.action_callback(function(win, pane)
+      if #win:active_tab():panes() > 1 then
+        win:perform_action(act.ActivatePaneDirection("Right"), pane)
+      else
+        win:perform_action(act.SendKey({ key = "l", mods = "ALT" }), pane)
+      end
+    end),
+  },
+  {
+    key = "k", mods = "ALT",
+    action = wezterm.action_callback(function(win, pane)
+      if #win:active_tab():panes() > 1 then
+        win:perform_action(act.ActivatePaneDirection("Up"), pane)
+      else
+        win:perform_action(act.SendKey({ key = "k", mods = "ALT" }), pane)
+      end
+    end),
+  },
+  {
+    key = "j", mods = "ALT",
+    action = wezterm.action_callback(function(win, pane)
+      if #win:active_tab():panes() > 1 then
+        win:perform_action(act.ActivatePaneDirection("Down"), pane)
+      else
+        win:perform_action(act.SendKey({ key = "j", mods = "ALT" }), pane)
+      end
+    end),
+  },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
   -- 選択中のPaneのみ表示
