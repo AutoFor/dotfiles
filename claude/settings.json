@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
+            "command": "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
+            "command": "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
           }
         ]
       }
