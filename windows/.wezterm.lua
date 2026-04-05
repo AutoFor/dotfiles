@@ -25,6 +25,7 @@ end)
 
 
 config.automatically_reload_config = true
+config.font = wezterm.font("HackGen Console NF")
 config.font_size = 12.0
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
 config.front_end = "WebGpu"
