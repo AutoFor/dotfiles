@@ -51,7 +51,20 @@ config.wsl_domains = {
     default_cwd = "/home/seiya-kawashima",
   },
 }
-config.default_domain = "WSL:Ubuntu"
+
+-- SSH 経由で WSL に接続（wsl_domains より体感速度が速い場合がある）
+-- 事前準備: WSL で sshd を 2222 番で起動し、Windows の公開鍵を authorized_keys に追加
+config.ssh_domains = {
+  {
+    name = "WSL-SSH",
+    remote_address = "127.0.0.1:2222",
+    username = "seiya-kawashima",
+    -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
+    multiplexing = "None",
+  },
+}
+
+config.default_domain = "WSL-SSH"
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
@@ -60,8 +73,12 @@ config.launch_menu = {
     args = { "pwsh.exe" },
   },
   {
-    label = "WSL: Ubuntu",
+    label = "WSL: Ubuntu (native)",
     domain = { DomainName = "WSL:Ubuntu" },
+  },
+  {
+    label = "WSL: Ubuntu (SSH)",
+    domain = { DomainName = "WSL-SSH" },
   },
 }
 
@@ -230,11 +247,11 @@ config.keys = {
       local cwd = cwd_uri and cwd_uri.file_path or get_last_dir()
       if cwd then
         window:perform_action(
-          act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL:Ubuntu" } }),
+          act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL-SSH" } }),
           pane
         )
       else
-        window:perform_action(act.SpawnTab({ DomainName = "WSL:Ubuntu" }), pane)
+        window:perform_action(act.SpawnTab({ DomainName = "WSL-SSH" }), pane)
       end
     end),
   },
