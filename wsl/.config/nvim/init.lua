@@ -41,6 +41,14 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
   end,
 })
 
+local function executable(cmd)
+  return vim.fn.executable(cmd) == 1
+end
+
+local function is_ssh_session()
+  return vim.env.SSH_TTY or vim.env.SSH_CLIENT or vim.env.SSH_CONNECTION
+end
+
 vim.opt.clipboard = "unnamedplus"
 
 -- d/x は黒穴レジスタに捨てる（クリップボードを汚さない）
@@ -49,26 +57,13 @@ vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
 vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
 vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
 
-if os.getenv("SSH_TTY") or os.getenv("SSH_CLIENT") then
-  -- SSH 接続時は OSC 52 でローカルクリップボードに転送
-  local osc52 = require("vim.ui.clipboard.osc52")
-  vim.g.clipboard = {
-    name = "OSC 52",
-    copy = {
-      ["+"] = osc52.copy("+"),
-      ["*"] = osc52.copy("*"),
-    },
-    paste = {
-      ["+"] = osc52.paste("+"),
-      ["*"] = osc52.paste("*"),
-    },
-  }
-elseif vim.fn.has("wsl") == 1 then
-  -- WSL では vim.ui.open を wslview に向ける
-  vim.ui.open = function(uri)
-    vim.fn.jobstart({ "wslview", uri }, { detach = true })
+if vim.fn.has("wsl") == 1 and executable("win32yank.exe") then
+  -- WSL ローカルでは Windows クリップボードへ直接つなぐ
+  if executable("wslview") then
+    vim.ui.open = function(uri)
+      vim.fn.jobstart({ "wslview", uri }, { detach = true })
+    end
   end
-
   vim.g.clipboard = {
     name = "win32yank-wsl",
     copy = {
@@ -80,6 +75,20 @@ elseif vim.fn.has("wsl") == 1 then
       ["*"] = "win32yank.exe -o --lf",
     },
     cache_enabled = 0,
+  }
+elseif is_ssh_session() then
+  -- SSH 先では OSC52 で手元の端末クリップボードへ返す
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "osc52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = osc52.paste("+"),
+      ["*"] = osc52.paste("*"),
+    },
   }
 end
 
@@ -206,18 +215,26 @@ local function visual_file_location()
   end
 end
 
--- <leader>y : 右隣の WezTerm ペインに送信 + クリップボードにコピー
+-- <leader>y : 右隣のペイン（WezTermまたはnvim内ターミナル）に送信 + クリップボードにコピー
 vim.keymap.set("v", "<leader>y", function()
   local s = visual_file_location()
   vim.fn.setreg("+", s)
-  local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
-  if pane_id == "" then
-    print("copied (no right pane): " .. s)
+  -- WezTerm/SSH問わず nvim 内の claude ターミナルバッファを探して送信
+  local claude_chan = nil
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buftype == "terminal" then
+      local name = vim.api.nvim_buf_get_name(buf)
+      local chan = vim.bo[buf].channel
+      if name:match("claude") and chan and chan ~= 0 then
+        claude_chan = chan
+        break
+      end
+    end
+  end
+  if not claude_chan then
+    print("copied (no claude terminal): " .. s)
     return
   end
-  -- ビジュアルモードを抜けてから送信・フォーカス移動
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
-  vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, s .. "\n" })
-  vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
+  vim.api.nvim_chan_send(claude_chan, s .. "\n")
   print("sent & copied: " .. s)
-end, { desc = "Send file:line to WezTerm right pane + copy to clipboard (visual)" })
+end, { desc = "Send file:line to right pane/window + copy to clipboard (visual)" })

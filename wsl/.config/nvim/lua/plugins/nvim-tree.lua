@@ -97,22 +97,30 @@ return {
             end)
           end, opts("Delete file/directory (permanent)"))
 
-          -- ファイルパスを右 WezTerm ペイン（Claude Code）に送信
+          -- ファイルパスを claude ターミナルバッファに送信
           vim.keymap.set("n", "<leader>y", function()
             local node = api.tree.get_node_under_cursor()
             if not node or not node.absolute_path then return end
-            local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
-            local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
-            if pane_id == "" then
-              vim.notify("no right pane: " .. node.absolute_path)
-              return
-            end
             local rel = vim.fn.fnamemodify(node.absolute_path, ":.")
             vim.fn.setreg("+", rel)
-            vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, rel .. "\n" })
-            vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
+            local claude_chan = nil
+            for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+              if vim.bo[buf].buftype == "terminal" then
+                local name = vim.api.nvim_buf_get_name(buf)
+                local chan = vim.bo[buf].channel
+                if name:match("claude") and chan and chan ~= 0 then
+                  claude_chan = chan
+                  break
+                end
+              end
+            end
+            if not claude_chan then
+              vim.notify("copied (no claude terminal): " .. rel)
+              return
+            end
+            vim.api.nvim_chan_send(claude_chan, rel .. "\n")
             vim.notify("sent & copied: " .. rel)
-          end, opts("Send file path to WezTerm right pane"))
+          end, opts("Send file path to claude terminal"))
 
           -- 相対パス → クリップボード
           vim.keymap.set("n", "gr", function()
