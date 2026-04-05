@@ -109,11 +109,15 @@ vim.keymap.set("i", "<C-End>", "<Esc><C-w>l", { silent = true, desc = "Move to r
 vim.keymap.set("t", "<C-Home>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal and move left" })
 vim.keymap.set("t", "<C-End>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Exit terminal and move right" })
 
--- ウィンドウ移動を Alt+hjkl でショートカット（通常モード）
+-- ウィンドウ移動を Alt+hjkl でショートカット（通常モード・ターミナルモード）
 vim.keymap.set("n", "<A-h>", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<A-l>", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<A-j>", "<C-w>j", { silent = true, desc = "Down window" })
 vim.keymap.set("n", "<A-k>", "<C-w>k", { silent = true, desc = "Up window" })
+vim.keymap.set("t", "<A-h>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Left window (terminal)" })
+vim.keymap.set("t", "<A-l>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Right window (terminal)" })
+vim.keymap.set("t", "<A-j>", [[<C-\><C-n><C-w>j]], { silent = true, desc = "Down window (terminal)" })
+vim.keymap.set("t", "<A-k>", [[<C-\><C-n><C-w>k]], { silent = true, desc = "Up window (terminal)" })
 vim.keymap.set("n", "<leader>h", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<leader>l", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<leader>j", "<C-w>j", { silent = true, desc = "Down window" })
