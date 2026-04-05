@@ -85,6 +85,9 @@ trust_level = "trusted"
 [projects."/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map"]
 trust_level = "trusted"
 
+[projects."/"]
+trust_level = "trusted"
+
 [notice]
 hide_rate_limit_model_nudge = true
 

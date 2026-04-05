@@ -22,3 +22,5 @@ bash ~/.claude/skills/gh-finish/gh-finish.sh
 
 - `gh pr review --approve` は使用しないこと（自分の PR は GitHub の仕様上承認できない）
 - Skill ツールでサブスキルを呼び出さないこと
+- スクリプト実行中に独自判断でコマンドを追加実行しないこと（`.gitignore` 追加・`git rm --cached` など、スクリプトが意図しない操作を行わないこと）
+- スクリプト外での修正が必要な問題（例: `node_modules` が追跡されているなど）はユーザーに報告するだけにとどめること
