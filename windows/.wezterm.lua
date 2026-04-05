@@ -26,8 +26,17 @@ end)
 
 config.automatically_reload_config = true
 config.font_size = 12.0
--- 最大化→元に戻す時のクラッシュ対策（WebGPU の GPU ドライバ相性問題）
-config.front_end = "OpenGL"
+-- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
+config.front_end = "WebGpu"
+config.webgpu_power_preference = "HighPerformance"
+-- アダプタ固定が必要なら有効化
+-- config.webgpu_preferred_adapter = {
+--   backend = "Dx12",
+--   device_type = "IntegratedGpu",
+-- }
+config.max_fps = 120
+config.animation_fps = 60
+-- config.front_end = "OpenGL"  -- クラッシュ時はこちらに戻す
 config.use_ime = true
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
