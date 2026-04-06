@@ -145,7 +145,7 @@ vim.api.nvim_create_user_command("Claude", function()
 end, {})
 
 -- Claude Code ウィンドウに入ったら自動でターミナルモードへ
-vim.api.nvim_create_autocmd("BufEnter", {
+vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
   callback = function()
     if vim.bo.buftype == "terminal" and vim.fn.bufname():match("claude") then
       vim.cmd("startinsert")
