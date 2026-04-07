@@ -61,20 +61,49 @@ export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
 
 # Windows パスを WSL パスに変換して出力 + クリップボードにコピー
 # 使い方: wpath 'G:\パス\ファイル.txt'  ← シングルクォート必須
+wsl_require_quoted_windows_path() {
+  local input="$*"
+
+  if [[ -z "$input" ]]; then
+    print -r -- "Usage: ${funcstack[2]} 'C:\path\to\target'"
+    return 1
+  fi
+
+  if [[ "$input" =~ '^[A-Za-z]:[^/\\]' ]]; then
+    print -r -- "Error: Windows path must be quoted."
+    print -r -- "Example: ${funcstack[2]} 'C:\Users\SeiyaKawashima\Downloads'"
+    return 1
+  fi
+}
+
+wsl_copy_to_clipboard() {
+  local value="$1"
+  local clip_cmd="/mnt/c/Windows/System32/clip.exe"
+
+  if [[ ! -x "$clip_cmd" ]]; then
+    print -r -- "Warning: clip.exe is not available; skipped clipboard copy."
+    return 1
+  fi
+
+  printf '%s' "$value" | "$clip_cmd" 2>/dev/null
+}
+
 wpath() {
+  wsl_require_quoted_windows_path "$@" || return 1
   local wsl_path
   wsl_path=$(wslpath -u "$*") || return 1
-  echo -n "'$wsl_path'" | clip.exe
+  wsl_copy_to_clipboard "'$wsl_path'" >/dev/null || true
   echo "'$wsl_path'"
 }
 
 # Windows パスを WSL パスに変換して claude を起動（ファイルパスは親ディレクトリに cd）
 # 使い方: wcd 'G:\パス\スペース含む パス'  ← シングルクォート必須
 wcd() {
+  wsl_require_quoted_windows_path "$@" || return 1
   local wsl_path
   wsl_path=$(wslpath -u "$*") || return 1
   [[ -f "$wsl_path" ]] && wsl_path=$(dirname "$wsl_path")
-  echo -n "'$wsl_path'" | clip.exe
+  wsl_copy_to_clipboard "'$wsl_path'" >/dev/null || true
   cd "$wsl_path" && claude
 }
 export DOTNET_ROOT=$HOME/.dotnet
