@@ -27,11 +27,11 @@ require("lazy").setup({
 vim.opt.number = true
 vim.opt.relativenumber = true
 
--- Fold (Treesitter ベース)
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+-- Fold (ufo/LSP ベース)
+vim.opt.foldcolumn = "1"
 vim.opt.foldlevel = 99
 vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
 
 -- 外部変更の自動リロード
 vim.opt.autoread = true
@@ -48,6 +48,8 @@ end
 local function is_ssh_session()
   return vim.env.SSH_TTY or vim.env.SSH_CLIENT or vim.env.SSH_CONNECTION
 end
+
+local agent_terminal = require("agent_terminal")
 
 vim.opt.clipboard = "unnamedplus"
 
@@ -92,21 +94,6 @@ elseif is_ssh_session() then
   }
 end
 
--- nvim-tree で <leader>y したら Windows クリップボードにパスを送る
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "NvimTree",
-  callback = function()
-    vim.keymap.set("n", "<leader>y", function()
-      local api = require("nvim-tree.api")
-      local node = api.tree.get_node_under_cursor()
-      if node and node.absolute_path then
-        vim.fn.setreg("+", node.absolute_path)  -- Windows クリップボード
-        print("Copied: " .. node.absolute_path)
-      end
-    end, { buffer = true, silent = true })
-  end,
-})
-
 -- ターミナルモードを Esc×2 で抜けて左ウィンドウへ移動
 vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal mode and move left" })
 vim.keymap.set("t", "<A-Left><A-Left>", [[<C-\><C-n>]], { silent = true, desc = "Exit terminal mode" })
@@ -144,11 +131,40 @@ vim.api.nvim_create_user_command("Claude", function()
   vim.cmd("ClaudeCode")
 end, {})
 
+vim.api.nvim_create_user_command("AgentTerminalDebugToggle", function()
+  agent_terminal.toggle_debug()
+end, {})
+
+vim.api.nvim_create_user_command("AgentTerminalDebugInfo", function()
+  local state = agent_terminal.collect_state()
+  vim.notify(vim.inspect(state), vim.log.levels.INFO, { title = "agent-terminal" })
+end, {})
+
+vim.api.nvim_create_user_command("AgentTerminalDebugSend", function(opts)
+  local text = opts.args ~= "" and opts.args or "agent-terminal-debug"
+  local ok, result = agent_terminal.send(text .. "\n")
+  if ok then
+    vim.notify("sent debug text to buffer " .. result, vim.log.levels.INFO, { title = "agent-terminal" })
+  else
+    vim.notify("debug send failed: " .. result, vim.log.levels.WARN, { title = "agent-terminal" })
+  end
+end, { nargs = "?" })
+
 -- Claude Code ウィンドウに入ったら自動でターミナルモードへ
-vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
-  callback = function()
-    if vim.bo.buftype == "terminal" and vim.fn.bufname():match("claude") then
-      vim.cmd("startinsert")
+vim.api.nvim_create_autocmd({ "TermOpen", "BufEnter", "WinEnter" }, {
+  callback = function(args)
+    local buf = vim.api.nvim_get_current_buf()
+    agent_terminal.debug("autocmd event", {
+      event = args.event,
+      current = agent_terminal.describe_buffer(buf),
+    })
+    if agent_terminal.is_agent_terminal(buf) then
+      vim.schedule(function()
+        if vim.api.nvim_get_current_buf() == buf then
+          agent_terminal.debug("autocmd startinsert", agent_terminal.describe_buffer(buf))
+          vim.cmd("startinsert")
+        end
+      end)
     end
   end,
 })
@@ -219,22 +235,10 @@ end
 vim.keymap.set("v", "<leader>y", function()
   local s = visual_file_location()
   vim.fn.setreg("+", s)
-  -- WezTerm/SSH問わず nvim 内の claude ターミナルバッファを探して送信
-  local claude_chan = nil
-  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if vim.bo[buf].buftype == "terminal" then
-      local name = vim.api.nvim_buf_get_name(buf)
-      local chan = vim.bo[buf].channel
-      if name:match("claude") and chan and chan ~= 0 then
-        claude_chan = chan
-        break
-      end
-    end
-  end
-  if not claude_chan then
-    print("copied (no claude terminal): " .. s)
+  local ok = agent_terminal.send(s .. "\n")
+  if not ok then
+    print("copied (no agent terminal): " .. s)
     return
   end
-  vim.api.nvim_chan_send(claude_chan, s .. "\n")
   print("sent & copied: " .. s)
 end, { desc = "Send file:line to right pane/window + copy to clipboard (visual)" })
