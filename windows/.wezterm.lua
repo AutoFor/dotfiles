@@ -28,8 +28,8 @@ config.automatically_reload_config = true
 config.font = wezterm.font("HackGen Console NF")
 config.font_size = 12.0
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
-config.front_end = "WebGpu"
-config.webgpu_power_preference = "HighPerformance"
+-- config.front_end = "WebGpu"
+-- config.webgpu_power_preference = "HighPerformance"
 -- アダプタ固定が必要なら有効化
 -- config.webgpu_preferred_adapter = {
 --   backend = "Dx12",
@@ -37,7 +37,7 @@ config.webgpu_power_preference = "HighPerformance"
 -- }
 config.max_fps = 120
 config.animation_fps = 60
--- config.front_end = "OpenGL"  -- クラッシュ時はこちらに戻す
+config.front_end = "OpenGL"  -- WebGPU クラッシュのため無効化
 config.use_ime = true
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
@@ -180,7 +180,20 @@ wezterm.on("update-right-status", function(window, pane)
 end)
 
 config.disable_default_key_bindings = true
+-- Ctrl+q を leader に使う
 config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }
+
+local function activate_pane_or_send_alt(direction, key)
+  return wezterm.action_callback(function(win, pane)
+    local tab = win:active_tab()
+    local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction(direction) or nil
+    if adjacent then
+      win:perform_action(act.ActivatePaneDirection(direction), pane)
+    else
+      win:perform_action(act.SendKey({ key = key, mods = "ALT" }), pane)
+    end
+  end)
+end
 
 config.keys = {
   {
@@ -244,8 +257,10 @@ config.keys = {
     key = "t",
     mods = "CTRL",
     action = wezterm.action_callback(function(window, pane)
-      local cwd_uri = pane:get_current_working_dir()
-      local cwd = cwd_uri and cwd_uri.file_path or get_last_dir()
+      local ok, cwd_uri = pcall(function()
+        return pane:get_current_working_dir()
+      end)
+      local cwd = (ok and cwd_uri and cwd_uri.file_path) or get_last_dir()
       if cwd then
         window:perform_action(
           act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL-SSH" } }),
@@ -276,47 +291,11 @@ config.keys = {
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
-  -- WezTermペインが複数あればペイン移動、1つだけ（SSH接続など）なら nvim に転送
-  {
-    key = "h", mods = "ALT",
-    action = wezterm.action_callback(function(win, pane)
-      if #win:active_tab():panes() > 1 then
-        win:perform_action(act.ActivatePaneDirection("Left"), pane)
-      else
-        win:perform_action(act.SendKey({ key = "h", mods = "ALT" }), pane)
-      end
-    end),
-  },
-  {
-    key = "l", mods = "ALT",
-    action = wezterm.action_callback(function(win, pane)
-      if #win:active_tab():panes() > 1 then
-        win:perform_action(act.ActivatePaneDirection("Right"), pane)
-      else
-        win:perform_action(act.SendKey({ key = "l", mods = "ALT" }), pane)
-      end
-    end),
-  },
-  {
-    key = "k", mods = "ALT",
-    action = wezterm.action_callback(function(win, pane)
-      if #win:active_tab():panes() > 1 then
-        win:perform_action(act.ActivatePaneDirection("Up"), pane)
-      else
-        win:perform_action(act.SendKey({ key = "k", mods = "ALT" }), pane)
-      end
-    end),
-  },
-  {
-    key = "j", mods = "ALT",
-    action = wezterm.action_callback(function(win, pane)
-      if #win:active_tab():panes() > 1 then
-        win:perform_action(act.ActivatePaneDirection("Down"), pane)
-      else
-        win:perform_action(act.SendKey({ key = "j", mods = "ALT" }), pane)
-      end
-    end),
-  },
+  -- その方向に WezTerm pane があれば移動し、無ければアプリ側へ Alt+hjkl を渡す
+  { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
+  { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
+  { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
+  { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
   -- 選択中のPaneのみ表示
