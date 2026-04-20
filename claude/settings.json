@@ -23,5 +23,18 @@
       }
     ]
   },
-  "skipDangerousModePermissionPrompt": true
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "genshijin@genshijin": true
+  },
+  "extraKnownMarketplaces": {
+    "genshijin": {
+      "source": {
+        "source": "github",
+        "repo": "InterfaceX-co-jp/genshijin"
+      }
+    }
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "model": "haiku"
 }
