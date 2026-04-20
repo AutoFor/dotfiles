@@ -11,8 +11,14 @@ allowed-tools:
 
 以下を実行する:
 
+1. 作業対象ディレクトリを決定する
+   - 引数としてパスが渡された場合はそれを使用する
+   - 引数がない場合は `$CLAUDE_PROJECT_DIR`（現在の Claude Code プロジェクトディレクトリ）を使用する
+
+2. 以下を実行する（`<DIR>` は上記で決定したディレクトリ）:
+
 ```bash
-bash ~/.claude/skills/gh-finish/gh-finish.sh
+bash ~/.claude/skills/gh-finish/gh-finish.sh "<DIR>"
 ```
 
 スクリプトが対話なしで完了まで実行する。

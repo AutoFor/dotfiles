@@ -61,15 +61,16 @@ fi
 git -C "$WORKTREE_ABSPATH" clean -fd 2>/dev/null || true
 
 # WezTerm で新しいペインを開いて Claude を起動
-# ネイティブ: wezterm + WEZTERM_PANE が必要
-# WSL2: wezterm.exe で代替（WEZTERM_PANE 不要）
+# SSH経由の場合はWezTermが使えないのでスキップ
 _wezterm_cmd=""
-if command -v wezterm &>/dev/null && [ -n "${WEZTERM_PANE:-}" ]; then
-  _wezterm_cmd="wezterm"
-elif command -v wezterm.exe &>/dev/null; then
-  _wezterm_cmd="wezterm.exe"
-elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
-  _wezterm_cmd="/mnt/c/Program Files/WezTerm/wezterm.exe"
+if [ -z "${SSH_CONNECTION:-}" ]; then
+  if command -v wezterm &>/dev/null && [ -n "${WEZTERM_PANE:-}" ]; then
+    _wezterm_cmd="wezterm"
+  elif command -v wezterm.exe &>/dev/null; then
+    _wezterm_cmd="wezterm.exe"
+  elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
+    _wezterm_cmd="/mnt/c/Program Files/WezTerm/wezterm.exe"
+  fi
 fi
 
 if [ "$SPLIT_DIR" != "none" ] && [ -n "$_wezterm_cmd" ]; then
