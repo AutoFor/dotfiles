@@ -45,8 +45,32 @@ cfd() {
   dir=$(find . -maxdepth 1 -type d | sort | fzf --no-sort) || return
   cd "$dir"
 }
+
+# 現在のディレクトリを確認付きで削除
+lrm() {
+  setopt localoptions glob_dots no_rm_star_silent
+
+  local target=$PWD
+  local parent
+  parent=$(dirname -- "$target")
+
+  if [[ "$target" == "/" || "$parent" == "$target" ]]; then
+    echo "Refusing to delete: $target"
+    return 1
+  fi
+
+  cd "$parent" || return 1
+  print -n "Delete directory: $target ? [y/N] "
+
+  local ans
+  read ans
+  [[ "$ans" == [yY] ]] || { cd "$target" 2>/dev/null; return 1; }
+
+  rm -rf -- "$target" || { echo "rm failed"; return 1; }
+}
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="$PATH:$HOME/.dotnet/tools"
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
 __wezterm_osc7() {
@@ -176,7 +200,18 @@ gwb() {
       echo "スクリプト出力: $output"
     fi
   else
-    bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$1"
+    local output
+    output=$(bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$1") || return 1
+    echo "$output"
+    local path line
+    while IFS= read -r line; do
+      [[ "$line" == ディレクトリ:* ]] && path="${line#ディレクトリ: }" && break
+    done <<< "$output"
+    if [[ -n "$path" ]]; then
+      local cd_cmd="cd \"$path\""
+      printf '%s' "$cd_cmd" | /mnt/c/Windows/System32/clip.exe
+      echo "クリップボードにコピーしました: $cd_cmd"
+    fi
   fi
 }
 
