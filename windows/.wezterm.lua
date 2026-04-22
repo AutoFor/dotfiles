@@ -1,6 +1,8 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
+local WSL_NATIVE_DOMAIN = "WSL:Ubuntu"
+local WSL_SSH_DOMAIN = "WSL-SSH"
 
 -- WSL の ~/.last_dir から直近のディレクトリを取得
 local function get_last_dir()
@@ -13,10 +15,41 @@ local function get_last_dir()
   return nil
 end
 
+local function boot_wsl_sshd()
+  wezterm.run_child_process({
+    "wsl.exe", "-d", "Ubuntu", "-u", "root", "--", "sh", "-lc",
+    "service ssh start >/dev/null 2>&1 || /etc/init.d/ssh start >/dev/null 2>&1 || true",
+  })
+end
+
+local function is_wsl_ssh_ready()
+  local success = wezterm.run_child_process({
+    "powershell.exe", "-NoProfile", "-Command",
+    "try {$client = New-Object Net.Sockets.TcpClient('127.0.0.1',2222); $client.Close(); exit 0} catch {exit 1}",
+  })
+  return success
+end
+
+local function wait_for_wsl_ssh(max_attempts, sleep_millis)
+  for _ = 1, max_attempts do
+    if is_wsl_ssh_ready() then
+      return true
+    end
+    wezterm.sleep_ms(sleep_millis)
+  end
+  return false
+end
+
 -- WezTerm 起動時に直近のディレクトリで開く
 wezterm.on("gui-startup", function(cmd)
   local last_dir = get_last_dir()
   local args = cmd or {}
+  boot_wsl_sshd()
+  if wait_for_wsl_ssh(30, 200) then
+    args.domain = { DomainName = WSL_SSH_DOMAIN }
+  else
+    args.domain = { DomainName = WSL_NATIVE_DOMAIN }
+  end
   if last_dir then
     args.cwd = last_dir
   end
@@ -47,7 +80,7 @@ config.macos_window_background_blur = 20
 -- → リサイズ時に Claude Code が固まる問題の軽減
 config.wsl_domains = {
   {
-    name = "WSL:Ubuntu",
+    name = WSL_NATIVE_DOMAIN,
     distribution = "Ubuntu",
     default_cwd = "/home/seiya-kawashima",
   },
@@ -57,7 +90,7 @@ config.wsl_domains = {
 -- 事前準備: WSL で sshd を 2222 番で起動し、Windows の公開鍵を authorized_keys に追加
 config.ssh_domains = {
   {
-    name = "WSL-SSH",
+    name = WSL_SSH_DOMAIN,
     remote_address = "127.0.0.1:2222",
     username = "seiya-kawashima",
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
@@ -65,7 +98,7 @@ config.ssh_domains = {
   },
 }
 
-config.default_domain = "WSL-SSH"
+config.default_domain = WSL_SSH_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
@@ -75,11 +108,11 @@ config.launch_menu = {
   },
   {
     label = "WSL: Ubuntu (native)",
-    domain = { DomainName = "WSL:Ubuntu" },
+    domain = { DomainName = WSL_NATIVE_DOMAIN },
   },
   {
     label = "WSL: Ubuntu (SSH)",
-    domain = { DomainName = "WSL-SSH" },
+    domain = { DomainName = WSL_SSH_DOMAIN },
   },
 }
 
