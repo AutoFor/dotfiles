@@ -72,6 +72,25 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
 export PATH="$PATH:$HOME/.dotnet/tools"
 
+__wezterm_set_user_var() {
+  local name="$1"
+  local value="$2"
+  local encoded
+  encoded=$(printf '%s' "$value" | base64 | tr -d '\n') || return
+  printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded"
+}
+
+nvim() {
+  if [[ -n "${SSH_CONNECTION:-}" || -n "${WEZTERM_PANE:-}" || -n "${WEZTERM_UNIX_SOCKET:-}" ]]; then
+    local marker="${PWD}:$$:${RANDOM}"
+    mkdir -p "$HOME/.cache"
+    printf '[%s] nvim trigger: pwd=%q marker=%q args=%q\n' \
+      "$(date '+%Y-%m-%d %H:%M:%S')" "$PWD" "$marker" "$*" >> "$HOME/.cache/wezterm-nvim-pane.log"
+    __wezterm_set_user_var "open_agent_pane_for_nvim" "$marker"
+  fi
+  command nvim "$@"
+}
+
 # WezTerm にカレントディレクトリを通知（OSC 7）
 __wezterm_osc7() {
   printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
@@ -164,13 +183,15 @@ bindkey '\ew' worktree-fzf
 # gh finish: Issue作成〜PRマージまで一括実行
 alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
 
+# claude: メモリ上限 12GB で起動
 # claude da: --dangerously-skip-permissions の短縮
+unalias claude 2>/dev/null || true
 claude() {
   if [[ "$1" == "da" ]]; then
     shift
-    command claude --dangerously-skip-permissions "$@"
+    command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
   else
-    command claude "$@"
+    command systemd-run --user --scope -p MemoryMax=12G claude "$@"
   fi
 }
 
@@ -224,9 +245,6 @@ fi
 pptx-meiryo() {
     /mnt/c/tools/pptx-meiryo/pptx-meiryo.exe "$@"
 }
-
-# claude: メモリ上限 12GB で起動
-alias claude='systemd-run --user --scope -p MemoryMax=12G claude'
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc' ]; then . '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc'; fi

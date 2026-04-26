@@ -228,12 +228,94 @@ local function activate_pane_or_send_alt(direction, key)
   end)
 end
 
+local function current_pane_cwd(pane)
+  local ok, cwd_uri = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  if ok and cwd_uri and cwd_uri.file_path then
+    return cwd_uri.file_path
+  end
+  return get_last_dir()
+end
+
+local function cwd_from_nvim_user_var(value)
+  if not value or value == "" then
+    return nil
+  end
+  return value:match("^(.-):%d+:%d+$") or value
+end
+
+local function sh_quote(value)
+  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function agent_command_with_debug(agent_command, cwd)
+  local cd_prefix = ""
+  if cwd and cwd ~= "" then
+    cd_prefix = "cd " .. sh_quote(cwd) .. " 2>/dev/null || true; "
+  end
+  return "mkdir -p ~/.cache; "
+    .. cd_prefix
+    .. "printf '[%s] agent pane: pwd=%q command=%q\\n' \"$(date '+%Y-%m-%d %H:%M:%S')\" \"$PWD\" "
+    .. sh_quote(agent_command)
+    .. " >> ~/.cache/wezterm-nvim-pane.log; "
+    .. agent_command
+    .. "; exec zsh -l"
+end
+
+local function open_nvim_with_agent(agent_command)
+  return wezterm.action_callback(function(window, pane)
+    local cwd = current_pane_cwd(pane)
+    local split = {
+      direction = "Right",
+      size = { Percent = 30 },
+      command = { args = { "zsh", "-lic", agent_command_with_debug(agent_command, cwd) } },
+    }
+    if cwd then
+      split.command.cwd = cwd
+    end
+
+    window:perform_action(act.SendString("nvim .\n"), pane)
+    window:perform_action(act.SplitPane(split), pane)
+  end)
+end
+
+wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name ~= "open_agent_pane_for_nvim" then
+    return
+  end
+
+  local tab = window:active_tab()
+  local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
+  if adjacent then
+    return
+  end
+
+  local cwd = cwd_from_nvim_user_var(value) or current_pane_cwd(pane)
+  local split = {
+    direction = "Right",
+    size = { Percent = 30 },
+    command = { args = { "zsh", "-lic", agent_command_with_debug("claude", cwd) } },
+  }
+  if cwd then
+    split.command.cwd = cwd
+  end
+
+  window:perform_action(act.SplitPane(split), pane)
+end)
+
 config.keys = {
   {
     -- workspaceの切り替え
     key = "w",
     mods = "LEADER",
     action = act.ShowLauncherArgs({ flags = "WORKSPACES", title = "Select workspace" }),
+  },
+  {
+    -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
+    key = "v",
+    mods = "LEADER",
+    action = open_nvim_with_agent("claude"),
   },
   {
     --workspaceの名前変更
