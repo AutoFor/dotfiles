@@ -1,4 +1,5 @@
 {
+  "model": "haiku",
   "hooks": {
     "Stop": [
       {
@@ -22,6 +23,19 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "genshijin@genshijin": true,
+    "skill-creator@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "genshijin": {
+      "source": {
+        "source": "github",
+        "repo": "InterfaceX-co-jp/genshijin"
+      }
+    }
   },
   "skipDangerousModePermissionPrompt": true
 }

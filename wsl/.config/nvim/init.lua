@@ -27,11 +27,11 @@ require("lazy").setup({
 vim.opt.number = true
 vim.opt.relativenumber = true
 
--- Fold (Treesitter ベース)
-vim.opt.foldmethod = "expr"
-vim.opt.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+-- Fold (ufo/LSP ベース)
+vim.opt.foldcolumn = "1"
 vim.opt.foldlevel = 99
 vim.opt.foldlevelstart = 99
+vim.opt.foldenable = true
 
 -- 外部変更の自動リロード
 vim.opt.autoread = true
@@ -41,6 +41,16 @@ vim.api.nvim_create_autocmd("FileChangedShell", {
   end,
 })
 
+local function executable(cmd)
+  return vim.fn.executable(cmd) == 1
+end
+
+local function is_ssh_session()
+  return vim.env.SSH_TTY or vim.env.SSH_CLIENT or vim.env.SSH_CONNECTION
+end
+
+local agent_terminal = require("agent_terminal")
+
 vim.opt.clipboard = "unnamedplus"
 
 -- d/x は黒穴レジスタに捨てる（クリップボードを汚さない）
@@ -49,26 +59,13 @@ vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
 vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
 vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
 
-if os.getenv("SSH_TTY") or os.getenv("SSH_CLIENT") then
-  -- SSH 接続時は OSC 52 でローカルクリップボードに転送
-  local osc52 = require("vim.ui.clipboard.osc52")
-  vim.g.clipboard = {
-    name = "OSC 52",
-    copy = {
-      ["+"] = osc52.copy("+"),
-      ["*"] = osc52.copy("*"),
-    },
-    paste = {
-      ["+"] = osc52.paste("+"),
-      ["*"] = osc52.paste("*"),
-    },
-  }
-elseif vim.fn.has("wsl") == 1 then
-  -- WSL では vim.ui.open を wslview に向ける
-  vim.ui.open = function(uri)
-    vim.fn.jobstart({ "wslview", uri }, { detach = true })
+if vim.fn.has("wsl") == 1 and executable("win32yank.exe") then
+  -- WSL ローカルでは Windows クリップボードへ直接つなぐ
+  if executable("wslview") then
+    vim.ui.open = function(uri)
+      vim.fn.jobstart({ "wslview", uri }, { detach = true })
+    end
   end
-
   vim.g.clipboard = {
     name = "win32yank-wsl",
     copy = {
@@ -81,22 +78,21 @@ elseif vim.fn.has("wsl") == 1 then
     },
     cache_enabled = 0,
   }
+elseif is_ssh_session() then
+  -- SSH 先では OSC52 で手元の端末クリップボードへ返す
+  local osc52 = require("vim.ui.clipboard.osc52")
+  vim.g.clipboard = {
+    name = "osc52",
+    copy = {
+      ["+"] = osc52.copy("+"),
+      ["*"] = osc52.copy("*"),
+    },
+    paste = {
+      ["+"] = osc52.paste("+"),
+      ["*"] = osc52.paste("*"),
+    },
+  }
 end
-
--- nvim-tree で <leader>y したら Windows クリップボードにパスを送る
-vim.api.nvim_create_autocmd("FileType", {
-  pattern = "NvimTree",
-  callback = function()
-    vim.keymap.set("n", "<leader>y", function()
-      local api = require("nvim-tree.api")
-      local node = api.tree.get_node_under_cursor()
-      if node and node.absolute_path then
-        vim.fn.setreg("+", node.absolute_path)  -- Windows クリップボード
-        print("Copied: " .. node.absolute_path)
-      end
-    end, { buffer = true, silent = true })
-  end,
-})
 
 -- ターミナルモードを Esc×2 で抜けて左ウィンドウへ移動
 vim.keymap.set("t", "<Esc><Esc>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal mode and move left" })
@@ -109,11 +105,15 @@ vim.keymap.set("i", "<C-End>", "<Esc><C-w>l", { silent = true, desc = "Move to r
 vim.keymap.set("t", "<C-Home>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Exit terminal and move left" })
 vim.keymap.set("t", "<C-End>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Exit terminal and move right" })
 
--- ウィンドウ移動を Alt+hjkl でショートカット（通常モード）
+-- ウィンドウ移動を Alt+hjkl でショートカット（通常モード・ターミナルモード）
 vim.keymap.set("n", "<A-h>", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<A-l>", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<A-j>", "<C-w>j", { silent = true, desc = "Down window" })
 vim.keymap.set("n", "<A-k>", "<C-w>k", { silent = true, desc = "Up window" })
+vim.keymap.set("t", "<A-h>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Left window (terminal)" })
+vim.keymap.set("t", "<A-l>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Right window (terminal)" })
+vim.keymap.set("t", "<A-j>", [[<C-\><C-n><C-w>j]], { silent = true, desc = "Down window (terminal)" })
+vim.keymap.set("t", "<A-k>", [[<C-\><C-n><C-w>k]], { silent = true, desc = "Up window (terminal)" })
 vim.keymap.set("n", "<leader>h", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<leader>l", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<leader>j", "<C-w>j", { silent = true, desc = "Down window" })
@@ -131,11 +131,40 @@ vim.api.nvim_create_user_command("Claude", function()
   vim.cmd("ClaudeCode")
 end, {})
 
+vim.api.nvim_create_user_command("AgentTerminalDebugToggle", function()
+  agent_terminal.toggle_debug()
+end, {})
+
+vim.api.nvim_create_user_command("AgentTerminalDebugInfo", function()
+  local state = agent_terminal.collect_state()
+  vim.notify(vim.inspect(state), vim.log.levels.INFO, { title = "agent-terminal" })
+end, {})
+
+vim.api.nvim_create_user_command("AgentTerminalDebugSend", function(opts)
+  local text = opts.args ~= "" and opts.args or "agent-terminal-debug"
+  local ok, result = agent_terminal.send(text .. "\n")
+  if ok then
+    vim.notify("sent debug text to buffer " .. result, vim.log.levels.INFO, { title = "agent-terminal" })
+  else
+    vim.notify("debug send failed: " .. result, vim.log.levels.WARN, { title = "agent-terminal" })
+  end
+end, { nargs = "?" })
+
 -- Claude Code ウィンドウに入ったら自動でターミナルモードへ
-vim.api.nvim_create_autocmd("BufEnter", {
-  callback = function()
-    if vim.bo.buftype == "terminal" and vim.fn.bufname():match("claude") then
-      vim.cmd("startinsert")
+vim.api.nvim_create_autocmd({ "TermOpen", "BufEnter", "WinEnter" }, {
+  callback = function(args)
+    local buf = vim.api.nvim_get_current_buf()
+    agent_terminal.debug("autocmd event", {
+      event = args.event,
+      current = agent_terminal.describe_buffer(buf),
+    })
+    if agent_terminal.is_agent_terminal(buf) then
+      vim.schedule(function()
+        if vim.api.nvim_get_current_buf() == buf then
+          agent_terminal.debug("autocmd startinsert", agent_terminal.describe_buffer(buf))
+          vim.cmd("startinsert")
+        end
+      end)
     end
   end,
 })
@@ -143,13 +172,20 @@ vim.api.nvim_create_autocmd("BufEnter", {
 -- wezterm.exe のパス（WSL から Windows の wezterm CLI を叩く）
 local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
 
--- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して開く
+-- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して Claude Code を開く
+-- SSH 経由など wezterm cli が使えない場合は、nvim 内 terminal にフォールバックしない。
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
     vim.schedule(function()
-      local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
-      vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+      if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
+        -- WezTerm ネイティブ接続: 右ペインを分割して Claude Code を起動
+        local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
+        vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+      else
+        -- WSL-SSH では WezTerm socket が見えないため、ここでは何もしない。
+        -- 本物の WezTerm 2ペイン構成は WezTerm 側の LEADER+v で起動する。
+      end
     end)
   end,
 })
@@ -192,18 +228,14 @@ local function visual_file_location()
   end
 end
 
--- <leader>y : 右隣の WezTerm ペインに送信 + クリップボードにコピー
+-- <leader>y : 右隣のペイン（WezTermまたはnvim内ターミナル）に送信 + クリップボードにコピー
 vim.keymap.set("v", "<leader>y", function()
   local s = visual_file_location()
   vim.fn.setreg("+", s)
-  local pane_id = vim.fn.trim(vim.fn.system({ wezterm, "cli", "get-pane-direction", "right" }))
-  if pane_id == "" then
-    print("copied (no right pane): " .. s)
+  local ok = agent_terminal.send(s .. "\n")
+  if not ok then
+    print("copied (no agent terminal): " .. s)
     return
   end
-  -- ビジュアルモードを抜けてから送信・フォーカス移動
-  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "x", false)
-  vim.fn.system({ wezterm, "cli", "send-text", "--no-paste", "--pane-id", pane_id, s .. "\n" })
-  vim.fn.system({ wezterm, "cli", "activate-pane", "--pane-id", pane_id })
   print("sent & copied: " .. s)
-end, { desc = "Send file:line to WezTerm right pane + copy to clipboard (visual)" })
+end, { desc = "Send file:line to right pane/window + copy to clipboard (visual)" })

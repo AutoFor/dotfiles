@@ -13,7 +13,7 @@ return {
       local ts = require("nvim-treesitter")
 
       -- 起動時に主要パーサーをインストール
-      ts.install({ "lua", "vim", "vimdoc", "query", "c_sharp" }, { summary = false })
+      ts.install({ "lua", "vim", "vimdoc", "query", "c_sharp", "yaml" }, { summary = false })
 
       -- FileType ごとに treesitter ハイライトを有効化
       vim.api.nvim_create_autocmd("FileType", {

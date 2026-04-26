@@ -45,8 +45,51 @@ cfd() {
   dir=$(find . -maxdepth 1 -type d | sort | fzf --no-sort) || return
   cd "$dir"
 }
+
+# 現在のディレクトリを確認付きで削除
+lrm() {
+  setopt localoptions glob_dots no_rm_star_silent
+
+  local target=$PWD
+  local parent
+  parent=$(dirname -- "$target")
+
+  if [[ "$target" == "/" || "$parent" == "$target" ]]; then
+    echo "Refusing to delete: $target"
+    return 1
+  fi
+
+  cd "$parent" || return 1
+  print -n "Delete directory: $target ? [y/N] "
+
+  local ans
+  read ans
+  [[ "$ans" == [yY] ]] || { cd "$target" 2>/dev/null; return 1; }
+
+  rm -rf -- "$target" || { echo "rm failed"; return 1; }
+}
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="$PATH:$HOME/.dotnet/tools"
+
+__wezterm_set_user_var() {
+  local name="$1"
+  local value="$2"
+  local encoded
+  encoded=$(printf '%s' "$value" | base64 | tr -d '\n') || return
+  printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded"
+}
+
+nvim() {
+  if [[ -n "${SSH_CONNECTION:-}" || -n "${WEZTERM_PANE:-}" || -n "${WEZTERM_UNIX_SOCKET:-}" ]]; then
+    local marker="${PWD}:$$:${RANDOM}"
+    mkdir -p "$HOME/.cache"
+    printf '[%s] nvim trigger: pwd=%q marker=%q args=%q\n' \
+      "$(date '+%Y-%m-%d %H:%M:%S')" "$PWD" "$marker" "$*" >> "$HOME/.cache/wezterm-nvim-pane.log"
+    __wezterm_set_user_var "open_agent_pane_for_nvim" "$marker"
+  fi
+  command nvim "$@"
+}
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
 __wezterm_osc7() {
@@ -61,20 +104,49 @@ export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
 
 # Windows パスを WSL パスに変換して出力 + クリップボードにコピー
 # 使い方: wpath 'G:\パス\ファイル.txt'  ← シングルクォート必須
+wsl_require_quoted_windows_path() {
+  local input="$*"
+
+  if [[ -z "$input" ]]; then
+    print -r -- "Usage: ${funcstack[2]} 'C:\path\to\target'"
+    return 1
+  fi
+
+  if [[ "$input" =~ '^[A-Za-z]:[^/\\]' ]]; then
+    print -r -- "Error: Windows path must be quoted."
+    print -r -- "Example: ${funcstack[2]} 'C:\Users\SeiyaKawashima\Downloads'"
+    return 1
+  fi
+}
+
+wsl_copy_to_clipboard() {
+  local value="$1"
+  local clip_cmd="/mnt/c/Windows/System32/clip.exe"
+
+  if [[ ! -x "$clip_cmd" ]]; then
+    print -r -- "Warning: clip.exe is not available; skipped clipboard copy."
+    return 1
+  fi
+
+  printf '%s' "$value" | "$clip_cmd" 2>/dev/null
+}
+
 wpath() {
+  wsl_require_quoted_windows_path "$@" || return 1
   local wsl_path
   wsl_path=$(wslpath -u "$*") || return 1
-  echo -n "'$wsl_path'" | clip.exe
+  wsl_copy_to_clipboard "'$wsl_path'" >/dev/null || true
   echo "'$wsl_path'"
 }
 
 # Windows パスを WSL パスに変換して claude を起動（ファイルパスは親ディレクトリに cd）
 # 使い方: wcd 'G:\パス\スペース含む パス'  ← シングルクォート必須
 wcd() {
+  wsl_require_quoted_windows_path "$@" || return 1
   local wsl_path
   wsl_path=$(wslpath -u "$*") || return 1
   [[ -f "$wsl_path" ]] && wsl_path=$(dirname "$wsl_path")
-  echo -n "'$wsl_path'" | clip.exe
+  wsl_copy_to_clipboard "'$wsl_path'" >/dev/null || true
   cd "$wsl_path" && claude
 }
 export DOTNET_ROOT=$HOME/.dotnet
@@ -111,13 +183,15 @@ bindkey '\ew' worktree-fzf
 # gh finish: Issue作成〜PRマージまで一括実行
 alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
 
+# claude: メモリ上限 12GB で起動
 # claude da: --dangerously-skip-permissions の短縮
+unalias claude 2>/dev/null || true
 claude() {
   if [[ "$1" == "da" ]]; then
     shift
-    command claude --dangerously-skip-permissions "$@"
+    command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
   else
-    command claude "$@"
+    command systemd-run --user --scope -p MemoryMax=12G claude "$@"
   fi
 }
 
@@ -147,7 +221,18 @@ gwb() {
       echo "スクリプト出力: $output"
     fi
   else
-    bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$1"
+    local output
+    output=$(bash ~/.claude/skills/gh-worktree-branch/create-worktree.sh "issue-${num}" "$1") || return 1
+    echo "$output"
+    local path line
+    while IFS= read -r line; do
+      [[ "$line" == ディレクトリ:* ]] && path="${line#ディレクトリ: }" && break
+    done <<< "$output"
+    if [[ -n "$path" ]]; then
+      local cd_cmd="cd \"$path\""
+      printf '%s' "$cd_cmd" | /mnt/c/Windows/System32/clip.exe
+      echo "クリップボードにコピーしました: $cd_cmd"
+    fi
   fi
 }
 
@@ -160,9 +245,6 @@ fi
 pptx-meiryo() {
     /mnt/c/tools/pptx-meiryo/pptx-meiryo.exe "$@"
 }
-
-# claude: メモリ上限 12GB で起動
-alias claude='systemd-run --user --scope -p MemoryMax=12G claude'
 
 # The next line updates PATH for the Google Cloud SDK.
 if [ -f '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc' ]; then . '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc'; fi

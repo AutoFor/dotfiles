@@ -1,6 +1,8 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
+local WSL_NATIVE_DOMAIN = "WSL:Ubuntu"
+local WSL_SSH_DOMAIN = "WSL-SSH"
 
 -- WSL の ~/.last_dir から直近のディレクトリを取得
 local function get_last_dir()
@@ -13,10 +15,41 @@ local function get_last_dir()
   return nil
 end
 
+local function boot_wsl_sshd()
+  wezterm.run_child_process({
+    "wsl.exe", "-d", "Ubuntu", "-u", "root", "--", "sh", "-lc",
+    "service ssh start >/dev/null 2>&1 || /etc/init.d/ssh start >/dev/null 2>&1 || true",
+  })
+end
+
+local function is_wsl_ssh_ready()
+  local success = wezterm.run_child_process({
+    "powershell.exe", "-NoProfile", "-Command",
+    "try {$client = New-Object Net.Sockets.TcpClient('127.0.0.1',2222); $client.Close(); exit 0} catch {exit 1}",
+  })
+  return success
+end
+
+local function wait_for_wsl_ssh(max_attempts, sleep_millis)
+  for _ = 1, max_attempts do
+    if is_wsl_ssh_ready() then
+      return true
+    end
+    wezterm.sleep_ms(sleep_millis)
+  end
+  return false
+end
+
 -- WezTerm 起動時に直近のディレクトリで開く
 wezterm.on("gui-startup", function(cmd)
   local last_dir = get_last_dir()
   local args = cmd or {}
+  boot_wsl_sshd()
+  if wait_for_wsl_ssh(30, 200) then
+    args.domain = { DomainName = WSL_SSH_DOMAIN }
+  else
+    args.domain = { DomainName = WSL_NATIVE_DOMAIN }
+  end
   if last_dir then
     args.cwd = last_dir
   end
@@ -25,10 +58,11 @@ end)
 
 
 config.automatically_reload_config = true
+config.font = wezterm.font("HackGen Console NF")
 config.font_size = 12.0
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
-config.front_end = "WebGpu"
-config.webgpu_power_preference = "HighPerformance"
+-- config.front_end = "WebGpu"
+-- config.webgpu_power_preference = "HighPerformance"
 -- アダプタ固定が必要なら有効化
 -- config.webgpu_preferred_adapter = {
 --   backend = "Dx12",
@@ -36,7 +70,7 @@ config.webgpu_power_preference = "HighPerformance"
 -- }
 config.max_fps = 120
 config.animation_fps = 60
--- config.front_end = "OpenGL"  -- クラッシュ時はこちらに戻す
+config.front_end = "OpenGL"  -- WebGPU クラッシュのため無効化
 config.use_ime = true
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
@@ -46,7 +80,7 @@ config.macos_window_background_blur = 20
 -- → リサイズ時に Claude Code が固まる問題の軽減
 config.wsl_domains = {
   {
-    name = "WSL:Ubuntu",
+    name = WSL_NATIVE_DOMAIN,
     distribution = "Ubuntu",
     default_cwd = "/home/seiya-kawashima",
   },
@@ -56,7 +90,7 @@ config.wsl_domains = {
 -- 事前準備: WSL で sshd を 2222 番で起動し、Windows の公開鍵を authorized_keys に追加
 config.ssh_domains = {
   {
-    name = "WSL-SSH",
+    name = WSL_SSH_DOMAIN,
     remote_address = "127.0.0.1:2222",
     username = "seiya-kawashima",
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
@@ -64,7 +98,7 @@ config.ssh_domains = {
   },
 }
 
-config.default_domain = "WSL-SSH"
+config.default_domain = WSL_SSH_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
@@ -74,11 +108,11 @@ config.launch_menu = {
   },
   {
     label = "WSL: Ubuntu (native)",
-    domain = { DomainName = "WSL:Ubuntu" },
+    domain = { DomainName = WSL_NATIVE_DOMAIN },
   },
   {
     label = "WSL: Ubuntu (SSH)",
-    domain = { DomainName = "WSL-SSH" },
+    domain = { DomainName = WSL_SSH_DOMAIN },
   },
 }
 
@@ -179,7 +213,96 @@ wezterm.on("update-right-status", function(window, pane)
 end)
 
 config.disable_default_key_bindings = true
+-- Ctrl+q を leader に使う
 config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }
+
+local function activate_pane_or_send_alt(direction, key)
+  return wezterm.action_callback(function(win, pane)
+    local tab = win:active_tab()
+    local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction(direction) or nil
+    if adjacent then
+      win:perform_action(act.ActivatePaneDirection(direction), pane)
+    else
+      win:perform_action(act.SendKey({ key = key, mods = "ALT" }), pane)
+    end
+  end)
+end
+
+local function current_pane_cwd(pane)
+  local ok, cwd_uri = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  if ok and cwd_uri and cwd_uri.file_path then
+    return cwd_uri.file_path
+  end
+  return get_last_dir()
+end
+
+local function cwd_from_nvim_user_var(value)
+  if not value or value == "" then
+    return nil
+  end
+  return value:match("^(.-):%d+:%d+$") or value
+end
+
+local function sh_quote(value)
+  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function agent_command_with_debug(agent_command, cwd)
+  local cd_prefix = ""
+  if cwd and cwd ~= "" then
+    cd_prefix = "cd " .. sh_quote(cwd) .. " 2>/dev/null || true; "
+  end
+  return "mkdir -p ~/.cache; "
+    .. cd_prefix
+    .. "printf '[%s] agent pane: pwd=%q command=%q\\n' \"$(date '+%Y-%m-%d %H:%M:%S')\" \"$PWD\" "
+    .. sh_quote(agent_command)
+    .. " >> ~/.cache/wezterm-nvim-pane.log; "
+    .. agent_command
+    .. "; exec zsh -l"
+end
+
+local function open_nvim_with_agent(agent_command)
+  return wezterm.action_callback(function(window, pane)
+    local cwd = current_pane_cwd(pane)
+    local split = {
+      direction = "Right",
+      size = { Percent = 30 },
+      command = { args = { "zsh", "-lic", agent_command_with_debug(agent_command, cwd) } },
+    }
+    if cwd then
+      split.command.cwd = cwd
+    end
+
+    window:perform_action(act.SendString("nvim .\n"), pane)
+    window:perform_action(act.SplitPane(split), pane)
+  end)
+end
+
+wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name ~= "open_agent_pane_for_nvim" then
+    return
+  end
+
+  local tab = window:active_tab()
+  local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
+  if adjacent then
+    return
+  end
+
+  local cwd = cwd_from_nvim_user_var(value) or current_pane_cwd(pane)
+  local split = {
+    direction = "Right",
+    size = { Percent = 30 },
+    command = { args = { "zsh", "-lic", agent_command_with_debug("claude", cwd) } },
+  }
+  if cwd then
+    split.command.cwd = cwd
+  end
+
+  window:perform_action(act.SplitPane(split), pane)
+end)
 
 config.keys = {
   {
@@ -187,6 +310,12 @@ config.keys = {
     key = "w",
     mods = "LEADER",
     action = act.ShowLauncherArgs({ flags = "WORKSPACES", title = "Select workspace" }),
+  },
+  {
+    -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
+    key = "v",
+    mods = "LEADER",
+    action = open_nvim_with_agent("claude"),
   },
   {
     --workspaceの名前変更
@@ -243,8 +372,10 @@ config.keys = {
     key = "t",
     mods = "CTRL",
     action = wezterm.action_callback(function(window, pane)
-      local cwd_uri = pane:get_current_working_dir()
-      local cwd = cwd_uri and cwd_uri.file_path or get_last_dir()
+      local ok, cwd_uri = pcall(function()
+        return pane:get_current_working_dir()
+      end)
+      local cwd = (ok and cwd_uri and cwd_uri.file_path) or get_last_dir()
       if cwd then
         window:perform_action(
           act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL-SSH" } }),
@@ -275,10 +406,11 @@ config.keys = {
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
-  { key = "h", mods = "ALT", action = act.ActivatePaneDirection("Left") },
-  { key = "l", mods = "ALT", action = act.ActivatePaneDirection("Right") },
-  { key = "k", mods = "ALT", action = act.ActivatePaneDirection("Up") },
-  { key = "j", mods = "ALT", action = act.ActivatePaneDirection("Down") },
+  -- その方向に WezTerm pane があれば移動し、無ければアプリ側へ Alt+hjkl を渡す
+  { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
+  { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
+  { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
+  { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
   -- 選択中のPaneのみ表示
