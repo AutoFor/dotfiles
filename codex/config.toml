@@ -1,5 +1,5 @@
-model = "gpt-5.4"
-model_reasoning_effort = "medium"
+model = "gpt-5.4-mini"
+model_reasoning_effort = "low"
 
 [projects."/mnt/c/Users/SeiyaKawashima"]
 trust_level = "trusted"
@@ -100,6 +100,9 @@ trust_level = "trusted"
 [projects."/home/seiya-kawashima/ghq/github.com/AutoFor/ourai-csc"]
 trust_level = "trusted"
 
+[projects."/home/seiya-kawashima/ghq/github.com/seiya-kawashima/hotlaunch"]
+trust_level = "trusted"
+
 [notice]
 hide_rate_limit_model_nudge = true
 
@@ -124,6 +127,9 @@ args = ["-y", "@drawio/mcp"]
 
 [plugins."github@openai-curated"]
 enabled = true
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
 
 [mcp_servers.playwright]
 command = "npx"
