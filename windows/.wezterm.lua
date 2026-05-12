@@ -249,6 +249,10 @@ local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
+local function is_wsl_absolute_path(value)
+  return type(value) == "string" and value:sub(1, 1) == "/"
+end
+
 local function agent_command_with_debug(agent_command, cwd)
   local cd_prefix = ""
   if cwd and cwd ~= "" then
@@ -375,10 +379,16 @@ config.keys = {
       local ok, cwd_uri = pcall(function()
         return pane:get_current_working_dir()
       end)
-      local cwd = (ok and cwd_uri and cwd_uri.file_path) or get_last_dir()
-      if cwd then
+      local cwd = ok and cwd_uri and cwd_uri.file_path or nil
+      if not is_wsl_absolute_path(cwd) then
+        cwd = get_last_dir()
+      end
+      if is_wsl_absolute_path(cwd) then
         window:perform_action(
-          act.SpawnCommandInNewTab({ cwd = cwd, domain = { DomainName = "WSL-SSH" } }),
+          act.SpawnCommandInNewTab({
+            domain = { DomainName = "WSL-SSH" },
+            args = { "zsh", "-lic", "cd " .. sh_quote(cwd) .. " 2>/dev/null || cd ~; exec zsh -l" },
+          }),
           pane
         )
       else
