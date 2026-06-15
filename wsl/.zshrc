@@ -37,7 +37,9 @@ zstyle ':completion:*:*:kill:*:processes' list-colors '=(#b) #([0-9]#)*=0=01;31'
 zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 
 # zoxide（スマートcd）を有効化
-eval "$(zoxide init zsh)"
+if command -v zoxide >/dev/null 2>&1; then
+  eval "$(zoxide init zsh)"
+fi
 
 # fzf でカレントディレクトリ配下のフォルダを選択して cd
 cfd() {
@@ -89,6 +91,22 @@ nvim() {
     __wezterm_set_user_var "open_agent_pane_for_nvim" "$marker"
   fi
   command nvim "$@"
+}
+
+tmp() {
+  local dir="/tmp-nvim"
+  local file="${dir}/$(date '+%Y-%m-%d-%H-%M-%S').txt"
+
+  if [[ ! -d "$dir" ]]; then
+    sudo mkdir -p "$dir" || return 1
+    sudo chown "$USER:$(id -gn)" "$dir" || return 1
+    chmod 700 "$dir" || return 1
+  fi
+
+  mkdir -p "$dir" || return 1
+  touch "$file" || return 1
+
+  NVIM_TMP_NOTE_FILE="$file" command nvim --cmd "cd $dir" "$file"
 }
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
@@ -189,9 +207,17 @@ unalias claude 2>/dev/null || true
 claude() {
   if [[ "$1" == "da" ]]; then
     shift
-    command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
+    if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+      command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
+    else
+      command claude --dangerously-skip-permissions "$@"
+    fi
   else
-    command systemd-run --user --scope -p MemoryMax=12G claude "$@"
+    if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+      command systemd-run --user --scope -p MemoryMax=12G claude "$@"
+    else
+      command claude "$@"
+    fi
   fi
 }
 

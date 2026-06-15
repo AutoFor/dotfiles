@@ -177,7 +177,15 @@ local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
+    if vim.env.NVIM_TMP_NOTE_FILE and vim.env.NVIM_TMP_NOTE_FILE ~= "" then
+      vim.schedule(function()
+        vim.cmd("wincmd l")
+      end)
+    end
     vim.schedule(function()
+      if vim.env.NVIM_TMP_NOTE_FILE and vim.env.NVIM_TMP_NOTE_FILE ~= "" then
+        return
+      end
       if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
         -- WezTerm ネイティブ接続: 右ペインを分割して Claude Code を起動
         local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))

@@ -23,15 +23,59 @@ return {
         ["7z"] = true,
       }
 
-      local function should_block_in_editor(node)
+      -- editor では開かず、Windows の既定アプリで開く拡張子 (WSL2用)
+      local external_open_extensions = {
+        pptx = true,
+        ppt = true,
+        pdf = true,
+      }
+
+      local function node_extension(node)
         if not node or node.type == "directory" or not node.name then
-          return false
+          return nil
         end
         local ext = node.name:match("%.([^.]+)$")
         if not ext then
+          return nil
+        end
+        return ext:lower()
+      end
+
+      local function should_block_in_editor(node)
+        local ext = node_extension(node)
+        if not ext then
           return false
         end
-        return blocked_media_extensions[ext:lower()] == true
+        return blocked_media_extensions[ext] == true
+      end
+
+      local function should_open_externally(node)
+        local ext = node_extension(node)
+        if not ext then
+          return false
+        end
+        return external_open_extensions[ext] == true
+      end
+
+      -- Windows の既定アプリでファイルを開く (WSL2用)
+      local function open_in_windows(node)
+        if not node or not node.absolute_path then return end
+
+        local result = vim.fn.system("wslpath -w " .. vim.fn.shellescape(node.absolute_path))
+        if vim.v.shell_error ~= 0 then
+          vim.notify("wslpath failed: " .. result, vim.log.levels.ERROR)
+          return
+        end
+
+        local win_path = result:gsub("\n$", "")
+        -- explorer.exe <path> で既定アプリに渡す（終了コードは不定なため job_id のみ確認）
+        local job_id = vim.fn.jobstart({ "/mnt/c/Windows/explorer.exe", win_path }, { detach = true })
+        if job_id <= 0 then
+          vim.notify("Failed to open in Windows: " .. win_path, vim.log.levels.ERROR)
+          return
+        end
+
+        vim.notify("Opened in Windows: " .. win_path)
       end
 
       vim.g.loaded_netrw = 1
@@ -47,7 +91,6 @@ return {
             "^\\.git$",
             "\\.mp3$", "\\.wav$", "\\.flac$", "\\.aac$",
             "\\.gif$", "\\.webp$", "\\.svg$",
-            "\\.pdf$",
             "Zone\\.Identifier$",
           },
         },
@@ -69,6 +112,10 @@ return {
           local function guarded_open(open_fn)
             return function()
               local node = api.tree.get_node_under_cursor()
+              if should_open_externally(node) then
+                open_in_windows(node)
+                return
+              end
               if should_block_in_editor(node) then
                 vim.notify("Blocked in editor: " .. node.name)
                 return

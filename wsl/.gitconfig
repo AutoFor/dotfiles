@@ -1,14 +1,12 @@
-[credential]
-	helper = /mnt/c/Program\\ Files/Git/mingw64/bin/git-credential-manager.exe
 [credential "https://github.com"]
 	helper = 
-	helper = !/usr/bin/env sh -c 'exec "$HOME/.local/bin/gh" auth git-credential "$@"' --
+	helper = !/usr/bin/env sh -c 'exec gh auth git-credential "$@"' --
 [credential "https://gist.github.com"]
 	helper =
-	helper = !/usr/bin/env sh -c 'exec "$HOME/.local/bin/gh" auth git-credential "$@"' --
+	helper = !/usr/bin/env sh -c 'exec gh auth git-credential "$@"' --
 [user]
 	name = your-name
 	email = your-id+your-name@users.noreply.github.com
 
 [ghq]
-	user = AutoFor
+	user = ai-foo
