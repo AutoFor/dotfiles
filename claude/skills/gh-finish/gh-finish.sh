@@ -110,19 +110,32 @@ detect_context() {
   worktree_count=$(echo "$worktree_list" | wc -l)
   toplevel=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 
+  echo "[detect] worktree count: $worktree_count"
+  echo "[detect] toplevel: $toplevel"
+  echo "[detect] worktree list:"
+  echo "$worktree_list" | sed 's/^/  /'
+
   if [ "$worktree_count" -le 1 ]; then
     MAIN_REPO="$toplevel"
     WORKTREE_PATH="none"
+    echo "[detect] mode: single repo (no worktree)"
   else
     # worktree 構造: デフォルトブランチの worktree を MAIN_REPO とする
     MAIN_REPO=$(echo "$worktree_list" | grep "\[$DEFAULT_BRANCH\]" | awk '{print $1}' | head -1)
+    if [ -z "$MAIN_REPO" ]; then
+      echo "[detect] WARNING: [$DEFAULT_BRANCH] worktree not found in list. Falling back to toplevel."
+      MAIN_REPO="$toplevel"
+    fi
     MAIN_REPO="${MAIN_REPO:-$toplevel}"
     if [ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]; then
       WORKTREE_PATH="$toplevel"
     else
       WORKTREE_PATH="none"
     fi
+    echo "[detect] mode: worktree"
   fi
+  echo "[detect] MAIN_REPO   : $MAIN_REPO"
+  echo "[detect] WORKTREE_PATH: $WORKTREE_PATH"
 }
 
 # ─── スマートコミット [claude -p #2] ──────────────────────────────────
@@ -395,9 +408,10 @@ cleanup() {
 
   local cleanup_script="$HOME/.claude/skills/gh-pr-approve/cleanup-after-merge.sh"
   if [ -f "$cleanup_script" ]; then
+    echo "[cleanup] using cleanup-after-merge.sh"
     bash "$cleanup_script" "$MAIN_REPO" "$WORKTREE_PATH" "$DEFAULT_BRANCH" "$branch"
   else
-    echo "Warning: cleanup-after-merge.sh が見つかりません。" >&2
+    echo "Warning: cleanup-after-merge.sh が見つかりません。fetch --prune はスキップされます。" >&2
     git -C "$MAIN_REPO" checkout "$DEFAULT_BRANCH" 2>/dev/null || true
     git -C "$MAIN_REPO" pull 2>/dev/null || true
   fi
@@ -414,6 +428,55 @@ cleanup() {
   echo "  - Issue #$issue_num をクローズ"
   echo "  - $DEFAULT_BRANCH ブランチに切り替え・最新を取得"
   echo "  - ブランチ $branch を削除"
+
+  # 完了サマリーをログファイルに保存
+  local log_file="$HOME/.cache/gh-finish-last.log"
+  {
+    echo "=== gh-finish 完了 $(date '+%Y-%m-%d %H:%M:%S') ==="
+    echo "Repo   : $OWNER/$REPO"
+    echo "Branch : $branch → $DEFAULT_BRANCH"
+    echo "PR     : #$pr_num"
+    echo "Issue  : #$issue_num"
+  } > "$log_file"
+  echo ""
+  echo "ログ保存: $log_file"
+
+  # Worktree使用時: 一番左のタブに移動して現在のタブを閉じる
+  if [ "$WORKTREE_PATH" != "none" ]; then
+    local wezterm_bin=""
+    if command -v wezterm &>/dev/null; then
+      wezterm_bin="wezterm"
+    elif [ -x "/mnt/c/Program Files/WezTerm/wezterm.exe" ]; then
+      wezterm_bin="/mnt/c/Program Files/WezTerm/wezterm.exe"
+    fi
+
+    # $WEZTERM_PANE が未設定の場合は pane-focus-changed イベントが書いたファイルを参照
+    local pane_id="${WEZTERM_PANE:-}"
+    local pane_source="env"
+    if [ -z "$pane_id" ] && [ -f "$HOME/.cache/wezterm-focused-pane" ]; then
+      pane_id=$(cat "$HOME/.cache/wezterm-focused-pane" 2>/dev/null | tr -d '[:space:]')
+      pane_source="file"
+    fi
+
+    if [ -n "$wezterm_bin" ] && [ -n "$pane_id" ]; then
+      echo ""
+      echo "[wezterm] タブを切り替えます (pane $pane_id [source=$pane_source] → tab 0)..."
+      local wezterm_result="OK"
+      local wezterm_detail=""
+      if ! "$wezterm_bin" cli activate-tab --tab-index 0 2>/tmp/gh-finish-wezterm.err; then
+        wezterm_result="FAILED(activate-tab)"
+        wezterm_detail=$(cat /tmp/gh-finish-wezterm.err)
+      elif ! "$wezterm_bin" cli close-pane --pane-id "$pane_id" 2>/tmp/gh-finish-wezterm.err; then
+        wezterm_result="FAILED(close-pane)"
+        wezterm_detail=$(cat /tmp/gh-finish-wezterm.err)
+      fi
+      echo "WezTerm : $wezterm_result (pane=$pane_id source=$pane_source)${wezterm_detail:+ detail=$wezterm_detail}" >> "$log_file"
+    else
+      echo ""
+      echo "[wezterm] スキップ: wezterm_bin='${wezterm_bin:-not found}' pane_id='${pane_id:-not found}'"
+      echo "WezTerm : スキップ (wezterm='${wezterm_bin:-not found}' pane_id='${pane_id:-not found}')" >> "$log_file"
+    fi
+  fi
 }
 
 # ─── エントリーポイント ───────────────────────────────────────────────

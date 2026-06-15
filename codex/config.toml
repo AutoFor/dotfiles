@@ -1,107 +1,5 @@
-model = "gpt-5.4-mini"
-model_reasoning_effort = "low"
-
-[projects."/mnt/c/Users/SeiyaKawashima"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects/uipath-xaml-visualizer"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/.claude"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/AutoFor-docs"]
-trust_level = "trusted"
-
-[projects."/mnt/c/prj/ScrapingBKSI"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/dotfiles"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects/github-issue-outliner"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects/life"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects/kindle-ocr-markdown"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/projects/life-public"]
-trust_level = "trusted"
-
-[projects."/tmp"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/life"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/.git-worktrees/github.com/seiya-kawashima/hotlaunch"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/TaxBenefits"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/dotfiles"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/seiya-kawashima/excel-bas-runner"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/video-whisper-transcriber"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/im8-svm-demand-forecast"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/short-term-prepaid-expenses"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/ThreeSixMonthCheck"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/im8"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/seat-presence-app"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/im8-seat-presence-app"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/life-public"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/ScrapingBKSI"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/.git-worktrees/github.com/AutoFor/iizuka-coupon-map"]
-trust_level = "trusted"
-
-[projects."/"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/iizuka-coupon-map"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/autofor-hp"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/microsoft-learn-power-platform-scraper"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/AutoFor/ourai-csc"]
-trust_level = "trusted"
-
-[projects."/home/seiya-kawashima/ghq/github.com/seiya-kawashima/hotlaunch"]
-trust_level = "trusted"
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
 
 [notice]
 hide_rate_limit_model_nudge = true
@@ -126,6 +24,9 @@ command = "npx"
 args = ["-y", "@drawio/mcp"]
 
 [plugins."github@openai-curated"]
+enabled = true
+
+[plugins."linear@openai-curated"]
 enabled = true
 
 [tui.model_availability_nux]

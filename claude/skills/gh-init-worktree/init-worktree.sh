@@ -37,9 +37,18 @@ if [ -d "$BARE_DIR" ]; then
 fi
 
 # デフォルトブランチ名を取得
+# origin/HEAD が未設定の ghq クローンでは、現在のローカルブランチではなく
+# リモートの HEAD を参照する。ローカル作業ブランチを bare clone 側で参照すると
+# 存在しないブランチになり、初期 worktree 作成に失敗するため。
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@') || true
 if [ -z "$DEFAULT_BRANCH" ]; then
-  DEFAULT_BRANCH=$(git branch --show-current)
+  DEFAULT_BRANCH=$(git ls-remote --symref origin HEAD 2>/dev/null | awk '/^ref:/ {sub("refs/heads/", "", $2); print $2; exit}') || true
+fi
+if [ -z "$DEFAULT_BRANCH" ] && git show-ref --verify --quiet refs/remotes/origin/main; then
+  DEFAULT_BRANCH="main"
+fi
+if [ -z "$DEFAULT_BRANCH" ] && git show-ref --verify --quiet refs/remotes/origin/master; then
+  DEFAULT_BRANCH="master"
 fi
 if [ -z "$DEFAULT_BRANCH" ]; then
   DEFAULT_BRANCH="main"

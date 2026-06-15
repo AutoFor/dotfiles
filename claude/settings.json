@@ -1,5 +1,40 @@
 {
-  "model": "haiku",
+  "permissions": {
+    "allow": [
+      "Bash(uip --version)",
+      "Bash(uip login status)",
+      "Bash(uip login status *)",
+      "Bash(which uip)",
+      "Bash(uip flow registry *)",
+      "Bash(uip is *)",
+      "Bash(uip or folders *)",
+      "Bash(uip flow init *)",
+      "Bash(uip flow validate *)",
+      "Bash(uip flow tidy *)",
+      "Bash(uip flow node *)",
+      "Bash(uip flow edge *)",
+      "Bash(uip solution new *)",
+      "Bash(uip solution project *)",
+      "Bash(uip solution resource *)",
+      "Bash(uip agent init)",
+      "Bash(uip agent init *)",
+      "Bash(uip agent validate *)",
+      "Bash(uip rpa *)"
+    ],
+    "ask": [
+      "Bash(uip login)",
+      "Bash(uip login --authority *)",
+      "Bash(uip flow debug)",
+      "Bash(uip flow debug *)",
+      "Bash(uip flow pack)",
+      "Bash(uip flow pack *)",
+      "Bash(uip solution upload)",
+      "Bash(uip solution upload *)",
+      "Bash(uip solution publish)",
+      "Bash(uip solution publish *)"
+    ]
+  },
+  "model": "sonnet[1m]",
   "hooks": {
     "Stop": [
       {
@@ -27,7 +62,9 @@
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
     "genshijin@genshijin": true,
-    "skill-creator@claude-plugins-official": true
+    "skill-creator@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "uipath@uipath-marketplace": true
   },
   "extraKnownMarketplaces": {
     "genshijin": {
@@ -35,7 +72,15 @@
         "source": "github",
         "repo": "InterfaceX-co-jp/genshijin"
       }
+    },
+    "uipath-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "UiPath/skills"
+      },
+      "autoUpdate": true
     }
   },
-  "skipDangerousModePermissionPrompt": true
+  "skipDangerousModePermissionPrompt": true,
+  "agentPushNotifEnabled": true
 }

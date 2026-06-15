@@ -31,19 +31,26 @@ if [ "$WORKTREE_PATH" != "none" ]; then
 fi
 
 # master切替
+echo "[cleanup] checkout $DEFAULT_BRANCH in $MAIN_REPO"
 git -C "$MAIN_REPO" checkout "$DEFAULT_BRANCH"
+echo "[cleanup] checkout OK"
 
 # ローカル変更がある場合はstashしてpull
 if ! git -C "$MAIN_REPO" diff --quiet 2>/dev/null; then
+  echo "[cleanup] uncommitted changes detected → stash + pull"
   git -C "$MAIN_REPO" stash
   git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
   git -C "$MAIN_REPO" stash pop || git -C "$MAIN_REPO" checkout --theirs . && git -C "$MAIN_REPO" stash drop 2>/dev/null || true
 else
+  echo "[cleanup] no local changes → pull"
   git -C "$MAIN_REPO" pull origin "$DEFAULT_BRANCH"
 fi
+echo "[cleanup] pull OK"
 
 # prune
+echo "[cleanup] fetch --prune"
 git -C "$MAIN_REPO" fetch --prune
+echo "[cleanup] fetch OK"
 
 # Worktree/ブランチ削除
 if [ "$WORKTREE_PATH" != "none" ]; then

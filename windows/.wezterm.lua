@@ -1,23 +1,58 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
-local WSL_NATIVE_DOMAIN = "WSL:Ubuntu"
+local WSL_DISTRO = wezterm.getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
+local WSL_NATIVE_DOMAIN = "WSL:" .. WSL_DISTRO
 local WSL_SSH_DOMAIN = "WSL-SSH"
+local CTRL_T_DOMAIN = WSL_NATIVE_DOMAIN
+local CTRL_T_DEBUG_LOG = "~/.cache/wezterm-ctrl-t-debug.log"
 
--- WSL の ~/.last_dir から直近のディレクトリを取得
-local function get_last_dir()
-  local success, stdout = wezterm.run_child_process({
-    "wsl.exe", "-e", "cat", "/home/seiya-kawashima/.last_dir",
+local function sh_quote(value)
+  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+end
+
+local function log_ctrl_t(message)
+  local line = os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(message)
+  wezterm.log_info("[ctrl-t] " .. line)
+  wezterm.run_child_process({
+    "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc",
+    "mkdir -p ~/.cache; printf '%s\\n' " .. sh_quote(line) .. " >> " .. CTRL_T_DEBUG_LOG,
   })
+end
+
+local function wsl_output(args)
+  local success, stdout = wezterm.run_child_process(args)
   if success and stdout and stdout ~= "" then
     return stdout:gsub("%s+$", "")
   end
   return nil
 end
 
+local WSL_HOME = wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$HOME\"" }) or "~"
+local WSL_USER = wezterm.getenv("WEZTERM_WSL_USER")
+  or wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$USER\"" })
+  or "root"
+
+-- WSL の ~/.last_dir から直近のディレクトリを取得
+local function get_last_dir(reason)
+  local last_dir = wsl_output({
+    "wsl.exe", "-d", WSL_DISTRO, "-e", "cat", WSL_HOME .. "/.last_dir",
+  })
+  if last_dir then
+    if reason then
+      log_ctrl_t(reason .. ": last_dir=" .. last_dir)
+    end
+    return last_dir
+  end
+  if reason then
+    log_ctrl_t(reason .. ": last_dir unavailable")
+  end
+  return nil
+end
+
 local function boot_wsl_sshd()
   wezterm.run_child_process({
-    "wsl.exe", "-d", "Ubuntu", "-u", "root", "--", "sh", "-lc",
+    "wsl.exe", "-d", WSL_DISTRO, "-u", "root", "--", "sh", "-lc",
     "service ssh start >/dev/null 2>&1 || /etc/init.d/ssh start >/dev/null 2>&1 || true",
   })
 end
@@ -81,8 +116,8 @@ config.macos_window_background_blur = 20
 config.wsl_domains = {
   {
     name = WSL_NATIVE_DOMAIN,
-    distribution = "Ubuntu",
-    default_cwd = "/home/seiya-kawashima",
+    distribution = WSL_DISTRO,
+    default_cwd = WSL_HOME,
   },
 }
 
@@ -92,7 +127,7 @@ config.ssh_domains = {
   {
     name = WSL_SSH_DOMAIN,
     remote_address = "127.0.0.1:2222",
-    username = "seiya-kawashima",
+    username = WSL_USER,
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
     multiplexing = "None",
   },
@@ -107,11 +142,11 @@ config.launch_menu = {
     args = { "pwsh.exe" },
   },
   {
-    label = "WSL: Ubuntu (native)",
+    label = "WSL: " .. WSL_DISTRO .. " (native)",
     domain = { DomainName = WSL_NATIVE_DOMAIN },
   },
   {
-    label = "WSL: Ubuntu (SSH)",
+    label = "WSL: " .. WSL_DISTRO .. " (SSH)",
     domain = { DomainName = WSL_SSH_DOMAIN },
   },
 }
@@ -245,8 +280,39 @@ local function cwd_from_nvim_user_var(value)
   return value:match("^(.-):%d+:%d+$") or value
 end
 
-local function sh_quote(value)
-  return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
+local function is_wsl_absolute_path(value)
+  return type(value) == "string" and value:sub(1, 1) == "/"
+end
+
+local function safe_pane_value(pane, method_name)
+  local ok, value = pcall(function()
+    if pane and pane[method_name] then
+      return pane[method_name](pane)
+    end
+    return nil
+  end)
+  if ok then
+    return value
+  end
+  return "error:" .. tostring(value)
+end
+
+local function ctrl_t_spawn_command(cwd)
+  return "mkdir -p ~/.cache; "
+    .. "printf '[%s] ctrl-t spawned: requested_cwd=%s before_pwd=%s\\n' "
+    .. "\"$(date '+%Y-%m-%d %H:%M:%S')\" "
+    .. sh_quote(cwd)
+    .. " \"$PWD\" >> ~/.cache/wezterm-ctrl-t-debug.log; "
+    .. "cd "
+    .. sh_quote(cwd)
+    .. " 2>> ~/.cache/wezterm-ctrl-t-debug.log || { "
+    .. "printf '[%s] ctrl-t cd failed: requested_cwd=%s fallback=~\\n' "
+    .. "\"$(date '+%Y-%m-%d %H:%M:%S')\" "
+    .. sh_quote(cwd)
+    .. " >> ~/.cache/wezterm-ctrl-t-debug.log; cd ~; }; "
+    .. "printf '[%s] ctrl-t shell ready: pwd=%s\\n' \"$(date '+%Y-%m-%d %H:%M:%S')\" \"$PWD\" "
+    .. ">> ~/.cache/wezterm-ctrl-t-debug.log; "
+    .. "exec zsh -l"
 end
 
 local function is_wsl_absolute_path(value)
@@ -284,7 +350,27 @@ local function open_nvim_with_agent(agent_command)
   end)
 end
 
+-- フォーカス中のペイン ID を WSL ファイルに書き出す（SSH ドメインでは $WEZTERM_PANE が
+-- 環境変数として渡されないため、gh-finish などのスクリプトがフォールバックとして参照する）
+wezterm.on("pane-focus-changed", function(window, pane)
+  local pane_id = pane:pane_id()
+  wezterm.run_child_process({
+    "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-c",
+    "mkdir -p ~/.cache && echo " .. tostring(pane_id) .. " > ~/.cache/wezterm-focused-pane",
+  })
+end)
+
 wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name == "send_to_right_agent_pane" then
+    local tab = window:active_tab()
+    local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
+    if adjacent then
+      window:perform_action(act.SendString(value), adjacent)
+      window:perform_action(act.ActivatePaneDirection("Right"), pane)
+    end
+    return
+  end
+
   if name ~= "open_agent_pane_for_nvim" then
     return
   end
@@ -371,28 +457,59 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成（常に WSL:Ubuntu で開く）
+  -- Tab新規作成（設定された WSL ドメインで開く）
   {
     key = "t",
     mods = "CTRL",
     action = wezterm.action_callback(function(window, pane)
+      log_ctrl_t(
+        "pressed: pane_id="
+          .. tostring(safe_pane_value(pane, "pane_id"))
+          .. " domain="
+          .. tostring(safe_pane_value(pane, "get_domain_name"))
+      )
       local ok, cwd_uri = pcall(function()
         return pane:get_current_working_dir()
       end)
-      local cwd = ok and cwd_uri and cwd_uri.file_path or nil
+      local raw_cwd = ok and cwd_uri and cwd_uri.file_path or nil
+      log_ctrl_t(
+        "cwd_probe: ok="
+          .. tostring(ok)
+          .. " raw="
+          .. tostring(raw_cwd)
+          .. " uri="
+          .. tostring(cwd_uri)
+      )
+      if CTRL_T_DOMAIN == WSL_SSH_DOMAIN then
+        local ssh_ready = is_wsl_ssh_ready()
+        log_ctrl_t("ssh_ready_before_spawn=" .. tostring(ssh_ready))
+      end
+      local cwd = raw_cwd
       if not is_wsl_absolute_path(cwd) then
-        cwd = get_last_dir()
+        cwd = get_last_dir("fallback because raw cwd is not WSL absolute")
       end
       if is_wsl_absolute_path(cwd) then
-        window:perform_action(
-          act.SpawnCommandInNewTab({
-            domain = { DomainName = "WSL-SSH" },
-            args = { "zsh", "-lic", "cd " .. sh_quote(cwd) .. " 2>/dev/null || cd ~; exec zsh -l" },
-          }),
-          pane
-        )
+        log_ctrl_t("action=SpawnCommandInNewTab domain=" .. CTRL_T_DOMAIN .. " cwd=" .. cwd)
+        if CTRL_T_DOMAIN == WSL_NATIVE_DOMAIN then
+          window:perform_action(
+            act.SpawnCommandInNewTab({
+              domain = { DomainName = CTRL_T_DOMAIN },
+              cwd = cwd,
+            }),
+            pane
+          )
+        else
+          window:perform_action(
+            act.SpawnCommandInNewTab({
+              domain = { DomainName = CTRL_T_DOMAIN },
+              args = { "sh", "-lc", ctrl_t_spawn_command(cwd) },
+            }),
+            pane
+          )
+        end
       else
-        window:perform_action(act.SpawnTab({ DomainName = "WSL-SSH" }), pane)
+        log_ctrl_t("action=SpawnTab domain=" .. CTRL_T_DOMAIN .. " reason=no safe cwd")
+        window:perform_action(act.SpawnTab({ DomainName = CTRL_T_DOMAIN }), pane)
       end
     end),
   },

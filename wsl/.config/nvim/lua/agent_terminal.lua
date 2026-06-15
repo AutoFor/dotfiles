@@ -30,6 +30,22 @@ local function notify(message, level)
   end)
 end
 
+local function set_wezterm_user_var(name, value)
+  local encoded = vim.base64.encode(value)
+  local osc = string.format("\027]1337;SetUserVar=%s=%s\007", name, encoded)
+  local ok = pcall(vim.api.nvim_chan_send, vim.v.stderr, osc)
+  return ok
+end
+
+function M.send_wezterm_right_pane(text)
+  local ok = set_wezterm_user_var("send_to_right_agent_pane", text)
+  if ok then
+    M.debug("send: fallback to wezterm right pane", { text = text })
+    return true, "wezterm-right-pane"
+  end
+  return false, "wezterm user var failed"
+end
+
 function M.debug(message, data)
   if not M.debug_enabled then
     return
@@ -139,13 +155,13 @@ function M.send(text)
   local buf = M.find_agent_terminal()
   if not buf then
     M.debug("send: no target terminal", { text = text })
-    return false, "no agent terminal"
+    return M.send_wezterm_right_pane(text)
   end
 
   local chan = vim.bo[buf].channel
   if not chan or chan == 0 then
     M.debug("send: target has no channel", M.describe_buffer(buf))
-    return false, "agent terminal has no channel"
+    return M.send_wezterm_right_pane(text)
   end
 
   M.debug("send: target selected", {
