@@ -46,27 +46,104 @@ Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジ
 - WSL 固有の設定は WSL 上でだけ適用し、通常の Linux ではスキップする
 - Windows 側の WezTerm は `WEZTERM_WSL_DISTRO` / `WEZTERM_WSL_USER` で環境差分を上書きできる
 
-## 前提条件
+## クリーンな Windows PC からの初回セットアップ
 
-### Linux / WSL 側
+想定する初期状態:
 
-- **zsh**: `sudo apt install zsh && chsh -s $(which zsh)`
-- **zoxide**: `curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh`
-- **gh (GitHub CLI)**: `sudo apt install gh && gh auth login`
-- **rclone**: `sudo apt install rclone && rclone config`
-- **Claude Code**: `npm install -g @anthropic-ai/claude-code`
+- Windows は入っている
+- Git / gh / WSL / WezTerm はまだ入っていない
+- Codex または Claude Code だけ先に入っている場合もある
 
-これらは全部必須ではない。未インストールのものに紐づく機能だけ使えない。
+PowerShell は **管理者として実行** する。
 
-### Windows 側
+### 1. Windows 側の基本ツールを入れる
 
-- **WezTerm**: [公式サイト](https://wezfurlong.org/wezterm/)からインストール
-- **Developer Mode** が有効（シンボリックリンク作成に必要）
-- **WSL**: Windows から WSL を使う場合は `wsl --install`
+```powershell
+winget install --id Git.Git -e
+winget install --id GitHub.cli -e
+winget install --id wez.wezterm -e
+winget install --id OpenJS.NodeJS.LTS -e
+```
 
-## セットアップ手順
+`winget` が使えない場合は Microsoft Store の「アプリ インストーラー」を更新する。
 
-### 1. リポジトリをクローン
+インストール後、新しい PowerShell を開いて確認する。
+
+```powershell
+git --version
+gh --version
+node --version
+npm --version
+```
+
+### 2. WSL Ubuntu を入れる
+
+```powershell
+wsl --install -d Ubuntu
+```
+
+再起動を求められたら Windows を再起動する。初回起動時に Linux ユーザー名とパスワードを作成する。
+
+既に WSL はあるが distro 名を確認したい場合:
+
+```powershell
+wsl -l -v
+```
+
+この README の例は distro 名を `Ubuntu` としている。`Ubuntu-24.04` など別名なら、後の `\\wsl$\Ubuntu\...` と `WEZTERM_WSL_DISTRO` を実際の名前に置き換える。
+
+### 3. GitHub にログインする
+
+PowerShell で:
+
+```powershell
+gh auth login
+```
+
+WSL 側でも後で `gh auth login` を実行する。Windows と WSL は別環境なので、両方で認証しておく。
+
+### 4. WSL 側の基本ツールを入れる
+
+Ubuntu を開いて実行する。
+
+```bash
+sudo apt update
+sudo apt install -y git gh zsh curl unzip build-essential openssh-server rclone
+```
+
+GitHub CLI にログインする。
+
+```bash
+gh auth login
+```
+
+zsh を既定シェルにする。
+
+```bash
+chsh -s "$(which zsh)"
+```
+
+`zoxide` を入れる。
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
+```
+
+Claude Code / Codex を WSL 側でも使う場合は、Node.js が必要。Windows に Node.js が入っていても WSL とは別なので、WSL 側にも入れる。
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+source ~/.bashrc
+nvm install --lts
+nvm use --lts
+npm install -g @anthropic-ai/claude-code
+```
+
+既に Codex CLI を Windows 側だけに入れている場合でも、WSL のシェルから使うなら WSL 側にも入れる。
+
+### 5. リポジトリをクローン
+
+WSL 側で実行する。
 
 ```bash
 git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
@@ -74,7 +151,7 @@ git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
 
 任意の場所に clone してよい。以降の例では `~/dotfiles` とする。
 
-### 2. Linux / WSL 設定をインストール
+### 6. Linux / WSL 設定をインストール
 
 ```bash
 cd ~/dotfiles
@@ -91,7 +168,7 @@ sudo が必要なシステム設定を明示的に避ける場合:
 INSTALL_SYSTEM_CONFIG=0 ./install.sh
 ```
 
-### 3. Windows 設定をインストール
+### 7. Windows 設定をインストール
 
 PowerShell（管理者）で実行：
 
@@ -100,6 +177,8 @@ PowerShell（管理者）で実行：
 ```
 
 WSL distro 名が `Ubuntu` ではない場合は、実際の distro 名に置き換える。
+
+管理者 PowerShell を使わない場合は、Windows の「開発者モード」を有効にしてから実行する。シンボリックリンク作成に必要。
 
 Windows 側に直接 clone した場合:
 
@@ -118,7 +197,13 @@ WezTerm から使う WSL distro / user が既定値と違う場合は、Windows 
 
 未設定時は distro は `Ubuntu`、ユーザー名とホームディレクトリは WSL 内から自動取得される。
 
-### 4. 確認
+### 8. WezTerm を起動する
+
+Windows のスタートメニューから WezTerm を起動する。設定が正しければ WSL が開く。
+
+WSL SSH ドメインを使う場合、この dotfiles は WSL 側の sshd を 2222 番で使う前提がある。接続できない場合でも WezTerm は WSL native domain へフォールバックする。
+
+### 9. 確認
 
 ```bash
 # シンボリックリンクの確認
@@ -126,6 +211,16 @@ ls -la ~/.zshrc             # → ~/dotfiles/wsl/.zshrc
 ls -la ~/.claude/CLAUDE.md  # → ~/dotfiles/claude/CLAUDE.md
 
 # 新しいターミナルを開いて動作確認
+```
+
+## 既に Linux / WSL がある場合の短縮手順
+
+必要なツールが入っていれば、WSL 側では以下だけでよい。
+
+```bash
+git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
+cd ~/dotfiles
+./install.sh
 ```
 
 ## 日常の使い方（設定を変更したいとき）
