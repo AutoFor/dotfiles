@@ -9,19 +9,21 @@ return {
         lineFoldingOnly = true,
       }
 
-      vim.lsp.config("yamlls", {
-        capabilities = capabilities,
-        settings = {
-          yaml = {
-            validate = true,
-            completion = true,
-            hover = true,
-            keyOrdering = false,
+      if vim.fn.executable("yaml-language-server") == 1 then
+        vim.lsp.config("yamlls", {
+          capabilities = capabilities,
+          settings = {
+            yaml = {
+              validate = true,
+              completion = true,
+              hover = true,
+              keyOrdering = false,
+            },
           },
-        },
-      })
+        })
 
-      vim.lsp.enable("yamlls")
+        vim.lsp.enable("yamlls")
+      end
     end,
   },
 }
