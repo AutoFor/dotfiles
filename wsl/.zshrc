@@ -221,6 +221,17 @@ claude() {
   fi
 }
 
+# codex -y: --dangerously-bypass-approvals-and-sandbox の短縮
+unalias codex 2>/dev/null || true
+codex() {
+  if [[ "$1" == "-y" ]]; then
+    shift
+    command codex --dangerously-bypass-approvals-and-sandbox "$@"
+  else
+    command codex "$@"
+  fi
+}
+
 # gh worktree branch: Issue作成 + worktree作成
 # gwb     → worktree作成してcd "path"をクリップボードにコピー
 # gwb r   → 右分割、gwb d → 下分割

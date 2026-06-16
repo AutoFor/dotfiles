@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+self="$(realpath "$0")"
+real_codex=""
+
+IFS=':' read -r -a path_entries <<< "$PATH"
+for dir in "${path_entries[@]}"; do
+  candidate="${dir}/codex"
+  if [[ -x "$candidate" ]] && [[ "$(realpath "$candidate")" != "$self" ]]; then
+    real_codex="$candidate"
+    break
+  fi
+done
+
+if [[ -z "$real_codex" ]]; then
+  echo "codex: real codex command not found in PATH" >&2
+  exit 127
+fi
+
+if [[ "${1:-}" == "-y" ]]; then
+  shift
+  exec "$real_codex" --dangerously-bypass-approvals-and-sandbox "$@"
+fi
+
+exec "$real_codex" "$@"
