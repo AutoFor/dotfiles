@@ -137,6 +137,7 @@ source ~/.bashrc
 nvm install --lts
 nvm use --lts
 npm install -g @anthropic-ai/claude-code
+npm install -g yaml-language-server
 ```
 
 既に Codex CLI を Windows 側だけに入れている場合でも、WSL のシェルから使うなら WSL 側にも入れる。
