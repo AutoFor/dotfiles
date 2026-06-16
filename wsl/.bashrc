@@ -120,3 +120,14 @@ export PATH="$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
+
+# codex -y: --dangerously-bypass-approvals-and-sandbox の短縮
+unalias codex 2>/dev/null || true
+codex() {
+  if [ "${1:-}" = "-y" ]; then
+    shift
+    command codex --dangerously-bypass-approvals-and-sandbox "$@"
+  else
+    command codex "$@"
+  fi
+}
