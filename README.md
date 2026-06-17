@@ -27,7 +27,8 @@ Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジ
 ├── windows/                      # Windows 設定
 │   ├── .wezterm.lua
 │   ├── .gitconfig
-│   └── .bashrc
+│   ├── .bashrc
+│   └── yamabuki-r/
 │
 ├── claude/                       # Claude Code 設定
 │   ├── CLAUDE.md
@@ -262,6 +263,7 @@ vim ~/dotfiles/claude/CLAUDE.md
 | `~/dotfiles/wsl/.bashrc` | `~/.bashrc` |
 | `~/dotfiles/windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
 | `~/dotfiles/windows/.gitconfig` | Windows の `~/.gitconfig` |
+| `~/dotfiles/windows/yamabuki-r/layout` | `C:\Prog\YamabukiR\layout` |
 | `~/dotfiles/claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `~/dotfiles/claude/settings.json` | `~/.claude/settings.json` |
 | `~/dotfiles/codex/config.toml` | `~/.codex/config.toml` |
