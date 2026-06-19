@@ -110,7 +110,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Ctrl+0` | フォントサイズをリセット | 0 = デフォルト（ゼロ点） |
 | `Ctrl+p` / `Ctrl+Shift+p` | コマンドパレットを開く | **p**alette（VS Code 由来） |
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
-| `Alt+Enter` | フルスクリーン切り替え | Enter = 確定・最大化 |
+| `Alt+Enter` | 通常 → 最大化（タスクバーを残す） → フルスクリーンを切り替え | Enter = 確定・最大化 |
 
 ### WSL ドメイン設定（リサイズ安定化）
 
@@ -129,6 +129,57 @@ config.default_domain = "WSL:Ubuntu"
 ```
 
 なお、リサイズによる一時的な黒画面が起きた際は `<leader> →z`（ペインズーム）で回避しやすい。
+
+### WSL への接続: native 既定（SSH は手動時のみ）
+
+起動時・新規ウィンドウ・`Ctrl+t` はすべて **WSL ネイティブ統合**（`WSL_NATIVE_DOMAIN`）を使う。
+
+- `config.default_domain = WSL_NATIVE_DOMAIN`
+- `CTRL_T_DOMAIN = WSL_NATIVE_DOMAIN`
+- `gui-startup` は native で即起動（SSH 待機はしない）
+
+**なぜ SSH を既定にしないか:** 一時は体感速度を狙って SSH（`127.0.0.1:2222`）を既定にしていたが、
+① 起動時に SSH 待機すると WezTerm が空プロセス化して GUI が出ない、
+② SSH セッションでは `WSL_INTEROP` が切れて `clip.exe`/`powershell.exe` など Windows 連携が動かない、
+という代償が大きく native に戻した。
+
+SSH ドメイン（`WSL-SSH`）の設定とランチャーエントリは残してあるので、必要なときは `<leader> → l` のランチャーから手動で `WSL: Ubuntu (SSH)` を選べる。
+
+#### SSH ドメインを手動で使う場合のセットアップ
+
+systemd ベースの WSL では sshd のポートを決めているのは `sshd_config` の `Port` ではなく **`ssh.socket`**（ソケットアクティベーション）。`sshd_config` に `Port 2222` を書いても無視されるので、ソケット側を上書きする。
+
+1. `ssh.socket` を 2222 番で listen させる（IPv4/IPv6 両方）:
+   ```bash
+   sudo mkdir -p /etc/systemd/system/ssh.socket.d
+   sudo tee /etc/systemd/system/ssh.socket.d/override.conf >/dev/null <<'EOF'
+   [Socket]
+   ListenStream=
+   ListenStream=0.0.0.0:2222
+   ListenStream=[::]:2222
+   EOF
+   sudo systemctl daemon-reload
+   sudo systemctl restart ssh.socket
+   ```
+2. WezTerm 専用の鍵ペアを生成し、公開鍵を `authorized_keys` に登録:
+   ```bash
+   ssh-keygen -t ed25519 -N "" -C "wezterm-wsl-localhost" -f ~/.ssh/wezterm_wsl
+   cat ~/.ssh/wezterm_wsl.pub >> ~/.ssh/authorized_keys
+   chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys ~/.ssh/wezterm_wsl
+   ```
+3. 秘密鍵を Windows ホーム配下にコピー（WezTerm は Windows プロセスとして鍵を読む）。
+   libssh がデフォルトで探す `id_ed25519` 名でも置いておくと確実（Windows 側に既存の `id_ed25519` が無い場合のみ）:
+   ```bash
+   WIN_SSH=/mnt/c/Users/<Windowsユーザー>/.ssh
+   cp ~/.ssh/wezterm_wsl     "$WIN_SSH/wezterm_wsl"
+   cp ~/.ssh/wezterm_wsl     "$WIN_SSH/id_ed25519"      # デフォルト名フォールバック
+   cp ~/.ssh/wezterm_wsl.pub "$WIN_SSH/id_ed25519.pub"
+   ```
+4. `.wezterm.lua` の `ssh_domains` で `ssh_option.identityfile` に Windows 側の鍵パス（`wezterm.home_dir .. "\\.ssh\\wezterm_wsl"`）を指定する（設定済み）。
+
+> **注意:** `ssh_domains` の変更はホットリロードでは反映されない。鍵が使われず `Password:` を聞かれる場合は **WezTerm を完全に終了して再起動**する。
+
+接続確認: `ssh -i ~/.ssh/wezterm_wsl -p 2222 ubuntu@127.0.0.1 'echo ok'`。`ssh.socket` は `enabled` なので WSL 再起動後も自動で 2222 番が上がる。
 
 ### SSH（Tailscale 経由）
 
@@ -836,7 +887,21 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `exit` または `Ctrl+D` | Claude Code セッションを終了 | exit / EOF（**D** = end of file） |
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
-| `claude da` | 権限確認をスキップして起動（danger mode） | **da**nger の略 |
+| `claude -y` / `claude da` | 権限確認をスキップして起動（`--dangerously-skip-permissions`） | **y**es（`codex -y` と統一）/ **da**nger の略 |
+
+#### トークン使用量・コスト集計（ccusage）
+
+[ccusage](https://github.com/ccusage/ccusage) で Claude Code / Codex の使用量とコストを集計。`alias ccusage='npx ccusage@latest'` で毎回最新版を実行（グローバルインストール不要）。
+
+| コマンド | 動作 | 由来 |
+|---------|------|------|
+| `ccusage` / `ccusage daily` | 日別のトークン使用量・コスト（デフォルト） | **daily** |
+| `ccusage weekly` | 週別集計 | **weekly** |
+| `ccusage monthly` | 月別集計 | **monthly** |
+| `ccusage session` | 会話セッション別集計 | **session** |
+| `ccusage blocks --live` | 5時間課金枠をライブ表示 | **blocks** |
+| `ccusage daily --since 2026-06-01 --until 2026-06-18` | 期間指定 | **since/until** |
+| `ccusage daily --json` | JSON 出力 | **json** |
 
 #### Claude Code ゾンビプロセス防止
 

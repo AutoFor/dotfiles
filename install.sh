@@ -60,6 +60,7 @@ sync_dir_links() {
 echo "=== Linux / WSL 設定ファイルのリンク ==="
 
 # --- WSL ホームディレクトリ直下 ---
+link_file "$DOTFILES_DIR/wsl/.zshenv"   "$HOME/.zshenv"
 link_file "$DOTFILES_DIR/wsl/.zshrc"     "$HOME/.zshrc"
 link_file "$DOTFILES_DIR/wsl/.bashrc"    "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/wsl/.gitconfig" "$HOME/.gitconfig"
