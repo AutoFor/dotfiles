@@ -72,6 +72,7 @@ lrm() {
 }
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="$HOME/go/bin:$PATH"
 export PATH="$PATH:$HOME/.dotnet/tools"
 
 __wezterm_set_user_var() {
@@ -149,6 +150,29 @@ wsl_copy_to_clipboard() {
   printf '%s' "$value" | "$clip_cmd" 2>/dev/null
 }
 
+# SSH 経由で WSL に入ると WSL_INTEROP が引き継がれず Windows の .exe（clip.exe 等）が
+# 呼べなくなる。/run/WSL 配下の生きている interop ソケットを探して復元する。
+# 有効なソケットが無い場合（純 SSH 運用など）は復元できないこともある。
+_wsl_interop_works() {
+  WSL_INTEROP="$1" /mnt/c/Windows/System32/cmd.exe /c "exit" >/dev/null 2>&1
+}
+
+wsl_restore_interop() {
+  [[ -n "$WSL_INTEROP" ]] && _wsl_interop_works "$WSL_INTEROP" && return 0
+  local sock
+  for sock in /run/WSL/*_interop(NOm); do  # zsh: N=該当なしOK, Om=新しい順(mtime降順)
+    if _wsl_interop_works "$sock"; then
+      export WSL_INTEROP="$sock"
+      return 0
+    fi
+  done
+  return 1
+}
+
+# native セッションでは WSL_INTEROP が既にあるので何もしない。
+# SSH セッション（WSL_INTEROP が空）のときだけ復元を試みる。
+[[ -z "$WSL_INTEROP" && -d /run/WSL ]] && wsl_restore_interop
+
 wpath() {
   wsl_require_quoted_windows_path "$@" || return 1
   local wsl_path
@@ -167,6 +191,7 @@ wcd() {
   wsl_copy_to_clipboard "'$wsl_path'" >/dev/null || true
   cd "$wsl_path" && claude
 }
+
 export DOTNET_ROOT=$HOME/.dotnet
 export PATH=$PATH:$HOME/.dotnet
 
@@ -202,10 +227,10 @@ bindkey '\ew' worktree-fzf
 alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
 
 # claude: メモリ上限 12GB で起動
-# claude da: --dangerously-skip-permissions の短縮
+# claude -y / claude da: --dangerously-skip-permissions の短縮
 unalias claude 2>/dev/null || true
 claude() {
-  if [[ "$1" == "da" ]]; then
+  if [[ "$1" == "-y" || "$1" == "da" ]]; then
     shift
     if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
       command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
@@ -220,6 +245,21 @@ claude() {
     fi
   fi
 }
+
+# codex -y: --dangerously-bypass-approvals-and-sandbox の短縮
+unalias codex 2>/dev/null || true
+codex() {
+  if [[ "$1" == "-y" ]]; then
+    shift
+    command codex --dangerously-bypass-approvals-and-sandbox "$@"
+  else
+    command codex "$@"
+  fi
+}
+
+# ccusage: Claude Code / Codex のトークン使用量・コストを集計
+# ccusage daily / weekly / monthly / session / blocks --live など
+alias ccusage='npx ccusage@latest'
 
 # gh worktree branch: Issue作成 + worktree作成
 # gwb     → worktree作成してcd "path"をクリップボードにコピー
@@ -277,3 +317,7 @@ if [ -f '/home/seiya-kawashima/google-cloud-sdk/path.zsh.inc' ]; then . '/home/s
 
 # The next line enables shell command completion for gcloud.
 if [ -f '/home/seiya-kawashima/google-cloud-sdk/completion.zsh.inc' ]; then . '/home/seiya-kawashima/google-cloud-sdk/completion.zsh.inc'; fi
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

@@ -32,6 +32,18 @@ enabled = true
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
+[projects."/home/ubuntu/ghq/github.com/AutoFor/dotfiles"]
+trust_level = "trusted"
+
+[projects."/home/ubuntu/ghq/github.com/AutoFor/im8-seat-presence-app"]
+trust_level = "trusted"
+
+[projects."/home/ubuntu/.git-worktrees/AutoFor"]
+trust_level = "trusted"
+
+[projects."/home/ubuntu/ghq/github.com/AutoFor"]
+trust_level = "trusted"
+
 [mcp_servers.playwright]
 command = "npx"
 args = ["@playwright/mcp@latest"]

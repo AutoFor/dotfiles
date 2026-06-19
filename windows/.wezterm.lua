@@ -50,13 +50,7 @@ local function get_last_dir(reason)
   return nil
 end
 
-local function boot_wsl_sshd()
-  wezterm.run_child_process({
-    "wsl.exe", "-d", WSL_DISTRO, "-u", "root", "--", "sh", "-lc",
-    "service ssh start >/dev/null 2>&1 || /etc/init.d/ssh start >/dev/null 2>&1 || true",
-  })
-end
-
+-- SSH ドメインの TCP 到達確認（Ctrl+t で SSH ドメインを使う場合のログ用）
 local function is_wsl_ssh_ready()
   local success = wezterm.run_child_process({
     "powershell.exe", "-NoProfile", "-Command",
@@ -65,26 +59,13 @@ local function is_wsl_ssh_ready()
   return success
 end
 
-local function wait_for_wsl_ssh(max_attempts, sleep_millis)
-  for _ = 1, max_attempts do
-    if is_wsl_ssh_ready() then
-      return true
-    end
-    wezterm.sleep_ms(sleep_millis)
-  end
-  return false
-end
-
 -- WezTerm 起動時に直近のディレクトリで開く
+-- 起動時は WSL native domain を既定にする（SSH 待機で GUI 表示がブロックされるのを避ける / #182）
+-- SSH は <leader> l のランチャーから明示的に選んだときだけ使う
 wezterm.on("gui-startup", function(cmd)
   local last_dir = get_last_dir()
   local args = cmd or {}
-  boot_wsl_sshd()
-  if wait_for_wsl_ssh(30, 200) then
-    args.domain = { DomainName = WSL_SSH_DOMAIN }
-  else
-    args.domain = { DomainName = WSL_NATIVE_DOMAIN }
-  end
+  args.domain = { DomainName = WSL_NATIVE_DOMAIN }
   if last_dir then
     args.cwd = last_dir
   end
@@ -128,12 +109,17 @@ config.ssh_domains = {
     name = WSL_SSH_DOMAIN,
     remote_address = "127.0.0.1:2222",
     username = WSL_USER,
+    -- WSL 側 sshd の公開鍵認証で使う秘密鍵（Windows ホーム配下に配置）
+    -- 対応する公開鍵は WSL の ~/.ssh/authorized_keys に登録済み
+    ssh_option = {
+      identityfile = wezterm.home_dir .. "\\.ssh\\wezterm_wsl",
+    },
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
     multiplexing = "None",
   },
 }
 
-config.default_domain = WSL_SSH_DOMAIN
+config.default_domain = WSL_NATIVE_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
@@ -259,6 +245,35 @@ local function activate_pane_or_send_alt(direction, key)
       win:perform_action(act.ActivatePaneDirection(direction), pane)
     else
       win:perform_action(act.SendKey({ key = key, mods = "ALT" }), pane)
+    end
+  end)
+end
+
+local window_mode_by_id = {}
+
+local function cycle_window_mode()
+  return wezterm.action_callback(function(window, pane)
+    local window_id = window:window_id()
+    local dimensions = window:get_dimensions()
+    local mode = window_mode_by_id[window_id] or "normal"
+
+    if dimensions.is_full_screen then
+      mode = "fullscreen"
+    end
+
+    if mode == "normal" then
+      window:maximize()
+      window_mode_by_id[window_id] = "maximized"
+    elseif mode == "maximized" then
+      window:toggle_fullscreen()
+      window_mode_by_id[window_id] = "fullscreen"
+    else
+      if dimensions.is_full_screen then
+        window:toggle_fullscreen()
+        wezterm.sleep_ms(50)
+      end
+      window:restore()
+      window_mode_by_id[window_id] = "normal"
     end
   end)
 end
@@ -517,8 +532,8 @@ config.keys = {
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
   { key = ".", mods = "ALT", action = act({ MoveTabRelative = 1 }) },
 
-  -- 画面フルスクリーン切り替え
-  { key = "Enter", mods = "ALT", action = act.ToggleFullScreen },
+  -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
+  { key = "Enter", mods = "ALT", action = cycle_window_mode() },
 
   -- コピーモード
   { key = "[", mods = "LEADER", action = act.ActivateCopyMode },

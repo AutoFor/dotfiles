@@ -34,7 +34,7 @@
       "Bash(uip solution publish *)"
     ]
   },
-  "model": "sonnet[1m]",
+  "model": "haiku",
   "hooks": {
     "Stop": [
       {
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
+            "command": "/mnt/c/Users/saint/AppData/Local/Microsoft/WindowsApps/pwsh.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
           }
         ]
       }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
+            "command": "/mnt/c/Users/saint/AppData/Local/Microsoft/WindowsApps/pwsh.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
           }
         ]
       }
@@ -61,18 +61,11 @@
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "genshijin@genshijin": true,
     "skill-creator@claude-plugins-official": true,
     "github@claude-plugins-official": true,
     "uipath@uipath-marketplace": true
   },
   "extraKnownMarketplaces": {
-    "genshijin": {
-      "source": {
-        "source": "github",
-        "repo": "InterfaceX-co-jp/genshijin"
-      }
-    },
     "uipath-marketplace": {
       "source": {
         "source": "github",
@@ -82,5 +75,6 @@
     }
   },
   "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
   "agentPushNotifEnabled": true
 }

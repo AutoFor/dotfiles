@@ -27,15 +27,20 @@ Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジ
 ├── windows/                      # Windows 設定
 │   ├── .wezterm.lua
 │   ├── .gitconfig
-│   └── .bashrc
+│   ├── .bashrc
+│   └── yamabuki-r/
 │
-└── claude/                       # Claude Code 設定
-    ├── CLAUDE.md
-    ├── settings.json
-    ├── windows-notify.ps1
-    ├── github-app-config.env.example
-    ├── mcp/mcp-config.json.example
-    └── skills/（9ディレクトリ）
+├── claude/                       # Claude Code 設定
+│   ├── CLAUDE.md
+│   ├── settings.json
+│   ├── windows-notify.ps1
+│   ├── github-app-config.env.example
+│   ├── mcp/mcp-config.json.example
+│   └── skills/（9ディレクトリ）
+│
+└── codex/                        # Codex 設定
+    ├── config.toml
+    └── skills/
 ```
 
 ## 方針
@@ -258,8 +263,18 @@ vim ~/dotfiles/claude/CLAUDE.md
 | `~/dotfiles/wsl/.bashrc` | `~/.bashrc` |
 | `~/dotfiles/windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
 | `~/dotfiles/windows/.gitconfig` | Windows の `~/.gitconfig` |
+| `~/dotfiles/windows/yamabuki-r/layout` | `C:\Prog\YamabukiR\layout` |
 | `~/dotfiles/claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `~/dotfiles/claude/settings.json` | `~/.claude/settings.json` |
+| `~/dotfiles/codex/config.toml` | `~/.codex/config.toml` |
+
+### コマンド短縮
+
+WSL の zsh / bash では、`codex -y` を以下の短縮として使える。
+
+```bash
+codex --dangerously-bypass-approvals-and-sandbox
+```
 
 ### 変更を GitHub に保存する
 

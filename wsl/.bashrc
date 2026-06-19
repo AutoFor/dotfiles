@@ -8,6 +8,15 @@ case $- in
       *) return;;
 esac
 
+# External editor for tools such as Codex.
+if command -v nvim >/dev/null 2>&1; then
+  export VISUAL=nvim
+  export EDITOR=nvim
+elif command -v vim >/dev/null 2>&1; then
+  export VISUAL=vim
+  export EDITOR=vim
+fi
+
 # don't put duplicate lines or lines starting with space in the history.
 # See bash(1) for more options
 HISTCONTROL=ignoreboth
@@ -120,3 +129,38 @@ export PATH="$HOME/.local/bin:$PATH"
 if [ -f "$HOME/.cargo/env" ]; then
     . "$HOME/.cargo/env"
 fi
+
+# codex -y: --dangerously-bypass-approvals-and-sandbox の短縮
+unalias codex 2>/dev/null || true
+codex() {
+  if [ "${1:-}" = "-y" ]; then
+    shift
+    command codex --dangerously-bypass-approvals-and-sandbox "$@"
+  else
+    command codex "$@"
+  fi
+}
+
+# claude: メモリ上限 12GB で起動
+# claude -y / claude da: --dangerously-skip-permissions の短縮
+unalias claude 2>/dev/null || true
+claude() {
+  if [ "${1:-}" = "-y" ] || [ "${1:-}" = "da" ]; then
+    shift
+    if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+      command systemd-run --user --scope -p MemoryMax=12G claude --dangerously-skip-permissions "$@"
+    else
+      command claude --dangerously-skip-permissions "$@"
+    fi
+  else
+    if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
+      command systemd-run --user --scope -p MemoryMax=12G claude "$@"
+    else
+      command claude "$@"
+    fi
+  fi
+}
+
+# ccusage: Claude Code / Codex のトークン使用量・コストを集計
+# ccusage daily / weekly / monthly / session / blocks --live など
+alias ccusage='npx ccusage@latest'
