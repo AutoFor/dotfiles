@@ -205,16 +205,17 @@ function ghq-fzf() {
 zle -N ghq-fzf
 bindkey '^G' ghq-fzf
 
-# ~/.git-worktrees 以下の worktree ルートを fzf で選択して cd（.bare 除外）Alt+W
+# ~/.git-worktrees 以下のイシューベースの worktree を fzf で選択して cd（issue-XXX-* パターンのみ）Alt+W
 function worktree-fzf() {
   local base="$HOME/.git-worktrees"
 
   local target
   target=$(
-    find "$base" -mindepth 4 -maxdepth 4 -type d \
-    | rg -v '/\.bare$' \
+    find "$base" -mindepth 3 -maxdepth 3 -type d -name 'issue-*' \
     | sort \
-    | fzf --height=40% --reverse --prompt='worktree> '
+    | fzf --height=40% --reverse --prompt='worktree> ' \
+      --preview 'ls -la {} | head -20' \
+      --preview-window=right:30%
   ) || return
 
   cd "$target"
