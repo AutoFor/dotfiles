@@ -251,6 +251,75 @@ end
 
 local window_mode_by_id = {}
 
+local function maximize_with_taskbar_excluded()
+  return wezterm.action_callback(function(window, pane)
+    local success, output = wezterm.run_child_process({
+      "powershell.exe",
+      "-NoProfile",
+      "-Command",
+      [[
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public class MonitorInfo {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFOEX {
+        public uint cbSize;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+        public char[] szDevice;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetMonitorInfoA(IntPtr hMonitor, ref MONITORINFOEX lpmi);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromPoint([In] System.Drawing.Point pt, uint dwFlags);
+}
+"@
+
+        $monitor = [MonitorInfo]::MonitorFromPoint(
+            [System.Drawing.Point]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.X,
+                                       [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Y),
+            0x00000001
+        )
+        $info = New-Object MonitorInfo+MONITORINFOEX
+        $info.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($info)
+        [MonitorInfo]::GetMonitorInfoA($monitor, [ref]$info)
+
+        [int]$x = $info.rcWork.left
+        [int]$y = $info.rcWork.top
+        [int]$w = $info.rcWork.right - $info.rcWork.left
+        [int]$h = $info.rcWork.bottom - $info.rcWork.top
+
+        Write-Output "$x,$y,$w,$h"
+      ]],
+    })
+
+    if success and output then
+      local dims = output:match("^([0-9,-]+)")
+      if dims then
+        local x, y, w, h = dims:match("([^,]+),([^,]+),([^,]+),([^,]+)")
+        if x and y and w and h then
+          window:set_position(tonumber(x), tonumber(y))
+          window:set_inner_size(tonumber(w), tonumber(h))
+        end
+      end
+    end
+  end)
+end
+
 local function cycle_window_mode()
   return wezterm.action_callback(function(window, pane)
     local window_id = window:window_id()
@@ -262,7 +331,7 @@ local function cycle_window_mode()
     end
 
     if mode == "normal" then
-      window:maximize()
+      window:perform_action(maximize_with_taskbar_excluded(), pane)
       window_mode_by_id[window_id] = "maximized"
     elseif mode == "maximized" then
       window:toggle_fullscreen()
