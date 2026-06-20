@@ -248,7 +248,7 @@ Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 
 | コマンド | 動作 | 由来 |
 |---------|------|------|
-| `Alt+W` | `~/.git-worktrees/` 以下の worktree を fzf で選択して `cd` | **W**orktree |
+| `Alt+W` | `~/.git-worktrees/` 以下のイシューベース worktree（`issue-*` パターン）を fzf で選択して `cd`（プレビュー表示付き） | **W**orktree |
 | `gwb` | GitHub Issue 作成 + worktree 作成 + WezTerm 下分割で Claude 起動 | **g**it **w**orktree **b**ranch |
 | `gwb r` | 同上・右分割 | **r**ight |
 | `gwb d` | 同上・下分割（`gwb` と同じ） | **d**own |
