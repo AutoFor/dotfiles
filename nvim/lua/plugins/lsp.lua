@@ -1,6 +1,7 @@
 return {
   {
     "neovim/nvim-lspconfig",
+    enabled = require("features").lsp_yaml,
     lazy = false,
     config = function()
       local capabilities = vim.lsp.protocol.make_client_capabilities()

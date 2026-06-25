@@ -13,6 +13,8 @@ Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジ
 ├── install-windows.ps1           # Windows 用セットアップスクリプト
 ├── .gitignore
 │
+├── nvim/                         # Neovim 設定（WSL / Windows 共有・OS分岐）
+│
 ├── wsl/                          # WSL Ubuntu 設定
 │   ├── .zshrc
 │   ├── .bashrc
@@ -257,6 +259,7 @@ vim ~/dotfiles/claude/CLAUDE.md
 | `~/dotfiles/wsl/.gitconfig` | `~/.gitconfig` |
 | `~/dotfiles/wsl/.bashrc` | `~/.bashrc` |
 | `~/dotfiles/windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
+| `~/dotfiles/nvim/`（init.lua, lua/） | WSL: `~/.config/nvim` / Windows: `%LOCALAPPDATA%\nvim` |
 | `~/dotfiles/windows/.gitconfig` | Windows の `~/.gitconfig` |
 | `~/dotfiles/claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `~/dotfiles/claude/settings.json` | `~/.claude/settings.json` |
@@ -290,6 +293,47 @@ Set-Location $env:USERPROFILE\dotfiles
 ```
 
 この手順で各 OS のホームディレクトリにリンクが作られる。
+
+## Neovim の機能プロファイル
+
+nvim 設定は WSL / Windows で共有し、OS 差分は `nvim/lua/os_util.lua` が、読み込む機能の範囲は `nvim/lua/features.lua` が制御する。
+
+「どこまで読み込むか」は環境変数 `NVIM_PROFILE` で切り替える。
+
+| 値 | 挙動 |
+|---|---|
+| `auto`（既定） | 外部コマンド（rg / cc・zig / node / gh / claude / codex / glow）の有無を検出し、使えるものだけ有効化 |
+| `core` | 外部依存のないコア機能（ツリー・配色・fold・csv・outline・scratch・キーマップ）だけ |
+| `full` | すべて有効化（未インストールでも読み込みを試みる） |
+
+```powershell
+# 例: 最小構成で起動（Windows）
+$env:NVIM_PROFILE = "core"; nvim
+```
+
+個別に上書きしたいときは、`nvim/lua/features_local.lua`（Git 管理外）を作る。
+
+```lua
+-- nvim/lua/features_local.lua の例
+return {
+  treesitter = false,  -- このマシンでは treesitter を切る
+  telescope = true,
+}
+```
+
+### Windows でフル機能を使うための依存ツール
+
+`auto` で未検出なら自動で無効化されるため必須ではない。フルに使う場合のみ:
+
+```powershell
+winget install BurntSushi.ripgrep.MSVC   # telescope の grep
+winget install zig.zig                    # treesitter のコンパイラ（zig cc）
+winget install OpenJS.NodeJS.LTS          # markdown-preview / yaml-language-server
+npm install -g yaml-language-server
+winget install charmbracelet.glow         # markdown プレビュー（任意）
+```
+
+シンボリックリンク作成には管理者権限または開発者モードが必要。
 
 ## WSL 丸ごとバックアップ
 

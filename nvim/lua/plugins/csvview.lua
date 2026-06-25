@@ -1,5 +1,6 @@
 return {
   "hat0uma/csvview.nvim",
+  enabled = require("features").csvview,
   opts = {
     view = {
       display_mode = "border",

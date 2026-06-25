@@ -1,6 +1,7 @@
 -- ~/.config/nvim/lua/plugins/claudecode.lua
 return {
   "coder/claudecode.nvim",
+  enabled = require("features").claudecode,
   lazy = false,
   dependencies = {
     "nvim-lua/plenary.nvim",

@@ -1,5 +1,6 @@
 return {
   "pwntester/octo.nvim",
+  enabled = require("features").octo,
   cmd = "Octo",
   opts = {
     picker = "telescope",

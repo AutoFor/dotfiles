@@ -45,5 +45,13 @@ Link-File -Source "$DotfilesWindows\.wslconfig"   -Destination "$WinHome\.wslcon
 Link-File -Source "$DotfilesWindows\.bashrc"      -Destination "$WinHome\.bashrc"
 
 Write-Host ""
+Write-Host "=== Neovim 設定のリンク ==="
+
+# nvim 設定（WSL/Windows 共有）→ %LOCALAPPDATA%\nvim
+$NvimSrc  = Join-Path $PSScriptRoot "nvim"
+$NvimDest = Join-Path $env:LOCALAPPDATA "nvim"
+Link-Directory -Source $NvimSrc -Destination $NvimDest
+
+Write-Host ""
 Write-Host "=== 完了 ==="
 Write-Host "WezTerm を再起動して設定が反映されていることを確認してください。"

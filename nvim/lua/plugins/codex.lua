@@ -1,7 +1,7 @@
-
 -- ~/.config/nvim/lua/plugins/codex.lua
 return {
   "johnseth97/codex.nvim",
+  enabled = require("features").codex,
   lazy = true,
   cmd = { "Codex", "CodexToggle" },
   keys = {
