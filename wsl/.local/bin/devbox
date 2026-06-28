@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Azure 開発サーバー (devbox) に接続する。
+#   - 停止中(deallocated)なら自動で起動してから SSH する
+#   - az 未導入 / 未ログイン / 接続失敗時はローカルのログインシェルにフォールバック
+#   - SSH を抜けた後もローカルシェルに戻る
+#
+# 環境変数で上書き可: DEVBOX_RG / DEVBOX_VM / DEVBOX_USER / DEVBOX_IP
+set -uo pipefail
+
+RG="${DEVBOX_RG:-rg-devbox}"
+VM="${DEVBOX_VM:-devbox}"
+USER_NAME="${DEVBOX_USER:-azureuser}"
+IP="${DEVBOX_IP:-20.46.165.130}"   # Standard SKU の静的 IP（停止/再開で不変）
+
+connect() {
+  if ! command -v az >/dev/null 2>&1; then
+    echo "⚠ az CLI が無いため Azure に接続できません。" >&2
+    return 1
+  fi
+  if ! az account show >/dev/null 2>&1; then
+    echo "⚠ az 未ログインです。'az login --use-device-code' を実行してください。" >&2
+    return 1
+  fi
+
+  local state
+  state=$(az vm get-instance-view -g "$RG" -n "$VM" \
+    --query "instanceView.statuses[?starts_with(code,'PowerState/')].code | [0]" \
+    -o tsv 2>/dev/null || true)
+
+  if [ "$state" != "PowerState/running" ]; then
+    echo "▶ devbox を起動中... (現在: ${state:-unknown})"
+    if ! az vm start -g "$RG" -n "$VM" -o none; then
+      echo "⚠ devbox の起動に失敗しました。" >&2
+      return 1
+    fi
+  fi
+
+  echo "🔗 ssh ${USER_NAME}@${IP}"
+  ssh -o StrictHostKeyChecking=accept-new "${USER_NAME}@${IP}"
+}
+
+connect || echo "（ローカルシェルに切り替えました）" >&2
+exec "${SHELL:-/usr/bin/zsh}" -l
