@@ -1,6 +1,7 @@
 return {
   {
     "reybits/scratch.nvim",
+    enabled = require("features").scratch,
     config = function()
       require("scratch").setup()
 

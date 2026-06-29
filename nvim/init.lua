@@ -49,6 +49,8 @@ local function is_ssh_session()
   return vim.env.SSH_TTY or vim.env.SSH_CLIENT or vim.env.SSH_CONNECTION
 end
 
+local os_util = require("os_util")
+local features = require("features")
 local agent_terminal = require("agent_terminal")
 
 vim.opt.clipboard = "unnamedplus"
@@ -59,6 +61,8 @@ vim.keymap.set({"n", "v"}, "D", '"_D', { silent = true })
 vim.keymap.set({"n", "v"}, "x", '"_x', { silent = true })
 vim.keymap.set({"n", "v"}, "X", '"_X', { silent = true })
 
+-- Windows ネイティブでは unnamedplus がそのまま OS クリップボードに繋がる。
+-- 以下は WSL / SSH 環境専用の調整。
 if vim.fn.has("wsl") == 1 and executable("win32yank.exe") then
   -- WSL ローカルでは Windows クリップボードへ直接つなぐ
   if executable("wslview") then
@@ -169,40 +173,43 @@ vim.api.nvim_create_autocmd({ "TermOpen", "BufEnter", "WinEnter" }, {
   end,
 })
 
--- wezterm.exe のパス（WSL から Windows の wezterm CLI を叩く）
-local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
-
--- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して Claude Code を開く
--- SSH 経由など wezterm cli が使えない場合は、nvim 内 terminal にフォールバックしない。
+-- 起動時: 左に NvimTree を開き、WezTerm の右ペインを分割して Claude Code を開く。
+-- NVIM_TMP_NOTE_FILE（memo のような単純起動）時は分割しない。
 vim.api.nvim_create_autocmd("VimEnter", {
   callback = function()
     require("nvim-tree.api").tree.open()
-    if vim.env.NVIM_TMP_NOTE_FILE and vim.env.NVIM_TMP_NOTE_FILE ~= "" then
+    local simple_note = vim.env.NVIM_TMP_NOTE_FILE and vim.env.NVIM_TMP_NOTE_FILE ~= ""
+    if simple_note then
       vim.schedule(function()
         vim.cmd("wincmd l")
       end)
     end
     vim.schedule(function()
-      if vim.env.NVIM_TMP_NOTE_FILE and vim.env.NVIM_TMP_NOTE_FILE ~= "" then
+      if simple_note then
         return
       end
-      if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
-        -- WezTerm ネイティブ接続: 右ペインを分割して Claude Code を起動
-        local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
-        vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+      if os_util.is_win then
+        -- Windows ネイティブ WezTerm 内なら右ペインを分割
+        if vim.env.WEZTERM_PANE and vim.env.WEZTERM_PANE ~= "" and executable("wezterm.exe") then
+          vim.fn.system({ "wezterm.exe", "cli", "split-pane", "--right", "--percent", "30", "--cwd", vim.fn.getcwd() })
+        end
       else
-        -- WSL-SSH では WezTerm socket が見えないため、ここでは何もしない。
-        -- 本物の WezTerm 2ペイン構成は WezTerm 側の LEADER+v で起動する。
+        -- WSL: Windows 側 wezterm バイナリを /mnt/c から叩く
+        if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
+          local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
+          local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
+          vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+        end
       end
     end)
   end,
 })
 
--- glow で markdown をプレビュー (<leader>md)
+-- glow で markdown をプレビュー (<leader>md)。glow がある環境のみ。
 local function render_markdown_with_glow()
   local tempfile = vim.fn.tempname() .. ".md"
   local tempdir = vim.fn.fnamemodify(tempfile, ":h")
-  vim.fn.system("mkdir -p " .. vim.fn.shellescape(tempdir))
+  vim.fn.mkdir(tempdir, "p")
   vim.cmd("write! " .. vim.fn.fnameescape(tempfile))
   vim.cmd("vsplit")
   vim.cmd("terminal glow -p " .. vim.fn.shellescape(tempfile))
@@ -212,6 +219,9 @@ end
 vim.api.nvim_create_autocmd("FileType", {
   pattern = "markdown",
   callback = function()
+    if not features.glow_preview then
+      return
+    end
     vim.keymap.set(
       "n",
       "<leader>md",

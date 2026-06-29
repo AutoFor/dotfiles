@@ -1,5 +1,6 @@
 return {
   "echasnovski/mini.bufremove",
+  enabled = require("features").bufremove,
   version = false,
   keys = {
     {

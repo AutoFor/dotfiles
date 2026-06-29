@@ -1,7 +1,7 @@
-
 return {
   {
     "nvim-tree/nvim-tree.lua",
+    enabled = require("features").nvim_tree,
     version = "*",
     lazy = false,
     dependencies = {
@@ -9,6 +9,8 @@ return {
     },
     config = function()
       local agent_terminal = require("agent_terminal")
+      local os_util = require("os_util")
+
       local blocked_media_extensions = {
         mp4 = true,
         mov = true,
@@ -23,7 +25,7 @@ return {
         ["7z"] = true,
       }
 
-      -- editor では開かず、Windows の既定アプリで開く拡張子 (WSL2用)
+      -- editor では開かず、OS の既定アプリで開く拡張子
       local external_open_extensions = {
         pptx = true,
         ppt = true,
@@ -57,25 +59,10 @@ return {
         return external_open_extensions[ext] == true
       end
 
-      -- Windows の既定アプリでファイルを開く (WSL2用)
-      local function open_in_windows(node)
+      -- 既定アプリでファイルを開く（OS差分は os_util が吸収）
+      local function open_externally(node)
         if not node or not node.absolute_path then return end
-
-        local result = vim.fn.system("wslpath -w " .. vim.fn.shellescape(node.absolute_path))
-        if vim.v.shell_error ~= 0 then
-          vim.notify("wslpath failed: " .. result, vim.log.levels.ERROR)
-          return
-        end
-
-        local win_path = result:gsub("\n$", "")
-        -- explorer.exe <path> で既定アプリに渡す（終了コードは不定なため job_id のみ確認）
-        local job_id = vim.fn.jobstart({ "/mnt/c/Windows/explorer.exe", win_path }, { detach = true })
-        if job_id <= 0 then
-          vim.notify("Failed to open in Windows: " .. win_path, vim.log.levels.ERROR)
-          return
-        end
-
-        vim.notify("Opened in Windows: " .. win_path)
+        os_util.open_external(node.absolute_path)
       end
 
       vim.g.loaded_netrw = 1
@@ -113,7 +100,7 @@ return {
             return function()
               local node = api.tree.get_node_under_cursor()
               if should_open_externally(node) then
-                open_in_windows(node)
+                open_externally(node)
                 return
               end
               if should_block_in_editor(node) then
@@ -138,62 +125,59 @@ return {
             vim.notify("Copied ABS: " .. node.absolute_path)
           end, opts("Copy absolute path to clipboard"))
 
-          -- Windows パス → クリップボード (WSL2用)
+          -- Windows(ネイティブ)パス → クリップボード
           vim.keymap.set("n", "gW", function()
             local node = api.tree.get_node_under_cursor()
             if not node or not node.absolute_path then return end
-            local result = vim.fn.system("wslpath -w " .. vim.fn.shellescape(node.absolute_path))
-            if vim.v.shell_error ~= 0 then
-              vim.notify("wslpath failed: " .. result, vim.log.levels.ERROR)
+            local win_path, err = os_util.to_native_path(node.absolute_path)
+            if not win_path then
+              vim.notify(err or "path conversion failed", vim.log.levels.ERROR)
               return
             end
-            local win_path = result:gsub("\n$", "")
-            -- OSC 52 でターミナル（WezTerm）経由でクリップボードに書き込む（SSH対応）
-            local encoded = vim.fn.system({ "base64", "--wrap=0" }, win_path)
-            io.write("\x1b]52;c;" .. encoded .. "\x07")
-            io.flush()
+            if os_util.is_wsl then
+              -- WSL/SSH: OSC 52 でターミナル経由でクリップボードに書き込む
+              local encoded = vim.fn.system({ "base64", "--wrap=0" }, win_path)
+              io.write("\x1b]52;c;" .. encoded .. "\x07")
+              io.flush()
+            else
+              vim.fn.setreg("+", win_path, "c")
+            end
             vim.notify("Copied WIN: " .. win_path)
-          end, opts("Copy Windows path to clipboard"))
+          end, opts("Copy native (Windows) path to clipboard"))
 
-          -- Windows Explorer で開く (WSL2用)
+          -- Explorer で開く（ファイルは選択状態で）
           vim.keymap.set("n", "gE", function()
             local node = api.tree.get_node_under_cursor()
             if not node or not node.absolute_path then return end
+            os_util.reveal_in_explorer(node.absolute_path, node.type == "directory")
+          end, opts("Open in Explorer"))
 
-            local result = vim.fn.system("wslpath -w " .. vim.fn.shellescape(node.absolute_path))
-            if vim.v.shell_error ~= 0 then
-              vim.notify("wslpath failed: " .. result, vim.log.levels.ERROR)
-              return
-            end
-
-            local win_path = result:gsub("\n$", "")
-            local cmd
-            if node.type == "directory" then
-              cmd = { "/mnt/c/Windows/explorer.exe", win_path }
-            else
-              cmd = { "/mnt/c/Windows/explorer.exe", "/select,", win_path }
-            end
-
-            local job_id = vim.fn.jobstart(cmd, { detach = true })
-            if job_id <= 0 then
-              vim.notify("Failed to open Explorer: " .. win_path, vim.log.levels.ERROR)
-              return
-            end
-
-            vim.notify("Opened Explorer: " .. win_path)
-          end, opts("Open in Windows Explorer"))
-
-          -- VSCode で開く (WSL Remote経由)
+          -- VSCode で開く
           vim.keymap.set("n", "gV", function()
             local node = api.tree.get_node_under_cursor()
             if not node or not node.absolute_path then return end
 
-            -- Remote WSL 拡張の wslCode.sh を動的に検索
+            if not os_util.is_wsl then
+              -- Windows: PATH の code をそのまま使う
+              if vim.fn.executable("code") ~= 1 then
+                vim.notify("`code` not found in PATH", vim.log.levels.ERROR)
+                return
+              end
+              local job_id = vim.fn.jobstart({ "code", node.absolute_path }, { detach = true })
+              if job_id <= 0 then
+                vim.notify("Failed to open VSCode: " .. node.absolute_path, vim.log.levels.ERROR)
+                return
+              end
+              vim.notify("Opened VSCode: " .. node.absolute_path)
+              return
+            end
+
+            -- WSL: Remote WSL 拡張の wslCode.sh を動的に検索
             local wsl_ext = vim.fn.glob(
-              "/mnt/c/Users/SeiyaKawashima/.vscode/extensions/ms-vscode-remote.remote-wsl-*/scripts/wslCode.sh",
+              vim.fn.expand("/mnt/c/Users/" .. (vim.env.WIN_USER or "") .. "/.vscode/extensions/ms-vscode-remote.remote-wsl-*/scripts/wslCode.sh"),
               false, true)
             if #wsl_ext == 0 then
-              vim.notify("Remote WSL extension not found", vim.log.levels.ERROR)
+              vim.notify("Remote WSL extension not found (set $WIN_USER)", vim.log.levels.ERROR)
               return
             end
             table.sort(wsl_ext)
@@ -210,7 +194,7 @@ return {
             table.sort(server_bins)
             local commit = server_bins[#server_bins]:match("/.vscode%-server/bin/([^/]+)/")
 
-            local electron = "/mnt/c/Users/SeiyaKawashima/AppData/Local/Programs/Microsoft VS Code/Code.exe"
+            local electron = vim.fn.expand("/mnt/c/Users/" .. (vim.env.WIN_USER or "") .. "/AppData/Local/Programs/Microsoft VS Code/Code.exe")
             local job_id = vim.fn.jobstart(
               { wsl_code_sh, commit, "stable", electron, "code", ".vscode-server", node.absolute_path },
               { detach = true })
@@ -219,7 +203,7 @@ return {
               return
             end
             vim.notify("Opened VSCode: " .. node.absolute_path)
-          end, opts("Open in VSCode (WSL Remote)"))
+          end, opts("Open in VSCode"))
 
           -- フォルダ作成（カーソル位置の親ディレクトリに作成）
           vim.keymap.set("n", "A", function()
