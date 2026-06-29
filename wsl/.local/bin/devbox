@@ -36,7 +36,14 @@ connect() {
   fi
 
   echo "🔗 ssh ${USER_NAME}@${IP}"
-  ssh -o StrictHostKeyChecking=accept-new "${USER_NAME}@${IP}"
+  # 接続できない場合（NSG で送信元IPが許可されていない等）に約2分ハングするのを防ぐ。
+  # まず短いタイムアウトで TCP 到達性を確認し、不可ならフォールバックさせる。
+  if ! timeout 8 bash -c "cat < /dev/null > /dev/tcp/${IP}/22" 2>/dev/null; then
+    echo "⚠ ${IP}:22 に到達できません。NSG の許可IPと現在の公開IPがずれている可能性があります。" >&2
+    echo "  現在の公開IP: $(curl -fsS --max-time 5 https://api.ipify.org 2>/dev/null || echo '取得失敗')" >&2
+    return 1
+  fi
+  ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${USER_NAME}@${IP}"
 }
 
 connect || echo "（ローカルシェルに切り替えました）" >&2

@@ -4,7 +4,9 @@ local config = wezterm.config_builder()
 local WSL_DISTRO = wezterm.getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
 local WSL_NATIVE_DOMAIN = "WSL:" .. WSL_DISTRO
 local WSL_SSH_DOMAIN = "WSL-SSH"
-local CTRL_T_DOMAIN = WSL_NATIVE_DOMAIN
+-- Azure 開発サーバー(devbox)へ接続するコマンド（WSL 内で実行）
+-- ~/.local/bin/devbox が停止中の VM を自動起動してから SSH する
+local DEVBOX_LAUNCH_ARGS = { "zsh", "-lic", "~/.local/bin/devbox" }
 local CTRL_T_DEBUG_LOG = "~/.cache/wezterm-ctrl-t-debug.log"
 
 local function sh_quote(value)
@@ -50,25 +52,14 @@ local function get_last_dir(reason)
   return nil
 end
 
--- SSH ドメインの TCP 到達確認（Ctrl+t で SSH ドメインを使う場合のログ用）
-local function is_wsl_ssh_ready()
-  local success = wezterm.run_child_process({
-    "powershell.exe", "-NoProfile", "-Command",
-    "try {$client = New-Object Net.Sockets.TcpClient('127.0.0.1',2222); $client.Close(); exit 0} catch {exit 1}",
-  })
-  return success
-end
-
--- WezTerm 起動時に直近のディレクトリで開く
--- 起動時は WSL native domain を既定にする（SSH 待機で GUI 表示がブロックされるのを避ける / #182）
--- SSH は <leader> l のランチャーから明示的に選んだときだけ使う
+-- WezTerm 起動時は Azure 開発サーバー(devbox)に接続する（既定を Azure に置き換え）
+-- devbox スクリプトが停止中の VM を自動起動してから SSH する。
+-- az 未ログイン等で失敗した場合はローカルのログインシェルにフォールバックする。
+-- ローカル WSL を使いたいときは <leader> l のランチャー、または Ctrl+t（新規タブ）を使う。
 wezterm.on("gui-startup", function(cmd)
-  local last_dir = get_last_dir()
   local args = cmd or {}
   args.domain = { DomainName = WSL_NATIVE_DOMAIN }
-  if last_dir then
-    args.cwd = last_dir
-  end
+  args.args = DEVBOX_LAUNCH_ARGS
   wezterm.mux.spawn_window(args)
 end)
 
@@ -124,11 +115,16 @@ config.default_domain = WSL_NATIVE_DOMAIN
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
   {
+    label = "Azure devbox (SSH)",
+    domain = { DomainName = WSL_NATIVE_DOMAIN },
+    args = DEVBOX_LAUNCH_ARGS,
+  },
+  {
     label = "PowerShell",
     args = { "pwsh.exe" },
   },
   {
-    label = "WSL: " .. WSL_DISTRO .. " (native)",
+    label = "WSL local: " .. WSL_DISTRO .. " (native)",
     domain = { DomainName = WSL_NATIVE_DOMAIN },
   },
   {
@@ -251,6 +247,75 @@ end
 
 local window_mode_by_id = {}
 
+local function maximize_with_taskbar_excluded()
+  return wezterm.action_callback(function(window, pane)
+    local success, output = wezterm.run_child_process({
+      "powershell.exe",
+      "-NoProfile",
+      "-Command",
+      [[
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public class MonitorInfo {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RECT {
+        public int left;
+        public int top;
+        public int right;
+        public int bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFOEX {
+        public uint cbSize;
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
+        public char[] szDevice;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+    }
+
+    [DllImport("user32.dll")]
+    public static extern bool GetMonitorInfoA(IntPtr hMonitor, ref MONITORINFOEX lpmi);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromPoint([In] System.Drawing.Point pt, uint dwFlags);
+}
+"@
+
+        $monitor = [MonitorInfo]::MonitorFromPoint(
+            [System.Drawing.Point]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.X,
+                                       [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Y),
+            0x00000001
+        )
+        $info = New-Object MonitorInfo+MONITORINFOEX
+        $info.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($info)
+        [MonitorInfo]::GetMonitorInfoA($monitor, [ref]$info)
+
+        [int]$x = $info.rcWork.left
+        [int]$y = $info.rcWork.top
+        [int]$w = $info.rcWork.right - $info.rcWork.left
+        [int]$h = $info.rcWork.bottom - $info.rcWork.top
+
+        Write-Output "$x,$y,$w,$h"
+      ]],
+    })
+
+    if success and output then
+      local dims = output:match("^([0-9,-]+)")
+      if dims then
+        local x, y, w, h = dims:match("([^,]+),([^,]+),([^,]+),([^,]+)")
+        if x and y and w and h then
+          window:set_position(tonumber(x), tonumber(y))
+          window:set_inner_size(tonumber(w), tonumber(h))
+        end
+      end
+    end
+  end)
+end
+
 local function cycle_window_mode()
   return wezterm.action_callback(function(window, pane)
     local window_id = window:window_id()
@@ -262,7 +327,7 @@ local function cycle_window_mode()
     end
 
     if mode == "normal" then
-      window:maximize()
+      window:perform_action(maximize_with_taskbar_excluded(), pane)
       window_mode_by_id[window_id] = "maximized"
     elseif mode == "maximized" then
       window:toggle_fullscreen()
@@ -278,14 +343,31 @@ local function cycle_window_mode()
   end)
 end
 
+-- 指定パスが「ローカル WSL に実在するディレクトリ」かを確認する。
+-- Azure など別ホストの cwd（例: /home/azureuser）はローカルに無いので false になり、
+-- 新規タブ/ペインがローカルで chdir に失敗するのを防ぐ。
+local function wsl_dir_exists(path)
+  if type(path) ~= "string" or path:sub(1, 1) ~= "/" then
+    return false
+  end
+  local ok = wezterm.run_child_process({
+    "wsl.exe", "-d", WSL_DISTRO, "-e", "test", "-d", path,
+  })
+  return ok == true
+end
+
 local function current_pane_cwd(pane)
   local ok, cwd_uri = pcall(function()
     return pane:get_current_working_dir()
   end)
-  if ok and cwd_uri and cwd_uri.file_path then
+  if ok and cwd_uri and cwd_uri.file_path and wsl_dir_exists(cwd_uri.file_path) then
     return cwd_uri.file_path
   end
-  return get_last_dir()
+  local last = get_last_dir()
+  if last and wsl_dir_exists(last) then
+    return last
+  end
+  return nil
 end
 
 local function cwd_from_nvim_user_var(value)
@@ -293,45 +375,6 @@ local function cwd_from_nvim_user_var(value)
     return nil
   end
   return value:match("^(.-):%d+:%d+$") or value
-end
-
-local function is_wsl_absolute_path(value)
-  return type(value) == "string" and value:sub(1, 1) == "/"
-end
-
-local function safe_pane_value(pane, method_name)
-  local ok, value = pcall(function()
-    if pane and pane[method_name] then
-      return pane[method_name](pane)
-    end
-    return nil
-  end)
-  if ok then
-    return value
-  end
-  return "error:" .. tostring(value)
-end
-
-local function ctrl_t_spawn_command(cwd)
-  return "mkdir -p ~/.cache; "
-    .. "printf '[%s] ctrl-t spawned: requested_cwd=%s before_pwd=%s\\n' "
-    .. "\"$(date '+%Y-%m-%d %H:%M:%S')\" "
-    .. sh_quote(cwd)
-    .. " \"$PWD\" >> ~/.cache/wezterm-ctrl-t-debug.log; "
-    .. "cd "
-    .. sh_quote(cwd)
-    .. " 2>> ~/.cache/wezterm-ctrl-t-debug.log || { "
-    .. "printf '[%s] ctrl-t cd failed: requested_cwd=%s fallback=~\\n' "
-    .. "\"$(date '+%Y-%m-%d %H:%M:%S')\" "
-    .. sh_quote(cwd)
-    .. " >> ~/.cache/wezterm-ctrl-t-debug.log; cd ~; }; "
-    .. "printf '[%s] ctrl-t shell ready: pwd=%s\\n' \"$(date '+%Y-%m-%d %H:%M:%S')\" \"$PWD\" "
-    .. ">> ~/.cache/wezterm-ctrl-t-debug.log; "
-    .. "exec zsh -l"
-end
-
-local function is_wsl_absolute_path(value)
-  return type(value) == "string" and value:sub(1, 1) == "/"
 end
 
 local function agent_command_with_debug(agent_command, cwd)
@@ -472,61 +515,14 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成（設定された WSL ドメインで開く）
+  -- Tab新規作成: Azure 開発サーバー(devbox)に接続する（停止中なら自動起動して SSH）
   {
     key = "t",
     mods = "CTRL",
-    action = wezterm.action_callback(function(window, pane)
-      log_ctrl_t(
-        "pressed: pane_id="
-          .. tostring(safe_pane_value(pane, "pane_id"))
-          .. " domain="
-          .. tostring(safe_pane_value(pane, "get_domain_name"))
-      )
-      local ok, cwd_uri = pcall(function()
-        return pane:get_current_working_dir()
-      end)
-      local raw_cwd = ok and cwd_uri and cwd_uri.file_path or nil
-      log_ctrl_t(
-        "cwd_probe: ok="
-          .. tostring(ok)
-          .. " raw="
-          .. tostring(raw_cwd)
-          .. " uri="
-          .. tostring(cwd_uri)
-      )
-      if CTRL_T_DOMAIN == WSL_SSH_DOMAIN then
-        local ssh_ready = is_wsl_ssh_ready()
-        log_ctrl_t("ssh_ready_before_spawn=" .. tostring(ssh_ready))
-      end
-      local cwd = raw_cwd
-      if not is_wsl_absolute_path(cwd) then
-        cwd = get_last_dir("fallback because raw cwd is not WSL absolute")
-      end
-      if is_wsl_absolute_path(cwd) then
-        log_ctrl_t("action=SpawnCommandInNewTab domain=" .. CTRL_T_DOMAIN .. " cwd=" .. cwd)
-        if CTRL_T_DOMAIN == WSL_NATIVE_DOMAIN then
-          window:perform_action(
-            act.SpawnCommandInNewTab({
-              domain = { DomainName = CTRL_T_DOMAIN },
-              cwd = cwd,
-            }),
-            pane
-          )
-        else
-          window:perform_action(
-            act.SpawnCommandInNewTab({
-              domain = { DomainName = CTRL_T_DOMAIN },
-              args = { "sh", "-lc", ctrl_t_spawn_command(cwd) },
-            }),
-            pane
-          )
-        end
-      else
-        log_ctrl_t("action=SpawnTab domain=" .. CTRL_T_DOMAIN .. " reason=no safe cwd")
-        window:perform_action(act.SpawnTab({ DomainName = CTRL_T_DOMAIN }), pane)
-      end
-    end),
+    action = act.SpawnCommandInNewTab({
+      domain = { DomainName = WSL_NATIVE_DOMAIN },
+      args = DEVBOX_LAUNCH_ARGS,
+    }),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
@@ -605,6 +601,15 @@ config.keys = {
     action = act.SpawnCommandInNewTab({
       domain = { DomainName = "local" },
       args = { "pwsh.exe", "-NoLogo" },
+    }),
+  },
+  {
+    -- Azure devbox を新規タブで開く（停止中なら自動起動して SSH）
+    key = "a",
+    mods = "LEADER",
+    action = act.SpawnCommandInNewTab({
+      domain = { DomainName = WSL_NATIVE_DOMAIN },
+      args = DEVBOX_LAUNCH_ARGS,
     }),
   },
 }
