@@ -12,10 +12,30 @@ export DEBIAN_FRONTEND=noninteractive
 # =============================================================
 
 echo "########## 1) apt パッケージ ##########"
+# neovim は apt 版が古すぎる(0.9.5)ため入れない。後段で stable tarball を入れる。
 sudo apt-get update -qq
 sudo apt-get install -y -qq \
-  zsh neovim git curl wget build-essential tmux \
+  zsh git curl wget build-essential tmux \
   fzf zoxide golang-go unzip ca-certificates jq
+
+echo "########## 1.5) Neovim (stable / tarball) ##########"
+# 設定が nvim 0.11+ を要求するため、公式 stable を /opt に入れて ~/.local/bin にリンク。
+if ! /opt/nvim/bin/nvim --version >/dev/null 2>&1; then
+  tmp_nvim="$(mktemp -d)"
+  url="https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz"
+  if ! curl -fsSL -o "$tmp_nvim/nvim.tar.gz" "$url"; then
+    url="https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz"
+    curl -fsSL -o "$tmp_nvim/nvim.tar.gz" "$url"
+  fi
+  extracted="$(tar -tzf "$tmp_nvim/nvim.tar.gz" | head -1 | cut -d/ -f1)"
+  sudo rm -rf /opt/nvim "/opt/$extracted"
+  sudo tar -C /opt -xzf "$tmp_nvim/nvim.tar.gz"
+  sudo mv "/opt/$extracted" /opt/nvim
+  rm -rf "$tmp_nvim"
+fi
+mkdir -p "$HOME/.local/bin"
+ln -sf /opt/nvim/bin/nvim "$HOME/.local/bin/nvim"
+echo "nvim: $(/opt/nvim/bin/nvim --version | head -1)"
 
 echo "########## 2) GitHub CLI (gh) ##########"
 if ! command -v gh >/dev/null 2>&1; then
