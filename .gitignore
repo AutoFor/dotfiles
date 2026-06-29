@@ -54,3 +54,6 @@ $RECYCLE.BIN/
 # ===== クレデンシャルのテンプレートは追跡（実ファイルは除外） =====
 # claude/github-app-config.env.example → 追跡する
 # claude/mcp/mcp-config.json.example → 追跡する
+
+# ===== nvim マシンローカル機能上書き =====
+nvim/lua/features_local.lua

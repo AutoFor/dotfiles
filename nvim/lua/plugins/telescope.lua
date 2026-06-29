@@ -1,9 +1,18 @@
+local os_util = require("os_util")
+
+-- telescope-fzf-native のビルドコマンドは OS で異なる。
+-- WSL/Linux: make / Windows: cmake（要 cmake + C コンパイラ）
+local fzf_build = os_util.is_win
+  and "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build"
+  or "make"
+
 return {
   {
     "nvim-telescope/telescope.nvim",
-dependencies = {
+    enabled = require("features").telescope,
+    dependencies = {
       "nvim-lua/plenary.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+      { "nvim-telescope/telescope-fzf-native.nvim", build = fzf_build },
     },
     config = function()
       local telescope = require("telescope")
@@ -29,7 +38,9 @@ dependencies = {
         },
       })
 
-      telescope.load_extension("fzf")
+      -- fzf-native がビルドできていない環境（cmake/compiler 無し）でも
+      -- telescope 自体は使えるよう、拡張ロードは握りつぶす。
+      pcall(telescope.load_extension, "fzf")
 
       -- ファイル名検索
       vim.keymap.set("n", "<leader>ff", builtin.find_files, { desc = "Telescope: find files" })

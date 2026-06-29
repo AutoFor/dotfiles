@@ -1,5 +1,6 @@
 return {
   "hedyhli/outline.nvim",
+  enabled = require("features").outline,
   cmd = { "Outline", "OutlineOpen" },
   keys = {
     { "<leader>o", "<cmd>Outline<CR>", desc = "Toggle outline" },

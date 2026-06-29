@@ -1,6 +1,7 @@
 return {
   {
     "iamcco/markdown-preview.nvim",
+    enabled = require("features").markdown_preview,
     cmd = { "MarkdownPreview", "MarkdownPreviewStop", "MarkdownPreviewToggle" },
     ft = { "markdown" },
     build = "cd app && npm install",

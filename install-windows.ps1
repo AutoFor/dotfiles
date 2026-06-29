@@ -90,6 +90,13 @@ if (Test-Path $YamabukiRDir) {
 else {
     Write-Host "  [skip] $YamabukiRDir -> Yamabuki R not found"
 }
+Write-Host ""
+Write-Host "=== Neovim 設定のリンク ==="
+
+# nvim 設定（WSL/Windows 共有）→ %LOCALAPPDATA%\nvim
+$NvimSrc  = Join-Path $PSScriptRoot "nvim"
+$NvimDest = Join-Path $env:LOCALAPPDATA "nvim"
+Link-Directory -Source $NvimSrc -Destination $NvimDest
 
 Write-Host ""
 Write-Host "=== 完了 ==="

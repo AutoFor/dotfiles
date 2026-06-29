@@ -68,7 +68,7 @@ link_file "$DOTFILES_DIR/wsl/.gitconfig" "$HOME/.gitconfig"
 # --- WSL .config 配下 ---
 link_file "$DOTFILES_DIR/wsl/.config/gh/config.yml" "$HOME/.config/gh/config.yml"
 link_file "$DOTFILES_DIR/wsl/.config/git/ignore"    "$HOME/.config/git/ignore"
-link_file "$DOTFILES_DIR/wsl/.config/nvim"          "$HOME/.config/nvim"
+link_file "$DOTFILES_DIR/nvim"          "$HOME/.config/nvim"
 
 echo ""
 echo "=== Claude Code 設定ファイルのリンク ==="
