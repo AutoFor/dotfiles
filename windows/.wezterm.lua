@@ -468,7 +468,7 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
   -- 接続し、その同じディレクトリで claude を開く。ローカルなら従来どおり。
   local nvim_cwd = cwd_from_nvim_user_var(value)
   if nvim_cwd and not wsl_dir_exists(nvim_cwd) then
-    local devbox_cmd = "DEVBOX_CD=" .. sh_quote(nvim_cwd) .. " DEVBOX_EXEC=claude ~/.local/bin/devbox"
+    local devbox_cmd = "DEVBOX_CD=" .. sh_quote(nvim_cwd) .. " DEVBOX_EXEC='claude -y' ~/.local/bin/devbox"
     window:perform_action(act.SplitPane({
       direction = "Right",
       size = { Percent = 30 },
@@ -481,7 +481,7 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
   local split = {
     direction = "Right",
     size = { Percent = 30 },
-    command = { args = { "zsh", "-lic", agent_command_with_debug("claude", cwd) } },
+    command = { args = { "zsh", "-lic", agent_command_with_debug("claude -y", cwd) } },
   }
   if cwd then
     split.command.cwd = cwd
@@ -501,7 +501,7 @@ config.keys = {
     -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
     key = "v",
     mods = "LEADER",
-    action = open_nvim_with_agent("claude"),
+    action = open_nvim_with_agent("claude -y"),
   },
   {
     --workspaceの名前変更
