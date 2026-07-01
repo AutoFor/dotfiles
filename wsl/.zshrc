@@ -83,7 +83,9 @@ __wezterm_set_user_var() {
   printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded"
 }
 
-nvim() {
+# nvim: プレーン（素の nvim / nvim-tree のみ）
+# nvimc: WezTerm 上で右に claude -y ペインを開いてから nvim を起動する
+nvimc() {
   if [[ -n "${SSH_CONNECTION:-}" || -n "${WEZTERM_PANE:-}" || -n "${WEZTERM_UNIX_SOCKET:-}" ]]; then
     local marker="${PWD}:$$:${RANDOM}"
     mkdir -p "$HOME/.cache"
