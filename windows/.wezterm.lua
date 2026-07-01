@@ -1,7 +1,16 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
-local WSL_DISTRO = wezterm.getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
+
+-- 一部の WezTerm バージョンには wezterm.getenv が無いため os.getenv にフォールバックする
+local function getenv(name)
+  if wezterm.getenv then
+    return wezterm.getenv(name)
+  end
+  return os.getenv(name)
+end
+
+local WSL_DISTRO = getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
 local WSL_NATIVE_DOMAIN = "WSL:" .. WSL_DISTRO
 local WSL_SSH_DOMAIN = "WSL-SSH"
 -- Azure 開発サーバー(devbox)へ接続するコマンド（WSL 内で実行）
@@ -31,7 +40,7 @@ local function wsl_output(args)
 end
 
 local WSL_HOME = wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$HOME\"" }) or "~"
-local WSL_USER = wezterm.getenv("WEZTERM_WSL_USER")
+local WSL_USER = getenv("WEZTERM_WSL_USER")
   or wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$USER\"" })
   or "root"
 
@@ -370,6 +379,22 @@ local function current_pane_cwd(pane)
   return nil
 end
 
+-- devbox を新規タブで開く。ローカルに実在する cwd を明示することで、
+-- Azure 等リモートの cwd（例: /home/azureuser）を継いで WSL 側の chdir が
+-- 失敗する（CreateProcessCommon:810 chdir failed 2）のを防ぐ。
+local function spawn_devbox_tab()
+  return wezterm.action_callback(function(window, pane)
+    window:perform_action(
+      act.SpawnCommandInNewTab({
+        domain = { DomainName = WSL_NATIVE_DOMAIN },
+        args = DEVBOX_LAUNCH_ARGS,
+        cwd = current_pane_cwd(pane) or WSL_HOME,
+      }),
+      pane
+    )
+  end)
+end
+
 local function cwd_from_nvim_user_var(value)
   if not value or value == "" then
     return nil
@@ -519,10 +544,7 @@ config.keys = {
   {
     key = "t",
     mods = "CTRL",
-    action = act.SpawnCommandInNewTab({
-      domain = { DomainName = WSL_NATIVE_DOMAIN },
-      args = DEVBOX_LAUNCH_ARGS,
-    }),
+    action = spawn_devbox_tab(),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
@@ -538,9 +560,10 @@ config.keys = {
   -- 貼り付け
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
-  -- Pane作成 leader + r or d
-  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
-  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+  -- Pane作成 leader + r or d（Azure devbox 接続で分割。cwd は WSL_HOME 固定で
+  -- Azure 側 cwd(/home/azureuser 等) をローカルが継承して chdir 失敗するのを防ぐ）
+  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
+  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
@@ -607,10 +630,7 @@ config.keys = {
     -- Azure devbox を新規タブで開く（停止中なら自動起動して SSH）
     key = "a",
     mods = "LEADER",
-    action = act.SpawnCommandInNewTab({
-      domain = { DomainName = WSL_NATIVE_DOMAIN },
-      args = DEVBOX_LAUNCH_ARGS,
-    }),
+    action = spawn_devbox_tab(),
   },
 }
 
