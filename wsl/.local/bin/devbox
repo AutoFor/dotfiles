@@ -116,8 +116,21 @@ connect() {
     fi
   fi
 
-  dbg "ssh 接続を開始: ${USER_NAME}@${IP}"
-  ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${USER_NAME}@${IP}"
+  dbg "ssh 接続を開始: ${USER_NAME}@${IP} (cd='${DEVBOX_CD:-}' exec='${DEVBOX_EXEC:-}')"
+  # DEVBOX_CD/DEVBOX_EXEC が指定されていれば、Azure 側で cd してからコマンドを起動する
+  # （nvim の agent ペインが同じプロジェクトディレクトリで claude を開く用途）。
+  if [ -n "${DEVBOX_CD:-}" ] || [ -n "${DEVBOX_EXEC:-}" ]; then
+    local rcmd=""
+    [ -n "${DEVBOX_CD:-}" ] && rcmd="cd $(printf '%q' "$DEVBOX_CD") 2>/dev/null || true; "
+    if [ -n "${DEVBOX_EXEC:-}" ]; then
+      rcmd="${rcmd}exec zsh -lic $(printf '%q' "$DEVBOX_EXEC")"
+    else
+      rcmd="${rcmd}exec zsh -l"
+    fi
+    ssh -t -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${USER_NAME}@${IP}" "$rcmd"
+  else
+    ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "${USER_NAME}@${IP}"
+  fi
   local rc=$?
   dbg "ssh 終了 rc=$rc（0=正常切断, それ以外=接続/認証失敗）"
   return $rc

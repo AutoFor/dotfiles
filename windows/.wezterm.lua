@@ -464,7 +464,20 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     return
   end
 
-  local cwd = cwd_from_nvim_user_var(value) or current_pane_cwd(pane)
+  -- nvim の cwd。Azure(リモート=ローカルに実在しない)なら agent ペインも devbox
+  -- 接続し、その同じディレクトリで claude を開く。ローカルなら従来どおり。
+  local nvim_cwd = cwd_from_nvim_user_var(value)
+  if nvim_cwd and not wsl_dir_exists(nvim_cwd) then
+    local devbox_cmd = "DEVBOX_CD=" .. sh_quote(nvim_cwd) .. " DEVBOX_EXEC=claude ~/.local/bin/devbox"
+    window:perform_action(act.SplitPane({
+      direction = "Right",
+      size = { Percent = 30 },
+      command = { args = { "zsh", "-lic", devbox_cmd }, cwd = WSL_HOME },
+    }), pane)
+    return
+  end
+
+  local cwd = (nvim_cwd and wsl_dir_exists(nvim_cwd) and nvim_cwd) or current_pane_cwd(pane)
   local split = {
     direction = "Right",
     size = { Percent = 30 },
