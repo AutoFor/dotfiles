@@ -303,9 +303,11 @@ gwb() {
   fi
 }
 
-# WSL_INTEROP をサブプロセスに引き継ぐ
-if [ -z "$WSL_INTEROP" ]; then
-  export WSL_INTEROP=$(ls -t /run/WSL/*_interop 2>/dev/null | head -1)
+# WSL_INTEROP をサブプロセスに引き継ぐ（WSL 環境のときだけ）
+# Azure 等の非WSLには /run/WSL が無く、zsh のグロブが "no matches found" を出すため -d でガードする
+if [[ -z "$WSL_INTEROP" && -d /run/WSL ]]; then
+  # (N)=該当なしでもエラーにしない（nomatch 抑止）
+  export WSL_INTEROP=$(ls -t /run/WSL/*_interop(N) 2>/dev/null | head -1)
 fi
 
 # pptx-meiryo: PowerPoint フォントを Meiryo UI に変換
