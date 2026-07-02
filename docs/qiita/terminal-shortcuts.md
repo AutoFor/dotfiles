@@ -76,6 +76,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `<leader> →p` | ペインをオーバーレイ表示して番号で選択（tmux display-panes 相当） | **p**ane |
 | `<leader> →q` | ペイン一覧をオーバーレイ表示（`Esc` で閉じる） | **q**uery（一覧照会） |
 | `<leader> →!` | 現在のペインを新規タブに切り出す | tmux の `!`（break-pane）由来 |
+| `<leader> →j` | 最後に通知が来た Claude Code のペインへジャンプ | **j**ump |
 
 ### コピーモード（vi ライク）
 
@@ -111,6 +112,25 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Ctrl+p` / `Ctrl+Shift+p` | コマンドパレットを開く | **p**alette（VS Code 由来） |
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
 | `Alt+Enter` | 通常 → 最大化（タスクバーを残す） → フルスクリーンを切り替え | Enter = 確定・最大化 |
+
+### Claude Code 通知連携（WSL / SSH リモート両対応）
+
+Claude Code の Stop / Notification hook は `~/.claude/notify.sh` を呼び、実行環境に応じて通知経路を切り替える。
+
+| 環境 | 通知経路 |
+|------|---------|
+| WSL | `pwsh.exe` + BurntToast で Windows トースト（従来どおり） |
+| SSH リモート（Azure devbox 等） | OSC 777 エスケープシーケンス → 手元の WezTerm が Windows トーストを表示 |
+
+どちらもタイトルに `[ディレクトリ名]`（SSH の場合は `[ホスト名:ディレクトリ名]`）が付くので、複数タブで Claude Code を並行実行していてもどのセッションの通知か区別できる。
+
+SSH リモートの場合はさらに OSC 1337 SetUserVar（`claude_notify`）も発行し、WezTerm 側で以下が動く:
+
+- 通知元ペインのタブタイトルに `🔔 ディレクトリ名` のマークが付く（そのペインにフォーカスすると元のタイトルに復元）
+- `<leader> →j` で「最後に通知が来たペイン」へジャンプできる（別ウィンドウ・別タブでも可。トーストのクリックでは特定タブに飛べないため、その代替）
+- 見ているペインからの通知はトーストにしない（`notification_handling = "SuppressFromFocusedPane"`、WezTerm 20240127 以降）
+
+なお tmux を挟む場合は `set -g allow-passthrough on` が必要。
 
 ### WSL ドメイン設定（リサイズ安定化）
 

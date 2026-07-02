@@ -1,7 +1,16 @@
 local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
-local WSL_DISTRO = wezterm.getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
+
+-- 一部の WezTerm バージョンには wezterm.getenv が無いため os.getenv にフォールバックする
+local function getenv(name)
+  if wezterm.getenv then
+    return wezterm.getenv(name)
+  end
+  return os.getenv(name)
+end
+
+local WSL_DISTRO = getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
 local WSL_NATIVE_DOMAIN = "WSL:" .. WSL_DISTRO
 local WSL_SSH_DOMAIN = "WSL-SSH"
 -- Azure 開発サーバー(devbox)へ接続するコマンド（WSL 内で実行）
@@ -31,7 +40,7 @@ local function wsl_output(args)
 end
 
 local WSL_HOME = wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$HOME\"" }) or "~"
-local WSL_USER = wezterm.getenv("WEZTERM_WSL_USER")
+local WSL_USER = getenv("WEZTERM_WSL_USER")
   or wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$USER\"" })
   or "root"
 
@@ -65,6 +74,9 @@ end)
 
 
 config.automatically_reload_config = true
+-- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
+-- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
+config.notification_handling = "SuppressFromFocusedPane"
 config.font = wezterm.font("HackGen Console NF")
 config.font_size = 12.0
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
@@ -370,6 +382,22 @@ local function current_pane_cwd(pane)
   return nil
 end
 
+-- devbox を新規タブで開く。ローカルに実在する cwd を明示することで、
+-- Azure 等リモートの cwd（例: /home/azureuser）を継いで WSL 側の chdir が
+-- 失敗する（CreateProcessCommon:810 chdir failed 2）のを防ぐ。
+local function spawn_devbox_tab()
+  return wezterm.action_callback(function(window, pane)
+    window:perform_action(
+      act.SpawnCommandInNewTab({
+        domain = { DomainName = WSL_NATIVE_DOMAIN },
+        args = DEVBOX_LAUNCH_ARGS,
+        cwd = current_pane_cwd(pane) or WSL_HOME,
+      }),
+      pane
+    )
+  end)
+end
+
 local function cwd_from_nvim_user_var(value)
   if not value or value == "" then
     return nil
@@ -408,10 +436,63 @@ local function open_nvim_with_agent(agent_command)
   end)
 end
 
+-- Claude Code hook（~/.claude/notify.sh）からの通知。
+-- リモート側が OSC 1337 SetUserVar "claude_notify" を発行すると、通知元ペインを記録して
+-- タブタイトルに 🔔 を付ける。フォーカスすると解除。LEADER+j で最後に通知したペインへジャンプ。
+local claude_notified = {} -- pane_id -> 通知前の明示タブタイトル（"" = 明示タイトルなし）
+local claude_notify_order = {} -- 通知順の pane_id（新しいものが末尾）
+
+local function claude_notify_forget(pane_id)
+  claude_notified[pane_id] = nil
+  for i = #claude_notify_order, 1, -1 do
+    if claude_notify_order[i] == pane_id then
+      table.remove(claude_notify_order, i)
+    end
+  end
+end
+
+local function claude_notify_clear_mark(pane_id)
+  local original = claude_notified[pane_id]
+  if original ~= nil then
+    local mux_pane = wezterm.mux.get_pane(pane_id)
+    local tab = mux_pane and mux_pane:tab() or nil
+    if tab then
+      tab:set_title(original)
+    end
+  end
+  claude_notify_forget(pane_id)
+end
+
+local function jump_to_notified_pane()
+  return wezterm.action_callback(function(window, pane)
+    while #claude_notify_order > 0 do
+      local target = claude_notify_order[#claude_notify_order]
+      local mux_pane = wezterm.mux.get_pane(target)
+      if mux_pane then
+        local mux_win = mux_pane:window()
+        local gui_win = mux_win and mux_win:gui_window() or nil
+        if gui_win then
+          gui_win:focus()
+        end
+        local tab = mux_pane:tab()
+        if tab then
+          tab:activate()
+        end
+        mux_pane:activate()
+        return
+      end
+      -- ペインが既に閉じられていたら履歴から捨てて次を試す
+      claude_notify_forget(target)
+    end
+  end)
+end
+
 -- フォーカス中のペイン ID を WSL ファイルに書き出す（SSH ドメインでは $WEZTERM_PANE が
 -- 環境変数として渡されないため、gh-finish などのスクリプトがフォールバックとして参照する）
 wezterm.on("pane-focus-changed", function(window, pane)
   local pane_id = pane:pane_id()
+  -- 通知マークの付いたペインに来たら解除してタイトルを復元
+  claude_notify_clear_mark(pane_id)
   wezterm.run_child_process({
     "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-c",
     "mkdir -p ~/.cache && echo " .. tostring(pane_id) .. " > ~/.cache/wezterm-focused-pane",
@@ -429,6 +510,31 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     return
   end
 
+  if name == "claude_notify" then
+    -- payload: "ディレクトリ名\tタイトル\tメッセージ"（notify.sh が base64 で送信、WezTerm が復号済み）
+    local pane_id = pane:pane_id()
+    -- 通知元ペインを見ているときはマーク不要
+    if window:is_focused() and window:active_pane():pane_id() == pane_id then
+      return
+    end
+    local dir = value:match("^([^\t]*)") or ""
+    local mux_pane = wezterm.mux.get_pane(pane_id)
+    local tab = mux_pane and mux_pane:tab() or nil
+    if tab then
+      if claude_notified[pane_id] == nil then
+        claude_notified[pane_id] = tab:get_title() or ""
+      end
+      tab:set_title("🔔 " .. (dir ~= "" and dir or "claude"))
+    end
+    for i = #claude_notify_order, 1, -1 do
+      if claude_notify_order[i] == pane_id then
+        table.remove(claude_notify_order, i)
+      end
+    end
+    table.insert(claude_notify_order, pane_id)
+    return
+  end
+
   if name ~= "open_agent_pane_for_nvim" then
     return
   end
@@ -439,11 +545,24 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     return
   end
 
-  local cwd = cwd_from_nvim_user_var(value) or current_pane_cwd(pane)
+  -- nvim の cwd。Azure(リモート=ローカルに実在しない)なら agent ペインも devbox
+  -- 接続し、その同じディレクトリで claude を開く。ローカルなら従来どおり。
+  local nvim_cwd = cwd_from_nvim_user_var(value)
+  if nvim_cwd and not wsl_dir_exists(nvim_cwd) then
+    local devbox_cmd = "DEVBOX_CD=" .. sh_quote(nvim_cwd) .. " DEVBOX_EXEC='claude -y' ~/.local/bin/devbox"
+    window:perform_action(act.SplitPane({
+      direction = "Right",
+      size = { Percent = 30 },
+      command = { args = { "zsh", "-lic", devbox_cmd }, cwd = WSL_HOME },
+    }), pane)
+    return
+  end
+
+  local cwd = (nvim_cwd and wsl_dir_exists(nvim_cwd) and nvim_cwd) or current_pane_cwd(pane)
   local split = {
     direction = "Right",
     size = { Percent = 30 },
-    command = { args = { "zsh", "-lic", agent_command_with_debug("claude", cwd) } },
+    command = { args = { "zsh", "-lic", agent_command_with_debug("claude -y", cwd) } },
   }
   if cwd then
     split.command.cwd = cwd
@@ -463,7 +582,7 @@ config.keys = {
     -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
     key = "v",
     mods = "LEADER",
-    action = open_nvim_with_agent("claude"),
+    action = open_nvim_with_agent("claude -y"),
   },
   {
     --workspaceの名前変更
@@ -519,10 +638,7 @@ config.keys = {
   {
     key = "t",
     mods = "CTRL",
-    action = act.SpawnCommandInNewTab({
-      domain = { DomainName = WSL_NATIVE_DOMAIN },
-      args = DEVBOX_LAUNCH_ARGS,
-    }),
+    action = spawn_devbox_tab(),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
@@ -538,9 +654,10 @@ config.keys = {
   -- 貼り付け
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
-  -- Pane作成 leader + r or d
-  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
-  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+  -- Pane作成 leader + r or d（Azure devbox 接続で分割。cwd は WSL_HOME 固定で
+  -- Azure 側 cwd(/home/azureuser 等) をローカルが継承して chdir 失敗するのを防ぐ）
+  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
+  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
@@ -607,10 +724,13 @@ config.keys = {
     -- Azure devbox を新規タブで開く（停止中なら自動起動して SSH）
     key = "a",
     mods = "LEADER",
-    action = act.SpawnCommandInNewTab({
-      domain = { DomainName = WSL_NATIVE_DOMAIN },
-      args = DEVBOX_LAUNCH_ARGS,
-    }),
+    action = spawn_devbox_tab(),
+  },
+  {
+    -- 最後に通知が来た Claude Code のペインへジャンプ（通知トーストの代わり）
+    key = "j",
+    mods = "LEADER",
+    action = jump_to_notified_pane(),
   },
 }
 

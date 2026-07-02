@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/mnt/c/Users/saint/AppData/Local/Microsoft/WindowsApps/pwsh.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"応答完了\" -Message \"処理が完了しました\" -IncludeWorkingDirectory"
+            "command": "\"$HOME/.claude/notify.sh\" '応答完了' '処理が完了しました'"
           }
         ]
       }
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/mnt/c/Users/saint/AppData/Local/Microsoft/WindowsApps/pwsh.exe -ExecutionPolicy Bypass -File \"$(wslpath -w ~/.claude/windows-notify.ps1)\" -Title \"入力待ち\" -Message \"Claudeが許可または入力を待っています\" -Sound IM -IncludeWorkingDirectory"
+            "command": "\"$HOME/.claude/notify.sh\" '入力待ち' 'Claudeが許可または入力を待っています' IM"
           }
         ]
       }
