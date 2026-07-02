@@ -203,22 +203,25 @@ systemd ベースの WSL では sshd のポートを決めているのは `sshd_
 
 接続確認: `ssh -i ~/.ssh/wezterm_wsl -p 2222 ubuntu@127.0.0.1 'echo ok'`。`ssh.socket` は `enabled` なので WSL 再起動後も自動で 2222 番が上がる。
 
-### 右下ステータスに接続ドメインを表示
+### 右上ステータスに接続状態を表示（mux / SSH / ローカル）
 
-「今開いているペインが Azure の WezTerm mux なのか、ローカルの WSL なのか分からない」問題の対策として、タブバーを画面下部（`config.tab_bar_at_bottom = true`）に移し、右端のステータスに **workspace 名・接続ドメイン名・アクティブなキーテーブル** を常時表示している。
+「今開いているペインが Azure の WezTerm mux 経由なのか、素の SSH なのか、ローカル WSL なのか分からない」問題の対策として、タブバー右端のステータスに **workspace 名・接続状態・アクティブなキーテーブル** を常時表示している。
 
 表示例:
 
 ```
-default    azure
+default    MUX:devbox
 ```
 
-ドメイン名の色で接続先を見分けられる（`WSL*` / `local` 以外はすべてリモート扱い）:
+接続状態はラベルと色の3値で見分けられる:
 
-| 色 | ドメイン例 | 意味 |
-|----|-----------|------|
-| 緑 | `WSL:Ubuntu`, `WSL-SSH`, `local` | ローカル（WSL / Windows） |
-| オレンジ | `azure`（mux 永続）, `SSHMUX:xxx`, `SSH:xxx` | リモート（Azure devbox など） |
+| 表示 | 色 | 意味 |
+|------|----|------|
+| `MUX:devbox` | オレンジ | **mux ドメイン経由**（永続。切断/スリープしてもリモート側でセッションが生き残る） |
+| `SSH:devbox` | 赤 | **素の SSH**（WSL ペイン内から `ssh` した状態。切断するとセッションも消える） |
+| `WSL:Ubuntu` / `local` | 緑 | ローカル（WSL / Windows） |
+
+仕組み: mux 接続はドメイン名（`azure`）で判定できるが、素の SSH はドメインが `WSL:Ubuntu` のままなのでドメイン名では検出できない。そこでシェルが OSC 7 で報告するホスト名（`pane:get_current_working_dir().host`）をローカルのホスト名と比較し、異なればリモートと判定している（リモート側のシェルが OSC 7 を発行していることが前提。dotfiles の zsh 設定なら発行される）。
 
 シェルからも確認したい場合は `echo $WEZTERM_EXECUTABLE` を実行し、`wezterm-mux-server` を含めば mux セッション、空または `wezterm` ならローカルと判断できる。
 
