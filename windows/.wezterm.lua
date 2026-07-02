@@ -74,6 +74,9 @@ end)
 
 
 config.automatically_reload_config = true
+-- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
+-- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
+config.notification_handling = "SuppressFromFocusedPane"
 config.font = wezterm.font("HackGen Console NF")
 config.font_size = 12.0
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
@@ -433,10 +436,63 @@ local function open_nvim_with_agent(agent_command)
   end)
 end
 
+-- Claude Code hook（~/.claude/notify.sh）からの通知。
+-- リモート側が OSC 1337 SetUserVar "claude_notify" を発行すると、通知元ペインを記録して
+-- タブタイトルに 🔔 を付ける。フォーカスすると解除。LEADER+j で最後に通知したペインへジャンプ。
+local claude_notified = {} -- pane_id -> 通知前の明示タブタイトル（"" = 明示タイトルなし）
+local claude_notify_order = {} -- 通知順の pane_id（新しいものが末尾）
+
+local function claude_notify_forget(pane_id)
+  claude_notified[pane_id] = nil
+  for i = #claude_notify_order, 1, -1 do
+    if claude_notify_order[i] == pane_id then
+      table.remove(claude_notify_order, i)
+    end
+  end
+end
+
+local function claude_notify_clear_mark(pane_id)
+  local original = claude_notified[pane_id]
+  if original ~= nil then
+    local mux_pane = wezterm.mux.get_pane(pane_id)
+    local tab = mux_pane and mux_pane:tab() or nil
+    if tab then
+      tab:set_title(original)
+    end
+  end
+  claude_notify_forget(pane_id)
+end
+
+local function jump_to_notified_pane()
+  return wezterm.action_callback(function(window, pane)
+    while #claude_notify_order > 0 do
+      local target = claude_notify_order[#claude_notify_order]
+      local mux_pane = wezterm.mux.get_pane(target)
+      if mux_pane then
+        local mux_win = mux_pane:window()
+        local gui_win = mux_win and mux_win:gui_window() or nil
+        if gui_win then
+          gui_win:focus()
+        end
+        local tab = mux_pane:tab()
+        if tab then
+          tab:activate()
+        end
+        mux_pane:activate()
+        return
+      end
+      -- ペインが既に閉じられていたら履歴から捨てて次を試す
+      claude_notify_forget(target)
+    end
+  end)
+end
+
 -- フォーカス中のペイン ID を WSL ファイルに書き出す（SSH ドメインでは $WEZTERM_PANE が
 -- 環境変数として渡されないため、gh-finish などのスクリプトがフォールバックとして参照する）
 wezterm.on("pane-focus-changed", function(window, pane)
   local pane_id = pane:pane_id()
+  -- 通知マークの付いたペインに来たら解除してタイトルを復元
+  claude_notify_clear_mark(pane_id)
   wezterm.run_child_process({
     "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-c",
     "mkdir -p ~/.cache && echo " .. tostring(pane_id) .. " > ~/.cache/wezterm-focused-pane",
@@ -451,6 +507,31 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
       window:perform_action(act.SendString(value), adjacent)
       window:perform_action(act.ActivatePaneDirection("Right"), pane)
     end
+    return
+  end
+
+  if name == "claude_notify" then
+    -- payload: "ディレクトリ名\tタイトル\tメッセージ"（notify.sh が base64 で送信、WezTerm が復号済み）
+    local pane_id = pane:pane_id()
+    -- 通知元ペインを見ているときはマーク不要
+    if window:is_focused() and window:active_pane():pane_id() == pane_id then
+      return
+    end
+    local dir = value:match("^([^\t]*)") or ""
+    local mux_pane = wezterm.mux.get_pane(pane_id)
+    local tab = mux_pane and mux_pane:tab() or nil
+    if tab then
+      if claude_notified[pane_id] == nil then
+        claude_notified[pane_id] = tab:get_title() or ""
+      end
+      tab:set_title("🔔 " .. (dir ~= "" and dir or "claude"))
+    end
+    for i = #claude_notify_order, 1, -1 do
+      if claude_notify_order[i] == pane_id then
+        table.remove(claude_notify_order, i)
+      end
+    end
+    table.insert(claude_notify_order, pane_id)
     return
   end
 
@@ -644,6 +725,12 @@ config.keys = {
     key = "a",
     mods = "LEADER",
     action = spawn_devbox_tab(),
+  },
+  {
+    -- 最後に通知が来た Claude Code のペインへジャンプ（通知トーストの代わり）
+    key = "j",
+    mods = "LEADER",
+    action = jump_to_notified_pane(),
   },
 }
 
