@@ -60,6 +60,8 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 | `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
 | `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+| `<leader> →Shift+A` | Azure mux ドメインに attach（既存の永続タブ/ペイン〈claude 等〉を丸ごと呼び戻す。スリープ/切断後の再接続用、VM は起動済みである必要あり） | **A**ttach |
+| `<leader> →Shift+D` | Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続） | **D**etach |
 
 ### Pane
 

@@ -120,12 +120,32 @@ config.ssh_domains = {
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
     multiplexing = "None",
   },
+  -- Azure devbox への永続 multiplexing ドメイン。
+  -- スリープ/切断で SSH が落ちても Azure 上の wezterm-mux-server が生き続け、
+  -- 再接続でペイン/プロセス(Claude Code 含む)がそのまま復帰する。
+  -- 事前: Azure に同一版 wezterm 導入済み、Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
+  -- 接続前に devbox --ensure で VM 起動+NSG を担保すること(Phase B)。
+  {
+    name = "azure",
+    remote_address = "20.46.165.130",
+    username = "azureuser",
+    ssh_option = {
+      identityfile = wezterm.home_dir .. "\\.ssh\\id_ed25519",
+    },
+    remote_wezterm_path = "/usr/bin/wezterm",
+    multiplexing = "WezTerm",
+  },
 }
 
 config.default_domain = WSL_NATIVE_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
+  {
+    -- 永続 mux ドメイン。切断/スリープでも Azure 側セッションが生き残る。
+    label = "Azure devbox (mux 永続)",
+    domain = { DomainName = "azure" },
+  },
   {
     label = "Azure devbox (SSH)",
     domain = { DomainName = WSL_NATIVE_DOMAIN },
@@ -731,6 +751,19 @@ config.keys = {
     key = "j",
     mods = "LEADER",
     action = jump_to_notified_pane(),
+  },
+  {
+    -- Azure mux ドメインに attach：既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。
+    -- スリープ/切断後の再接続はこれを使う（VM は起動済みである必要あり）。
+    key = "A",
+    mods = "LEADER|SHIFT",
+    action = act.AttachDomain("azure"),
+  },
+  {
+    -- Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続）。
+    key = "D",
+    mods = "LEADER|SHIFT",
+    action = act.DetachDomain({ DomainName = "azure" }),
   },
 }
 
