@@ -181,6 +181,25 @@ systemd ベースの WSL では sshd のポートを決めているのは `sshd_
 
 接続確認: `ssh -i ~/.ssh/wezterm_wsl -p 2222 ubuntu@127.0.0.1 'echo ok'`。`ssh.socket` は `enabled` なので WSL 再起動後も自動で 2222 番が上がる。
 
+### 右下ステータスに接続ドメインを表示
+
+「今開いているペインが Azure の WezTerm mux なのか、ローカルの WSL なのか分からない」問題の対策として、タブバーを画面下部（`config.tab_bar_at_bottom = true`）に移し、右端のステータスに **workspace 名・接続ドメイン名・アクティブなキーテーブル** を常時表示している。
+
+表示例:
+
+```
+default    SSHMUX:azure-devbox
+```
+
+ドメイン名の色で接続先を見分けられる:
+
+| 色 | ドメイン例 | 意味 |
+|----|-----------|------|
+| 緑 | `WSL:Ubuntu`, `WSL-SSH`, `local` | ローカル（WSL / Windows） |
+| オレンジ | `SSHMUX:xxx`, `SSH:xxx`, `TLS:xxx` | リモート（Azure devbox の mux など） |
+
+シェルからも確認したい場合は `echo $WEZTERM_EXECUTABLE` を実行し、`wezterm-mux-server` を含めば mux セッション、空または `wezterm` ならローカルと判断できる。
+
 ### SSH（Tailscale 経由）
 
 外出先から Tailscale 経由でリモートマシンに接続するとき、通常の `ssh` コマンドの代わりに `wezterm ssh` を使うと、WezTerm のペイン分割などのローカル機能がそのまま使える。
