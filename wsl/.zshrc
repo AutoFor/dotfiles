@@ -264,6 +264,11 @@ codex() {
 # ccusage daily / weekly / monthly / session / blocks --live など
 alias ccusage='npx ccusage@latest'
 
+# tssh: trzsz でラップした SSH（ターミナル内ファイル転送）
+# リモート側で trz → ローカルのファイル選択ダイアログが開いてアップロード（要 zenity + WSLg）
+# リモート側で tsz <file> → ローカルにダウンロード
+alias tssh='trzsz -d ssh'
+
 # gh worktree branch: Issue作成 + worktree作成
 # gwb     → worktree作成してcd "path"をクリップボードにコピー
 # gwb r   → 右分割、gwb d → 下分割
