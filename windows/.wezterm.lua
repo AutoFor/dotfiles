@@ -120,12 +120,32 @@ config.ssh_domains = {
     -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
     multiplexing = "None",
   },
+  -- Azure devbox への永続 multiplexing ドメイン。
+  -- スリープ/切断で SSH が落ちても Azure 上の wezterm-mux-server が生き続け、
+  -- 再接続でペイン/プロセス(Claude Code 含む)がそのまま復帰する。
+  -- 事前: Azure に同一版 wezterm 導入済み、Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
+  -- 接続前に devbox --ensure で VM 起動+NSG を担保すること(Phase B)。
+  {
+    name = "azure",
+    remote_address = "20.46.165.130",
+    username = "azureuser",
+    ssh_option = {
+      identityfile = wezterm.home_dir .. "\\.ssh\\id_ed25519",
+    },
+    remote_wezterm_path = "/usr/bin/wezterm",
+    multiplexing = "WezTerm",
+  },
 }
 
 config.default_domain = WSL_NATIVE_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
+  {
+    -- 永続 mux ドメイン。切断/スリープでも Azure 側セッションが生き残る。
+    label = "Azure devbox (mux 永続)",
+    domain = { DomainName = "azure" },
+  },
   {
     label = "Azure devbox (SSH)",
     domain = { DomainName = WSL_NATIVE_DOMAIN },
@@ -169,10 +189,13 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
+-- タブバー（右ステータス含む）を画面下部に表示
+-- tab_bar_at_bottom はレトロタブバー（use_fancy_tab_bar = false）でのみ有効
+-- （fancy のままだと下に移動しない。透過は opacity=1.0 のため未使用で実害なし）
+config.use_fancy_tab_bar = false
+config.tab_bar_at_bottom = true
 -- タブが一つの時も表示
 config.hide_tab_bar_if_only_one_tab = false
--- falseにするとタブバーの透過が効かなくなる
--- config.use_fancy_tab_bar = false
 
 -- タブバーの透過
 config.window_frame = {
@@ -192,6 +215,8 @@ config.show_new_tab_button_in_tab_bar = false
 config.colors = {
   tab_bar = {
     inactive_tab_edge = "none",
+    -- レトロタブバーの地色を背景（黒）に合わせる
+    background = "#000000",
   },
 }
 
@@ -230,15 +255,32 @@ end)
 -- keybinds
 ----------------------------------------------------
 
--- Show which key table is active in the status area
+-- 右下ステータス: workspace / 接続ドメイン / アクティブなキーテーブル
+-- ドメイン名で mux（SSHMUX: など）かローカル（WSL:Ubuntu など）かを見分けられるようにする
 wezterm.on("update-right-status", function(window, pane)
-  local key_table = window:active_key_table()
-  local workspace = wezterm.mux.get_active_workspace()
-  local status = workspace
-  if key_table then
-    status = status .. "  TABLE: " .. key_table
+  local ok, domain = pcall(function()
+    return pane:get_domain_name()
+  end)
+  domain = (ok and domain) and domain or "?"
+  -- WSL*/local 以外（azure mux, SSH:, SSHMUX: など）はリモート接続として扱う
+  local domain_color = "#e0af68"
+  if domain:match("^WSL") or domain == "local" then
+    domain_color = "#9ece6a"
   end
-  window:set_right_status(status .. "  ")
+
+  local items = {
+    { Foreground = { Color = "#7aa2f7" } },
+    { Text = wezterm.mux.get_active_workspace() },
+    { Foreground = { Color = domain_color } },
+    { Text = "  " .. wezterm.nerdfonts.md_server_network .. " " .. domain },
+  }
+  local key_table = window:active_key_table()
+  if key_table then
+    table.insert(items, { Foreground = { Color = "#f7768e" } })
+    table.insert(items, { Text = "  TABLE: " .. key_table })
+  end
+  table.insert(items, { Text = "  " })
+  window:set_right_status(wezterm.format(items))
 end)
 
 config.disable_default_key_bindings = true
@@ -731,6 +773,19 @@ config.keys = {
     key = "j",
     mods = "LEADER",
     action = jump_to_notified_pane(),
+  },
+  {
+    -- Azure mux ドメインに attach：既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。
+    -- スリープ/切断後の再接続はこれを使う（VM は起動済みである必要あり）。
+    key = "A",
+    mods = "LEADER|SHIFT",
+    action = act.AttachDomain("azure"),
+  },
+  {
+    -- Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続）。
+    key = "D",
+    mods = "LEADER|SHIFT",
+    action = act.DetachDomain({ DomainName = "azure" }),
   },
 }
 

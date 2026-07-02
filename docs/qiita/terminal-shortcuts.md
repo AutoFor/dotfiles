@@ -60,6 +60,8 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 | `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
 | `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+| `<leader> →Shift+A` | Azure mux ドメインに attach（既存の永続タブ/ペイン〈claude 等〉を丸ごと呼び戻す。スリープ/切断後の再接続用、VM は起動済みである必要あり） | **A**ttach |
+| `<leader> →Shift+D` | Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続） | **D**etach |
 
 ### Pane
 
@@ -201,6 +203,25 @@ systemd ベースの WSL では sshd のポートを決めているのは `sshd_
 
 接続確認: `ssh -i ~/.ssh/wezterm_wsl -p 2222 ubuntu@127.0.0.1 'echo ok'`。`ssh.socket` は `enabled` なので WSL 再起動後も自動で 2222 番が上がる。
 
+### 右下ステータスに接続ドメインを表示
+
+「今開いているペインが Azure の WezTerm mux なのか、ローカルの WSL なのか分からない」問題の対策として、タブバーを画面下部（`config.tab_bar_at_bottom = true`）に移し、右端のステータスに **workspace 名・接続ドメイン名・アクティブなキーテーブル** を常時表示している。
+
+表示例:
+
+```
+default    azure
+```
+
+ドメイン名の色で接続先を見分けられる（`WSL*` / `local` 以外はすべてリモート扱い）:
+
+| 色 | ドメイン例 | 意味 |
+|----|-----------|------|
+| 緑 | `WSL:Ubuntu`, `WSL-SSH`, `local` | ローカル（WSL / Windows） |
+| オレンジ | `azure`（mux 永続）, `SSHMUX:xxx`, `SSH:xxx` | リモート（Azure devbox など） |
+
+シェルからも確認したい場合は `echo $WEZTERM_EXECUTABLE` を実行し、`wezterm-mux-server` を含めば mux セッション、空または `wezterm` ならローカルと判断できる。
+
 ### SSH（Tailscale 経由）
 
 外出先から Tailscale 経由でリモートマシンに接続するとき、通常の `ssh` コマンドの代わりに `wezterm ssh` を使うと、WezTerm のペイン分割などのローカル機能がそのまま使える。
@@ -216,6 +237,45 @@ wezterm ssh user@tailscale-hostname
 Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 
 **なぜ動くか：** `wezterm ssh` は SSH 接続時に WezTerm のマルチプレクサをセットアップし、リモート側に `WEZTERM_PANE` と `WEZTERM_UNIX_SOCKET` を自動でセットする。これにより `wezterm cli split-pane` などのコマンドがリモートからでも動作する。
+
+### trzsz（SSH 経由のファイル転送）
+
+ターミナルの中だけでローカル ⇔ リモートのファイル転送ができるツール。scp のようにローカル側で別コマンドを打つ必要がなく、**リモート側で `trz` と打つとローカルにファイル選択ダイアログが開く**。
+
+| コマンド | 実行する場所 | 動作 | 由来 |
+|---------|------------|------|------|
+| `tssh user@host` | ローカル（WSL） | trzsz でラップした SSH 接続（`trzsz -d ssh` のエイリアス） | **t**rzsz + **ssh** |
+| `trz` | リモート | ローカルにファイル選択ダイアログが開き、選んだファイルをアップロード | **t**rzsz **r**eceive → **z**（rz 互換） |
+| `trz -d` | リモート | ディレクトリごとアップロード | **d**irectory |
+| `tsz <file>` | リモート | ファイルをローカルにダウンロード | **t**rzsz **s**end → **z**（sz 互換） |
+
+```bash
+# ローカル（WSL）から接続
+tssh azureuser@tailscale-hostname
+
+# リモート側で
+trz          # → ローカルにダイアログが開く。選んだファイルがカレントディレクトリに届く
+tsz file.txt # → ローカルにダウンロード（保存先ダイアログが開く）
+```
+
+ダイアログは WSLg 経由で Windows 上に表示される。Windows 側のファイルは `/mnt/c/...` から選べる。
+
+**セットアップ：** ローカル（WSL）とリモートの両方に trzsz-go を、ローカル（WSL）にはダイアログ表示用の zenity もインストールする。
+
+```bash
+# trzsz-go 本体（ローカル WSL・リモート共通）
+curl -sLO https://github.com/trzsz/trzsz-go/releases/download/v1.2.0/trzsz_1.2.0_linux_x86_64.deb
+sudo dpkg -i trzsz_1.2.0_linux_x86_64.deb
+
+# zenity（ローカル WSL のみ。trz のファイル選択ダイアログに必要）
+sudo apt install zenity
+```
+
+> **注意**: trzsz は「`ssh` コマンドを打つ側」（= WSL）にインストールする。普段 Windows を使っていても、WezTerm → WSL の zsh → `ssh` という流れなら trzsz が動くのは WSL 側。
+>
+> **注意**: trzsz は `ssh` コマンドをラップして動くため、`wezterm ssh` とは併用できない。ペイン分割などの WezTerm 機能を使いたいときは `wezterm ssh`、ファイル転送したいときは `tssh` と使い分ける。
+>
+> **制限**: `-d`（dragfile）によるドラッグ&ドロップアップロードは、Linux 版 trzsz が `/` 始まりの絶対パスしか認識しないため、エクスプローラーからのドラッグ（`C:\...` が貼り付く）では発動しない。WSL 構成では `trz` のダイアログを使うのが基本。
 
 ---
 
