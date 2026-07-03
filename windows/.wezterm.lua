@@ -456,6 +456,28 @@ local function spawn_devbox_tab()
   end)
 end
 
+-- Azure mux ドメインの新規タブを開く（切断してもセッションがリモート側に残る）。
+-- リモート（devbox）のペインから開いた場合は同じディレクトリを引き継ぐ。
+-- VM 停止中は接続できないため、その場合は <leader> a（devbox: 自動起動して SSH）で先に起こす。
+local function spawn_mux_tab()
+  return wezterm.action_callback(function(window, pane)
+    local cwd
+    local ok, uri = pcall(function()
+      return pane:get_current_working_dir()
+    end)
+    if ok and uri and uri.host and uri.host:lower() ~= WSL_HOSTNAME and uri.file_path then
+      cwd = uri.file_path
+    end
+    window:perform_action(
+      act.SpawnCommandInNewTab({
+        domain = { DomainName = "azure" },
+        cwd = cwd,
+      }),
+      pane
+    )
+  end)
+end
+
 local function cwd_from_nvim_user_var(value)
   if not value or value == "" then
     return nil
@@ -692,11 +714,11 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成: Azure 開発サーバー(devbox)に接続する（停止中なら自動起動して SSH）
+  -- Tab新規作成: Azure mux ドメインで開く（永続。VM 停止中は <leader> a で起こしてから）
   {
     key = "t",
     mods = "CTRL",
-    action = spawn_devbox_tab(),
+    action = spawn_mux_tab(),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },

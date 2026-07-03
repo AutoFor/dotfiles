@@ -50,7 +50,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
-| `Ctrl+t` | 新規タブを開く | ブラウザ由来（**t**ab） |
+| `Ctrl+t` | Azure mux ドメインの新規タブを開く（`MUX:devbox`。切断してもセッション維持。VM 停止中は `<leader> →a` で起こしてから） | ブラウザ由来（**t**ab） |
 | `Ctrl+w` | 現在のタブを閉じる | ブラウザ由来（**w**indow close） |
 | `Ctrl+Tab` | 次のタブへ移動 | ブラウザ由来 |
 | `Ctrl+Shift+Tab` | 前のタブへ移動 | 上記の逆 |
@@ -60,6 +60,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 | `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
 | `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+| `<leader> →a` | Azure devbox を素の SSH で開く（VM 停止中でも自動起動して接続。`SSH:devbox` 表示） | **a**zure |
 | `<leader> →Shift+A` | Azure mux ドメインに attach（既存の永続タブ/ペイン〈claude 等〉を丸ごと呼び戻す。スリープ/切断後の再接続用、VM は起動済みである必要あり） | **A**ttach |
 | `<leader> →Shift+D` | Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続） | **D**etach |
 
@@ -154,11 +155,8 @@ config.default_domain = "WSL:Ubuntu"
 
 ### WSL への接続: native 既定（SSH は手動時のみ）
 
-起動時・新規ウィンドウ・`Ctrl+t` はすべて **WSL ネイティブ統合**（`WSL_NATIVE_DOMAIN`）を使う。
-
-- `config.default_domain = WSL_NATIVE_DOMAIN`
-- `CTRL_T_DOMAIN = WSL_NATIVE_DOMAIN`
-- `gui-startup` は native で即起動（SSH 待機はしない）
+ローカル WSL を開く場合は **WSL ネイティブ統合**（`WSL_NATIVE_DOMAIN`）を使う（`config.default_domain = WSL_NATIVE_DOMAIN`）。
+なお現在は Azure devbox が開発の主戦場のため、起動時は devbox への SSH、`Ctrl+t` は Azure mux ドメインで開く構成になっている（前掲の Tab 表を参照）。
 
 **なぜ SSH を既定にしないか:** 一時は体感速度を狙って SSH（`127.0.0.1:2222`）を既定にしていたが、
 ① 起動時に SSH 待機すると WezTerm が空プロセス化して GUI が出ない、
