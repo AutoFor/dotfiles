@@ -348,6 +348,18 @@ sudo apt install zenity
 WSL パス（`/mnt/c/...`）・Windows パス（`C:\...` / `C:/...`）どちらも受け付ける。
 実体は `C:\tools\pptx-meiryo\pptx-meiryo.exe`（PowerPoint COM Interop、要 PowerPoint インストール済み）。
 
+### pplx（Perplexity API 連携）
+
+| コマンド | 動作 |
+|---------|------|
+| `pplx` | 対話モード（`pplx>` プロンプトで複数ターンの会話、`exit`/`quit`/Ctrl+D で終了、`/reset` で履歴クリア） |
+| `pplx "質問文"` | 単発モード。1回answerして終了 |
+| `pplx -m sonar-pro "質問文"` | モデルを指定（既定は `sonar`、`PPLX_MODEL` 環境変数でも上書き可） |
+
+Web 検索で根拠付けされた回答を返す Perplexity Sonar API（`/v1/sonar`）を呼び出す。
+APIキーはローカルに保存せず、起動のたびに Azure Key Vault（既定: `autofor-kv` / シークレット名: `perplexity-api-key`）から取得する。これにより毎回の起動時に Azure へのログイン状態・Key Vault への権限が正しいかを確認できる（`az login` が必要な場合はエラーで案内される）。テスト用に `PERPLEXITY_API_KEY` 環境変数を設定すると、その値が優先され Key Vault 取得はスキップされる。
+実体は `wsl/.local/bin/pplx`。
+
 ---
 
 ## Git
