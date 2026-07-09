@@ -91,19 +91,15 @@ local function tmux_bridge(keys, fallback_action)
 end
 
 -- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
--- セッションの実体はリモート側 tmux が持つため、休止/切断後に WezTerm を
--- 開き直すだけでペイン/プロセス(Claude Code 含む)ごと復帰する。
+-- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
+-- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
+-- 二重に開くレースがあるため、gui-startup では VM の起動担保だけ行う。
 -- 接続前に devbox.ps1 ensure で VM 起動と NSG(現在IPの許可)を担保する。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
-  local args = cmd or {}
-  args.domain = args.domain or { DomainName = DEVBOX_TMUX_DOMAIN }
-  local ok = pcall(function()
-    wezterm.mux.spawn_window(args)
-  end)
-  if not ok then
-    -- 接続できない場合はローカル PowerShell にフォールバック
-    wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo" }, domain = { DomainName = "local" } })
+  if cmd then
+    -- CLI から明示的にコマンド指定された場合 (wezterm start -- ...) はそれを尊重
+    wezterm.mux.spawn_window(cmd)
   end
 end)
 
@@ -162,8 +158,10 @@ config.ssh_domains = {
   },
 }
 
--- default_domain は local のまま (#214: セッション層は tmux に一本化。
--- mux ドメインは切り分け用フォールバックとして ssh_domains に残置)
+-- 既定ドメインはネイティブ SSH + tmux (#214)。起動時のウィンドウはここに生成される。
+-- VM 停止中に接続失敗した場合はウィンドウにエラーが表示されるので、
+-- LEADER+l のランチャーから PowerShell を開いて切り分けする。
+config.default_domain = DEVBOX_TMUX_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
