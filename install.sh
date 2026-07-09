@@ -63,6 +63,7 @@ link_file "$DOTFILES_DIR/linux/.zshenv"   "$HOME/.zshenv"
 link_file "$DOTFILES_DIR/linux/.zshrc"     "$HOME/.zshrc"
 link_file "$DOTFILES_DIR/linux/.bashrc"    "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/linux/.gitconfig" "$HOME/.gitconfig"
+link_file "$DOTFILES_DIR/linux/.tmux.conf"  "$HOME/.tmux.conf"
 
 # --- .config 配下 ---
 link_file "$DOTFILES_DIR/linux/.config/gh/config.yml" "$HOME/.config/gh/config.yml"

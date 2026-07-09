@@ -269,6 +269,11 @@ alias ccusage='npx ccusage@latest'
 # リモート側で tsz <file> → ローカルにダウンロード
 alias tssh='trzsz -d ssh'
 
+# tm: tmux のメインセッションに attach（無ければ作成）。tm <名前> で別セッション
+tm() {
+  tmux new-session -A -s "${1:-main}"
+}
+
 # gh worktree branch: Issue作成 + worktree作成
 # gwb     → worktree作成してcd "path"をクリップボードにコピー
 # gwb r   → 右分割、gwb d → 下分割
