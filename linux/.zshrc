@@ -75,12 +75,24 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$PATH:$HOME/.dotnet/tools"
 
+# エスケープシーケンスを最前面の端末 (WezTerm) まで届ける。
+# tmux 内では passthrough (ESC P tmux; ... ESC \) でラップしないと tmux に飲まれる
+# (.tmux.conf の allow-passthrough on とセット)
+__term_emit() {
+  local seq="$1"
+  if [[ -n "${TMUX:-}" ]]; then
+    printf '\033Ptmux;%s\033\\' "${seq//$'\033'/$'\033\033'}"
+  else
+    printf '%s' "$seq"
+  fi
+}
+
 __wezterm_set_user_var() {
   local name="$1"
   local value="$2"
   local encoded
   encoded=$(printf '%s' "$value" | base64 | tr -d '\n') || return
-  printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded"
+  __term_emit "$(printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded")"
 }
 
 # nvim: プレーン（素の nvim / nvim-tree のみ）
@@ -122,8 +134,10 @@ tmp() {
 }
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
+# tmux 内でも __term_emit がラップして届ける。WezTerm 側はこれで host=devbox を
+# 認識し、ステータス表示や tmux ブリッジ判定 (is_tmux_client_pane) が機能する
 __wezterm_osc7() {
-  printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
+  __term_emit "$(printf '\033]7;file://%s%s\007' "$(hostname)" "$PWD")"
 }
 precmd_functions+=(__wezterm_osc7)
 

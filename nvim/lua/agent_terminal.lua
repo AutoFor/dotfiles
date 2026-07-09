@@ -33,6 +33,10 @@ end
 local function set_wezterm_user_var(name, value)
   local encoded = vim.base64.encode(value)
   local osc = string.format("\027]1337;SetUserVar=%s=%s\007", name, encoded)
+  if vim.env.TMUX and vim.env.TMUX ~= "" then
+    -- tmux 内では passthrough でラップしないと tmux に飲まれる
+    osc = "\027Ptmux;" .. osc:gsub("\027", "\027\027") .. "\027\\"
+  end
   local ok = pcall(vim.api.nvim_chan_send, vim.v.stderr, osc)
   return ok
 end
