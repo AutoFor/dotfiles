@@ -2,76 +2,57 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
--- 一部の WezTerm バージョンには wezterm.getenv が無いため os.getenv にフォールバックする
-local function getenv(name)
-  if wezterm.getenv then
-    return wezterm.getenv(name)
-  end
-  return os.getenv(name)
-end
-
-local WSL_DISTRO = getenv("WEZTERM_WSL_DISTRO") or "Ubuntu"
-local WSL_NATIVE_DOMAIN = "WSL:" .. WSL_DISTRO
-local WSL_SSH_DOMAIN = "WSL-SSH"
--- Azure 開発サーバー(devbox)へ接続するコマンド（WSL 内で実行）
--- ~/.local/bin/devbox が停止中の VM を自動起動してから SSH する
-local DEVBOX_LAUNCH_ARGS = { "zsh", "-lic", "~/.local/bin/devbox" }
-local CTRL_T_DEBUG_LOG = "~/.cache/wezterm-ctrl-t-debug.log"
+-- Azure 開発サーバー (devbox) 関連の定数
+local DEVBOX_DOMAIN = "azure"
+local DEVBOX_HOST = "20.46.165.130"   -- Standard SKU の静的 IP（停止/再開で不変）
+local DEVBOX_USER = "azureuser"
+local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
+-- VM 起動 + NSG の現在IP許可を担保するスクリプト（windows/bin/devbox.ps1）。
+-- dotfiles を ~/dotfiles 以外に clone した場合は環境変数 DOTFILES_DIR で上書きする。
+local DOTFILES_DIR = os.getenv("DOTFILES_DIR") or (wezterm.home_dir .. "\\dotfiles")
+local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
 
 local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
-local function log_ctrl_t(message)
-  local line = os.date("%Y-%m-%d %H:%M:%S") .. " " .. tostring(message)
-  wezterm.log_info("[ctrl-t] " .. line)
-  wezterm.run_child_process({
-    "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc",
-    "mkdir -p ~/.cache; printf '%s\\n' " .. sh_quote(line) .. " >> " .. CTRL_T_DEBUG_LOG,
-  })
+-- devbox の VM 起動と NSG を担保する。22番に届く場合は az を呼ばず即 return するため、
+-- VM 起動中の普段は 1 秒程度で終わる（詳細は devbox.ps1 ensure）。
+local function ensure_devbox()
+  local ok = pcall(function()
+    wezterm.run_child_process({
+      "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", DEVBOX_PS1, "ensure",
+    })
+  end)
+  return ok
 end
 
-local function wsl_output(args)
-  local success, stdout = wezterm.run_child_process(args)
-  if success and stdout and stdout ~= "" then
-    return stdout:gsub("%s+$", "")
+-- ペインの cwd（azure ドメインならリモート側のパス）を返す
+local function pane_cwd(pane)
+  local ok, uri = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  if ok and uri and uri.file_path then
+    return uri.file_path
   end
   return nil
 end
 
-local WSL_HOME = wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$HOME\"" }) or "~"
-local WSL_USER = getenv("WEZTERM_WSL_USER")
-  or wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$USER\"" })
-  or "root"
--- ローカル WSL のホスト名（ステータス表示でリモート SSH 先と区別するために使う）
-local WSL_HOSTNAME = (wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "hostname" }) or ""):lower()
-
--- WSL の ~/.last_dir から直近のディレクトリを取得
-local function get_last_dir(reason)
-  local last_dir = wsl_output({
-    "wsl.exe", "-d", WSL_DISTRO, "-e", "cat", WSL_HOME .. "/.last_dir",
-  })
-  if last_dir then
-    if reason then
-      log_ctrl_t(reason .. ": last_dir=" .. last_dir)
-    end
-    return last_dir
-  end
-  if reason then
-    log_ctrl_t(reason .. ": last_dir unavailable")
-  end
-  return nil
-end
-
--- WezTerm 起動時は Azure 開発サーバー(devbox)に接続する（既定を Azure に置き換え）
--- devbox スクリプトが停止中の VM を自動起動してから SSH する。
--- az 未ログイン等で失敗した場合はローカルのログインシェルにフォールバックする。
--- ローカル WSL を使いたいときは <leader> l のランチャー、または Ctrl+t（新規タブ）を使う。
+-- WezTerm 起動時は Azure devbox の mux ドメインに接続する。
+-- セッションはリモート側の wezterm-mux-server に残るため、休止/切断後に
+-- WezTerm を開き直すだけでペイン/プロセス(Claude Code 含む)ごと復帰する。
+-- 接続前に devbox.ps1 ensure で VM 起動と NSG(現在IPの許可)を担保する。
 wezterm.on("gui-startup", function(cmd)
+  ensure_devbox()
   local args = cmd or {}
-  args.domain = { DomainName = WSL_NATIVE_DOMAIN }
-  args.args = DEVBOX_LAUNCH_ARGS
-  wezterm.mux.spawn_window(args)
+  args.domain = { DomainName = DEVBOX_DOMAIN }
+  local ok = pcall(function()
+    wezterm.mux.spawn_window(args)
+  end)
+  if not ok then
+    -- 接続できない場合はローカル PowerShell にフォールバック
+    wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo" } })
+  end
 end)
 
 
@@ -96,41 +77,16 @@ config.use_ime = true
 config.window_background_opacity = 1.0
 config.macos_window_background_blur = 20
 
--- WSL 関連
--- wsl_domains を明示することで ConPTY を経由せず WezTerm ネイティブ統合を使用する
--- → リサイズ時に Claude Code が固まる問題の軽減
-config.wsl_domains = {
-  {
-    name = WSL_NATIVE_DOMAIN,
-    distribution = WSL_DISTRO,
-    default_cwd = WSL_HOME,
-  },
-}
-
--- SSH 経由で WSL に接続（wsl_domains より体感速度が速い場合がある）
--- 事前準備: WSL で sshd を 2222 番で起動し、Windows の公開鍵を authorized_keys に追加
+-- Azure devbox への永続 multiplexing ドメイン。
+-- スリープ/切断で SSH が落ちても Azure 上の wezterm-mux-server が生き続け、
+-- 再接続でペイン/プロセス(Claude Code 含む)がそのまま復帰する。
+-- 事前: Azure に同一版 wezterm 導入済み(bootstrap.sh が導入)、
+--       Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
 config.ssh_domains = {
   {
-    name = WSL_SSH_DOMAIN,
-    remote_address = "127.0.0.1:2222",
-    username = WSL_USER,
-    -- WSL 側 sshd の公開鍵認証で使う秘密鍵（Windows ホーム配下に配置）
-    -- 対応する公開鍵は WSL の ~/.ssh/authorized_keys に登録済み
-    ssh_option = {
-      identityfile = wezterm.home_dir .. "\\.ssh\\wezterm_wsl",
-    },
-    -- WSL に WezTerm をインストールした場合は "WezTermMux" に変更するとさらに速い
-    multiplexing = "None",
-  },
-  -- Azure devbox への永続 multiplexing ドメイン。
-  -- スリープ/切断で SSH が落ちても Azure 上の wezterm-mux-server が生き続け、
-  -- 再接続でペイン/プロセス(Claude Code 含む)がそのまま復帰する。
-  -- 事前: Azure に同一版 wezterm 導入済み、Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
-  -- 接続前に devbox --ensure で VM 起動+NSG を担保すること(Phase B)。
-  {
-    name = "azure",
-    remote_address = "20.46.165.130",
-    username = "azureuser",
+    name = DEVBOX_DOMAIN,
+    remote_address = DEVBOX_HOST,
+    username = DEVBOX_USER,
     ssh_option = {
       identityfile = wezterm.home_dir .. "\\.ssh\\id_ed25519",
     },
@@ -139,31 +95,25 @@ config.ssh_domains = {
   },
 }
 
-config.default_domain = WSL_NATIVE_DOMAIN
+config.default_domain = DEVBOX_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
   {
     -- 永続 mux ドメイン。切断/スリープでも Azure 側セッションが生き残る。
     label = "Azure devbox (mux 永続)",
-    domain = { DomainName = "azure" },
+    domain = { DomainName = DEVBOX_DOMAIN },
   },
   {
+    -- 素の SSH 接続（mux を経由しない切り分け用。切断でセッションは消える）
     label = "Azure devbox (SSH)",
-    domain = { DomainName = WSL_NATIVE_DOMAIN },
-    args = DEVBOX_LAUNCH_ARGS,
+    domain = { DomainName = "local" },
+    args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", DEVBOX_PS1, "connect" },
   },
   {
     label = "PowerShell",
-    args = { "pwsh.exe" },
-  },
-  {
-    label = "WSL local: " .. WSL_DISTRO .. " (native)",
-    domain = { DomainName = WSL_NATIVE_DOMAIN },
-  },
-  {
-    label = "WSL: " .. WSL_DISTRO .. " (SSH)",
-    domain = { DomainName = WSL_SSH_DOMAIN },
+    domain = { DomainName = "local" },
+    args = { "pwsh.exe", "-NoLogo" },
   },
 }
 
@@ -254,7 +204,7 @@ end)
 
 -- 右ステータス: workspace / 接続状態 / アクティブなキーテーブル
 -- 接続状態は「mux 経由（永続）」「素の SSH（切断で消える）」「ローカル」の3値で表示する。
--- ドメイン名だけでは素の SSH（WSL ペイン内から ssh した場合）を検出できないため、
+-- ドメイン名だけでは素の SSH（devbox ペイン内からさらに ssh した場合）を検出できないため、
 -- シェルが OSC 7 で報告するホスト名（pane:get_current_working_dir().host）も併用する。
 wezterm.on("update-right-status", function(window, pane)
   local ok, domain = pcall(function()
@@ -271,14 +221,14 @@ wezterm.on("update-right-status", function(window, pane)
   end
 
   local label, color
-  if domain == "azure" then
-    -- 永続 mux ドメイン。切断/スリープしてもリモート側でセッションが生き残る
-    label = "MUX:" .. (host or "azure")
-    color = "#e0af68"
-  elseif host and host:lower() ~= WSL_HOSTNAME then
-    -- ローカルペインから素の ssh でリモートに入っている状態。切断するとセッションも消える
+  if host and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
+    -- ペイン内から素の ssh で別ホストに入っている状態。切断するとセッションも消える
     label = "SSH:" .. host
     color = "#f7768e"
+  elseif domain == DEVBOX_DOMAIN then
+    -- 永続 mux ドメイン。切断/スリープしてもリモート側でセッションが生き残る
+    label = "MUX:" .. (host or DEVBOX_DOMAIN)
+    color = "#e0af68"
   else
     label = domain
     color = "#9ece6a"
@@ -413,68 +363,48 @@ local function cycle_window_mode()
   end)
 end
 
--- 指定パスが「ローカル WSL に実在するディレクトリ」かを確認する。
--- Azure など別ホストの cwd（例: /home/azureuser）はローカルに無いので false になり、
--- 新規タブ/ペインがローカルで chdir に失敗するのを防ぐ。
-local function wsl_dir_exists(path)
-  if type(path) ~= "string" or path:sub(1, 1) ~= "/" then
-    return false
-  end
-  local ok = wezterm.run_child_process({
-    "wsl.exe", "-d", WSL_DISTRO, "-e", "test", "-d", path,
-  })
-  return ok == true
-end
-
-local function current_pane_cwd(pane)
-  local ok, cwd_uri = pcall(function()
-    return pane:get_current_working_dir()
-  end)
-  if ok and cwd_uri and cwd_uri.file_path and wsl_dir_exists(cwd_uri.file_path) then
-    return cwd_uri.file_path
-  end
-  local last = get_last_dir()
-  if last and wsl_dir_exists(last) then
-    return last
-  end
-  return nil
-end
-
--- devbox を新規タブで開く。ローカルに実在する cwd を明示することで、
--- Azure 等リモートの cwd（例: /home/azureuser）を継いで WSL 側の chdir が
--- 失敗する（CreateProcessCommon:810 chdir failed 2）のを防ぐ。
-local function spawn_devbox_tab()
-  return wezterm.action_callback(function(window, pane)
-    window:perform_action(
-      act.SpawnCommandInNewTab({
-        domain = { DomainName = WSL_NATIVE_DOMAIN },
-        args = DEVBOX_LAUNCH_ARGS,
-        cwd = current_pane_cwd(pane) or WSL_HOME,
-      }),
-      pane
-    )
-  end)
-end
-
 -- Azure mux ドメインの新規タブを開く（切断してもセッションがリモート側に残る）。
--- リモート（devbox）のペインから開いた場合は同じディレクトリを引き継ぐ。
--- VM 停止中は接続できないため、その場合は <leader> a（devbox: 自動起動して SSH）で先に起こす。
+-- devbox のペインから開いた場合は同じディレクトリを引き継ぐ。
+-- VM 停止中はドメイン未接続で失敗するため、その場合は <leader> a（ensure してから開く）を使う。
 local function spawn_mux_tab()
   return wezterm.action_callback(function(window, pane)
     local cwd
-    local ok, uri = pcall(function()
-      return pane:get_current_working_dir()
+    local ok, pane_domain = pcall(function()
+      return pane:get_domain_name()
     end)
-    if ok and uri and uri.host and uri.host:lower() ~= WSL_HOSTNAME and uri.file_path then
-      cwd = uri.file_path
+    if ok and pane_domain == DEVBOX_DOMAIN then
+      cwd = pane_cwd(pane)
     end
     window:perform_action(
       act.SpawnCommandInNewTab({
-        domain = { DomainName = "azure" },
+        domain = { DomainName = DEVBOX_DOMAIN },
         cwd = cwd,
       }),
       pane
     )
+  end)
+end
+
+-- devbox の VM 起動と NSG を担保してから、Azure mux ドメインの新規タブを開く。
+-- 休止明けや VM 停止中はこちらを使う（Ctrl+t は ensure しない分だけ速い）。
+local function spawn_devbox_tab()
+  return wezterm.action_callback(function(window, pane)
+    ensure_devbox()
+    window:perform_action(
+      act.SpawnCommandInNewTab({
+        domain = { DomainName = DEVBOX_DOMAIN },
+      }),
+      pane
+    )
+  end)
+end
+
+-- devbox の VM 起動と NSG を担保してから、Azure mux ドメインに attach する。
+-- 既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。休止/切断後の復帰はこれ。
+local function attach_devbox_domain()
+  return wezterm.action_callback(function(window, pane)
+    ensure_devbox()
+    window:perform_action(act.AttachDomain(DEVBOX_DOMAIN), pane)
   end)
 end
 
@@ -501,7 +431,7 @@ end
 
 local function open_nvim_with_agent(agent_command)
   return wezterm.action_callback(function(window, pane)
-    local cwd = current_pane_cwd(pane)
+    local cwd = pane_cwd(pane)
     local split = {
       direction = "Right",
       size = { Percent = 30 },
@@ -567,16 +497,9 @@ local function jump_to_notified_pane()
   end)
 end
 
--- フォーカス中のペイン ID を WSL ファイルに書き出す（SSH ドメインでは $WEZTERM_PANE が
--- 環境変数として渡されないため、gh-finish などのスクリプトがフォールバックとして参照する）
 wezterm.on("pane-focus-changed", function(window, pane)
-  local pane_id = pane:pane_id()
   -- 通知マークの付いたペインに来たら解除してタイトルを復元
-  claude_notify_clear_mark(pane_id)
-  wezterm.run_child_process({
-    "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-c",
-    "mkdir -p ~/.cache && echo " .. tostring(pane_id) .. " > ~/.cache/wezterm-focused-pane",
-  })
+  claude_notify_clear_mark(pane:pane_id())
 end)
 
 wezterm.on("user-var-changed", function(window, pane, name, value)
@@ -625,20 +548,8 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     return
   end
 
-  -- nvim の cwd。Azure(リモート=ローカルに実在しない)なら agent ペインも devbox
-  -- 接続し、その同じディレクトリで claude を開く。ローカルなら従来どおり。
-  local nvim_cwd = cwd_from_nvim_user_var(value)
-  if nvim_cwd and not wsl_dir_exists(nvim_cwd) then
-    local devbox_cmd = "DEVBOX_CD=" .. sh_quote(nvim_cwd) .. " DEVBOX_EXEC='claude -y' ~/.local/bin/devbox"
-    window:perform_action(act.SplitPane({
-      direction = "Right",
-      size = { Percent = 30 },
-      command = { args = { "zsh", "-lic", devbox_cmd }, cwd = WSL_HOME },
-    }), pane)
-    return
-  end
-
-  local cwd = (nvim_cwd and wsl_dir_exists(nvim_cwd) and nvim_cwd) or current_pane_cwd(pane)
+  -- nvim と同じドメイン(通常 azure)・同じディレクトリで claude を開く
+  local cwd = cwd_from_nvim_user_var(value) or pane_cwd(pane)
   local split = {
     direction = "Right",
     size = { Percent = 30 },
@@ -734,10 +645,9 @@ config.keys = {
   -- 貼り付け
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
-  -- Pane作成 leader + r or d（Azure devbox 接続で分割。cwd は WSL_HOME 固定で
-  -- Azure 側 cwd(/home/azureuser 等) をローカルが継承して chdir 失敗するのを防ぐ）
-  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
-  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain", args = DEVBOX_LAUNCH_ARGS, cwd = WSL_HOME }) },
+  -- Pane作成 leader + r or d（現在ペインと同じドメイン・同じディレクトリで分割）
+  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
+  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
   -- Paneを閉じる leader + x
   { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
   -- Pane移動 Alt + hjkl
@@ -786,7 +696,7 @@ config.keys = {
     action = act.PaneSelect({ alphabet = "1234567890", show_pane_ids = true }),
   },
   {
-    -- ランチャーメニュー表示（PowerShell / WSL 切り替えなど）
+    -- ランチャーメニュー表示（Azure devbox / PowerShell 切り替えなど）
     key = "l",
     mods = "LEADER",
     action = act.ShowLauncherArgs({ flags = "LAUNCH_MENU_ITEMS", title = "Launch" }),
@@ -801,7 +711,7 @@ config.keys = {
     }),
   },
   {
-    -- Azure devbox を新規タブで開く（停止中なら自動起動して SSH）
+    -- Azure devbox を新規タブで開く（停止中なら自動起動してから mux 接続）
     key = "a",
     mods = "LEADER",
     action = spawn_devbox_tab(),
@@ -814,16 +724,16 @@ config.keys = {
   },
   {
     -- Azure mux ドメインに attach：既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。
-    -- スリープ/切断後の再接続はこれを使う（VM は起動済みである必要あり）。
+    -- スリープ/切断後の再接続はこれ（VM 停止中でも ensure が自動起動する）。
     key = "A",
     mods = "LEADER|SHIFT",
-    action = act.AttachDomain("azure"),
+    action = attach_devbox_domain(),
   },
   {
     -- Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続）。
     key = "D",
     mods = "LEADER|SHIFT",
-    action = act.DetachDomain({ DomainName = "azure" }),
+    action = act.DetachDomain({ DomainName = DEVBOX_DOMAIN }),
   },
 }
 

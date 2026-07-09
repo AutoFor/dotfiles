@@ -70,14 +70,26 @@ echo "node: $(node -v) / npm: $(npm -v)"
 npm install -g @anthropic-ai/claude-code
 echo "claude: $(claude --version 2>/dev/null || echo 'installed (要ログイン)')"
 
+echo "########## 4.5) wezterm (mux-server) ##########"
+# Windows 側 WezTerm から mux ドメインで接続するためのサーバー。
+# セッション永続化のため、クライアント(Windows)と同一バージョンに固定する。
+WEZTERM_VERSION="20240203-110809-5046fc22"
+if ! /usr/bin/wezterm --version 2>/dev/null | grep -q "$WEZTERM_VERSION"; then
+  tmp_wez="$(mktemp -d)"
+  curl -fsSL -o "$tmp_wez/wezterm.deb" \
+    "https://github.com/wez/wezterm/releases/download/${WEZTERM_VERSION}/wezterm-${WEZTERM_VERSION}.Ubuntu22.04.deb"
+  sudo apt-get install -y -qq "$tmp_wez/wezterm.deb"
+  rm -rf "$tmp_wez"
+fi
+echo "wezterm: $(/usr/bin/wezterm --version)"
+
 echo "########## 5) dotfiles clone & install ##########"
 if [ ! -d "$HOME/dotfiles" ]; then
   git clone https://github.com/AutoFor/dotfiles.git "$HOME/dotfiles"
 else
   git -C "$HOME/dotfiles" pull --ff-only || true
 fi
-# 非 WSL なので wsl.conf 等のシステム設定はスキップ
-INSTALL_SYSTEM_CONFIG=0 bash "$HOME/dotfiles/install.sh"
+bash "$HOME/dotfiles/install.sh"
 
 echo "########## 6) デフォルトシェルを zsh に ##########"
 ZSH_PATH="$(command -v zsh)"

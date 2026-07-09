@@ -1,48 +1,61 @@
 # dotfiles
 
-Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジトリ。
+「Windows クライアント + Azure 開発サーバー (devbox)」構成の設定ファイルを一元管理するリポジトリ。
+
+- **Windows** … 接続クライアント。WezTerm から Azure devbox へ mux ドメインで直接つなぐ
+- **Azure devbox** … 開発の本体。zsh / Neovim / Claude Code はすべてここで動く
 
 別 PC への移植を `git clone` + インストールスクリプトで完了できるようにする。
+
+## 全体像
+
+```
+Windows (クライアント)                Azure devbox (開発サーバー)
+┌──────────────────────┐            ┌──────────────────────────┐
+│ WezTerm              │  SSH(mux)  │ wezterm-mux-server        │
+│  └─ azure ドメイン ──┼────────────┼→ zsh / nvim / claude      │
+│ devbox.ps1 (az CLI)  │  VM起動+NSG │   セッションはここに永続   │
+└──────────────────────┘            └──────────────────────────┘
+```
+
+接続は WezTerm の **mux ドメイン**（`azure`）を使う。セッションの実体はリモート側の
+wezterm-mux-server にあるため、PC の休止・スリープ・切断でローカルの SSH が切れても、
+WezTerm を開き直す（または `LEADER+Shift+A` で attach）だけでペイン構成・実行中プロセスごと復帰する。
+
+VM の自動起動と NSG（SSH 許可 IP）の追従は `windows/bin/devbox.ps1` が担い、
+WezTerm 起動時に自動実行される。
 
 ## ディレクトリ構成
 
 ```
 ~/dotfiles/
 ├── README.md
-├── install.sh                    # Linux / WSL 用セットアップスクリプト
+├── install.sh                    # Linux (Azure devbox 等) 用セットアップスクリプト
 ├── install-windows.ps1           # Windows 用セットアップスクリプト
-├── .gitignore
 │
-├── nvim/                         # Neovim 設定（WSL / Windows 共有・OS分岐）
+├── nvim/                         # Neovim 設定（Linux / Windows 共有・OS分岐）
 │
-├── wsl/                          # WSL Ubuntu 設定
-│   ├── .zshrc
-│   ├── .bashrc
+├── linux/                        # Linux (Azure devbox 等) 設定
+│   ├── .zshenv / .zshrc / .bashrc
 │   ├── .gitconfig
 │   ├── .config/
 │   │   ├── gh/config.yml
 │   │   └── git/ignore
 │   └── .local/bin/
 │       ├── gf
-│       └── backup-wsl-full
+│       └── codex
 │
-├── windows/                      # Windows 設定
+├── windows/                      # Windows (クライアント) 設定
 │   ├── .wezterm.lua
 │   ├── .gitconfig
 │   ├── .bashrc
+│   ├── bin/devbox.ps1            # devbox の起動/接続 CLI (ensure/connect/up/down/status)
 │   └── yamabuki-r/
 │
-├── claude/                       # Claude Code 設定
-│   ├── CLAUDE.md
-│   ├── settings.json
-│   ├── windows-notify.ps1
-│   ├── github-app-config.env.example
-│   ├── mcp/mcp-config.json.example
-│   └── skills/（9ディレクトリ）
+├── cloud/azure-devbox/           # Azure devbox の構築 (create-vm.sh / bootstrap.sh)
 │
+├── claude/                       # Claude Code 設定（devbox 側にリンクされる）
 └── codex/                        # Codex 設定
-    ├── config.toml
-    └── skills/
 ```
 
 ## 方針
@@ -50,144 +63,30 @@ Linux / WSL Ubuntu + Windows の設定ファイルを一元管理するリポジ
 - リポジトリ内の設定ファイルを実体として、各 OS のホームディレクトリへシンボリックリンクする
 - 既存ファイルは `*.backup.YYYYMMDD` に退避する
 - ユーザー名やホームディレクトリは `$HOME` / `$USERPROFILE` から解決する
-- WSL 固有の設定は WSL 上でだけ適用し、通常の Linux ではスキップする
-- Windows 側の WezTerm は `WEZTERM_WSL_DISTRO` / `WEZTERM_WSL_USER` で環境差分を上書きできる
+- 環境の違いはディレクトリ（`linux/` / `windows/`）と実行時判定で吸収する（ブランチでは分けない）
+- 開発環境は Azure devbox に集約する。ローカル（Windows）は接続と最小限のツールのみ
 
-## クリーンな Windows PC からの初回セットアップ
+## セットアップ
 
-想定する初期状態:
+### 1. Windows クライアント
 
-- Windows は入っている
-- Git / gh / WSL / WezTerm はまだ入っていない
-- Codex または Claude Code だけ先に入っている場合もある
-
-PowerShell は **管理者として実行** する。
-
-### 1. Windows 側の基本ツールを入れる
+PowerShell で基本ツールを入れる。
 
 ```powershell
 winget install --id Git.Git -e
 winget install --id GitHub.cli -e
 winget install --id wez.wezterm -e
-winget install --id OpenJS.NodeJS.LTS -e
+winget install --id Microsoft.AzureCLI -e
 ```
 
-`winget` が使えない場合は Microsoft Store の「アプリ インストーラー」を更新する。
-
-インストール後、新しい PowerShell を開いて確認する。
-
-```powershell
-git --version
-gh --version
-node --version
-npm --version
-```
-
-### 2. WSL Ubuntu を入れる
-
-```powershell
-wsl --install -d Ubuntu
-```
-
-再起動を求められたら Windows を再起動する。初回起動時に Linux ユーザー名とパスワードを作成する。
-
-既に WSL はあるが distro 名を確認したい場合:
-
-```powershell
-wsl -l -v
-```
-
-この README の例は distro 名を `Ubuntu` としている。`Ubuntu-24.04` など別名なら、後の `\\wsl$\Ubuntu\...` と `WEZTERM_WSL_DISTRO` を実際の名前に置き換える。
-
-### 3. GitHub にログインする
-
-PowerShell で:
+ログインする。
 
 ```powershell
 gh auth login
+az login
 ```
 
-WSL 側でも後で `gh auth login` を実行する。Windows と WSL は別環境なので、両方で認証しておく。
-
-### 4. WSL 側の基本ツールを入れる
-
-Ubuntu を開いて実行する。
-
-```bash
-sudo apt update
-sudo apt install -y git gh zsh curl unzip build-essential openssh-server rclone
-```
-
-GitHub CLI にログインする。
-
-```bash
-gh auth login
-```
-
-zsh を既定シェルにする。
-
-```bash
-chsh -s "$(which zsh)"
-```
-
-`zoxide` を入れる。
-
-```bash
-curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | sh
-```
-
-Claude Code / Codex を WSL 側でも使う場合は、Node.js が必要。Windows に Node.js が入っていても WSL とは別なので、WSL 側にも入れる。
-
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-source ~/.bashrc
-nvm install --lts
-nvm use --lts
-npm install -g @anthropic-ai/claude-code
-```
-
-既に Codex CLI を Windows 側だけに入れている場合でも、WSL のシェルから使うなら WSL 側にも入れる。
-
-### 5. リポジトリをクローン
-
-WSL 側で実行する。
-
-```bash
-git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
-```
-
-任意の場所に clone してよい。以降の例では `~/dotfiles` とする。
-
-### 6. Linux / WSL 設定をインストール
-
-```bash
-cd ~/dotfiles
-chmod +x install.sh
-./install.sh
-```
-
-既存ファイルは `*.backup.YYYYMMDD` にバックアップされる。
-
-通常の Linux では `/etc/wsl.conf` と WSL 用 SSH 自動起動は自動でスキップされる。
-sudo が必要なシステム設定を明示的に避ける場合:
-
-```bash
-INSTALL_SYSTEM_CONFIG=0 ./install.sh
-```
-
-### 7. Windows 設定をインストール
-
-PowerShell（管理者）で実行：
-
-```powershell
-\\wsl$\Ubuntu\home\<ユーザー名>\dotfiles\install-windows.ps1
-```
-
-WSL distro 名が `Ubuntu` ではない場合は、実際の distro 名に置き換える。
-
-管理者 PowerShell を使わない場合は、Windows の「開発者モード」を有効にしてから実行する。シンボリックリンク作成に必要。
-
-Windows 側に直接 clone した場合:
+リポジトリを clone してリンクを張る（シンボリックリンク作成に管理者権限または開発者モードが必要）。
 
 ```powershell
 git clone https://github.com/AutoFor/dotfiles.git $env:USERPROFILE\dotfiles
@@ -195,123 +94,88 @@ Set-Location $env:USERPROFILE\dotfiles
 .\install-windows.ps1
 ```
 
-WezTerm から使う WSL distro / user が既定値と違う場合は、Windows のユーザー環境変数に設定する。
+`~/dotfiles` 以外に clone した場合は、ユーザー環境変数 `DOTFILES_DIR` にそのパスを設定する
+（WezTerm が `devbox.ps1` を見つけるために使う）。
+
+SSH 鍵が無ければ作成する。公開鍵は devbox の `~/.ssh/authorized_keys` に登録する
+（`create-vm.sh` で VM を作った場合は作成時に登録済み）。
 
 ```powershell
-[Environment]::SetEnvironmentVariable("WEZTERM_WSL_DISTRO", "Ubuntu-24.04", "User")
-[Environment]::SetEnvironmentVariable("WEZTERM_WSL_USER", "your-linux-user", "User")
+ssh-keygen -t ed25519
 ```
 
-未設定時は distro は `Ubuntu`、ユーザー名とホームディレクトリは WSL 内から自動取得される。
+### 2. Azure devbox（開発サーバー）
 
-### 8. WezTerm を起動する
-
-Windows のスタートメニューから WezTerm を起動する。設定が正しければ WSL が開く。
-
-WSL SSH ドメインを使う場合、この dotfiles は WSL 側の sshd を 2222 番で使う前提がある。接続できない場合でも WezTerm は WSL native domain へフォールバックする。
-
-### 9. 確認
+VM の作成から開発環境の流し込みまでは [cloud/azure-devbox/README.md](cloud/azure-devbox/README.md) を参照。
+要点は次の 2 コマンド。
 
 ```bash
-# シンボリックリンクの確認
-ls -la ~/.zshrc             # → ~/dotfiles/wsl/.zshrc
-ls -la ~/.claude/CLAUDE.md  # → ~/dotfiles/claude/CLAUDE.md
-
-# 新しいターミナルを開いて動作確認
+bash cloud/azure-devbox/create-vm.sh
+ssh azureuser@<IP> 'bash -s' < cloud/azure-devbox/bootstrap.sh
 ```
 
-## 既に Linux / WSL がある場合の短縮手順
+`bootstrap.sh` が dotfiles の clone と `install.sh` の実行、wezterm-mux-server の導入
+（Windows クライアントと同一バージョン固定）まで面倒を見る。
 
-必要なツールが入っていれば、WSL 側では以下だけでよい。
+初回だけ VM 内で各サービスにログインする。
 
 ```bash
-git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-./install.sh
+gh auth login
+claude    # 初回起動で認証
 ```
 
-## 日常の使い方（設定を変更したいとき）
+### 3. 動作確認
 
-### シンボリックリンクの仕組み
+WezTerm を起動すると `devbox.ps1 ensure`（VM 起動 + NSG 許可）を経て azure ドメインに接続され、
+devbox の zsh が開く。右下ステータスに `MUX:devbox`（黄色）と出ていれば永続セッションに乗れている。
 
-`install.sh` を実行すると、各設定ファイルに「ショートカット」（シンボリックリンク）が作られる。
+## 日常の使い方
 
+### 接続まわり（LEADER は `Ctrl+q`）
+
+| 操作 | 動作 |
+|---|---|
+| WezTerm 起動 | VM 起動を担保して azure ドメインに接続 |
+| `Ctrl+t` | azure ドメインで新規タブ（現在のリモート cwd を引き継ぐ） |
+| `LEADER a` | VM 起動を担保してから azure ドメインで新規タブ（休止明けなど） |
+| `LEADER Shift+A` | azure ドメインに attach（既存の永続タブ/ペインを丸ごと呼び戻す） |
+| `LEADER Shift+D` | azure ドメインから detach（リモート側セッションは生存継続） |
+| `LEADER l` | ランチャー（mux / 素の SSH / PowerShell） |
+| `LEADER Shift+P` | ローカル PowerShell を新規タブで開く |
+
+**休止・スリープ明け**: ローカルの接続は切れるが、リモートのセッションは生きている。
+WezTerm を開き直すか `LEADER Shift+A` で元の画面がそのまま戻る。
+
+### VM の起動・停止（課金対策）
+
+```powershell
+# どこからでも（~/.local/bin にリンク済みなら devbox.ps1 だけでよい）
+pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 status
+pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 up
+pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 down   # deallocate（課金はディスク代のみ）
 ```
-~/.zshrc  →  ~/dotfiles/wsl/.zshrc
-（ショートカット）   （本体ファイル）
-```
 
-どちらを開いても同じファイルが表示されるが、**Git で管理されているのは `~/dotfiles/` の中**。
+毎日 22:00 の自動シャットダウンも設定済み（create-vm.sh）。
 
-### 編集するファイル
+### 設定を変更したいとき
 
-設定を変えたいときは `~/dotfiles/` 内のファイルを編集する。
-
-```bash
-# 例: zshrc を編集
-vim ~/dotfiles/wsl/.zshrc
-
-# 例: WezTerm の設定を変更
-vim ~/dotfiles/windows/.wezterm.lua
-
-# 例: Claude Code の設定を変更
-vim ~/dotfiles/claude/CLAUDE.md
-```
+設定を変えたいときは `~/dotfiles/` 内のファイルを編集する（リンク先に実体がある）。
 
 | 編集するファイル | 実際に効く場所 |
 |---|---|
-| `~/dotfiles/wsl/.zshrc` | `~/.zshrc` |
-| `~/dotfiles/wsl/.gitconfig` | `~/.gitconfig` |
-| `~/dotfiles/wsl/.bashrc` | `~/.bashrc` |
-| `~/dotfiles/windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
-| `~/dotfiles/nvim/`（init.lua, lua/） | WSL: `~/.config/nvim` / Windows: `%LOCALAPPDATA%\nvim` |
-| `~/dotfiles/windows/.gitconfig` | Windows の `~/.gitconfig` |
-| `~/dotfiles/windows/yamabuki-r/layout` | `C:\Prog\YamabukiR\layout` |
-| `~/dotfiles/claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
-| `~/dotfiles/claude/settings.json` | `~/.claude/settings.json` |
-| `~/dotfiles/codex/config.toml` | `~/.codex/config.toml` |
+| `linux/.zshrc` ほか linux/ 配下 | devbox の `~/.zshrc` など |
+| `windows/.wezterm.lua` | Windows の `~/.wezterm.lua` |
+| `windows/.gitconfig` | Windows の `~/.gitconfig` |
+| `windows/bin/devbox.ps1` | WezTerm 起動時 / `~/.local/bin/devbox.ps1` |
+| `nvim/`（init.lua, lua/） | devbox: `~/.config/nvim` / Windows: `%LOCALAPPDATA%\nvim` |
+| `claude/CLAUDE.md` / `claude/settings.json` | devbox の `~/.claude/` |
+| `codex/config.toml` | devbox の `~/.codex/config.toml` |
 
-### コマンド短縮
-
-WSL の zsh / bash では、`codex -y` を以下の短縮として使える。
-
-```bash
-codex --dangerously-bypass-approvals-and-sandbox
-```
-
-### 変更を GitHub に保存する
-
-```bash
-cd ~/dotfiles
-git status                          # 変更を確認
-git add -A                          # 変更をステージング
-git commit -m "zshrc にエイリアスを追加"  # コミット
-git push                            # GitHub にプッシュ
-```
-
-### 別のPCに移すとき
-
-Linux / WSL:
-
-```bash
-git clone https://github.com/AutoFor/dotfiles.git ~/dotfiles
-cd ~/dotfiles
-./install.sh
-```
-
-Windows:
-
-```powershell
-git clone https://github.com/AutoFor/dotfiles.git $env:USERPROFILE\dotfiles
-Set-Location $env:USERPROFILE\dotfiles
-.\install-windows.ps1
-```
-
-この手順で各 OS のホームディレクトリにリンクが作られる。
+変更の保存は devbox 上（または Windows 上）の clone から通常どおり commit / push する。
 
 ## Neovim の機能プロファイル
 
-nvim 設定は WSL / Windows で共有し、OS 差分は `nvim/lua/os_util.lua` が、読み込む機能の範囲は `nvim/lua/features.lua` が制御する。
+nvim 設定は Linux / Windows で共有し、OS 差分は `nvim/lua/os_util.lua` が、読み込む機能の範囲は `nvim/lua/features.lua` が制御する。
 
 「どこまで読み込むか」は環境変数 `NVIM_PROFILE` で切り替える。
 
@@ -336,54 +200,13 @@ return {
 }
 ```
 
-### Windows でフル機能を使うための依存ツール
-
-`auto` で未検出なら自動で無効化されるため必須ではない。フルに使う場合のみ:
-
-```powershell
-winget install BurntSushi.ripgrep.MSVC   # telescope の grep
-winget install zig.zig                    # treesitter のコンパイラ（zig cc）
-winget install OpenJS.NodeJS.LTS          # markdown-preview / yaml-language-server
-npm install -g yaml-language-server
-winget install charmbracelet.glow         # markdown プレビュー（任意）
-```
-
-シンボリックリンク作成には管理者権限または開発者モードが必要。
-
-## WSL 丸ごとバックアップ
-
-`backup-wsl-full` は `wsl.exe --export` を使って WSL ディストリを `.tar` に書き出し、`rclone` で Google Drive へアップロードし、30 日より古いバックアップを削除する。
-
-```bash
-backup-wsl-full --distro Ubuntu
-```
-
-既定値:
-
-- 一時置き場: `C:\Users\<WindowsUser>\AppData\Local\WSLBackups\tmp`
-- 保存先: `gdrive:WSL-FullBackups/<distro>/`
-- 保持期間: 30 日
-
-よく使うオプション:
-
-```bash
-backup-wsl-full --dry-run
-backup-wsl-full --distro Ubuntu --keep-local
-backup-wsl-full --distro Ubuntu --remote gdrive:WSL-FullBackups --retention-days 30
-```
-
-注意:
-
-- `rclone config` で `gdrive:` remote を事前に設定しておく必要がある
-- 実行中の現在のディストリ自身は WSL 内から `terminate` できないため、その場合は停止せずに export する
-- アップロード失敗時は再送のため一時 `.tar` を残す
-
 ## 注意事項
 
 - Windows のシンボリックリンク作成には管理者権限または Developer Mode が必要
-- Windows + WSL で WezTerm を使う場合、distro 名が `Ubuntu` 以外なら `WEZTERM_WSL_DISTRO` を設定する
-- WSL SSH ドメインを使う場合は、WSL 側で `ssh` をインストールし、2222 番で接続できる状態にする
-- Git のユーザー名とメールは `wsl/.gitconfig` / `windows/.gitconfig` の `[user]` を各自の値に変える
+- `devbox.ps1` は 22 番に到達できる場合 az CLI を呼ばない。az が要るのは VM 起動と NSG 更新のときだけ
+- WezTerm の mux ドメインは Windows / devbox の wezterm バージョンが一致している必要がある
+  （bootstrap.sh の `WEZTERM_VERSION` を Windows 側の `wezterm --version` に合わせる）
+- Git のユーザー名とメールは `linux/.gitconfig` / `windows/.gitconfig` の `[user]` を各自の値に変える
 - Codex の trusted project はマシンごとのローカル情報なので、共有設定には固定パスを入れない
-- `.profile` にシークレットが含まれている場合はリポジトリに含めないこと
-- `install.sh` は冪等: 何度実行しても安全
+- `install.sh` / `install-windows.ps1` は冪等: 何度実行しても安全
+- 旧構成（WSL 前提）の記述・スクリプトは #212 で廃止した。WSL 時代のファイルが必要になったら Git 履歴を参照
