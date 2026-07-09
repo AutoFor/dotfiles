@@ -84,8 +84,17 @@ __wezterm_set_user_var() {
 }
 
 # nvim: プレーン（素の nvim / nvim-tree のみ）
-# nvimc: WezTerm 上で右に claude -y ペインを開いてから nvim を起動する
+# nvimc: 右に claude -y ペインを開いてから nvim を起動する
+#   tmux 内なら tmux split-window で直接開く（WezTerm 非依存: iPad 等の SSH クライアントでも動く）
+#   tmux 外 (wezterm mux 等) は従来どおり user var で WezTerm 側に依頼する
 nvimc() {
+  if [[ -n "${TMUX:-}" ]]; then
+    if [[ "$(tmux display-message -p '#{window_panes}')" == "1" ]]; then
+      tmux split-window -h -l '30%' -d -c "$PWD" 'claude -y; exec zsh -l'
+    fi
+    command nvim "$@"
+    return
+  fi
   if [[ -n "${SSH_CONNECTION:-}" || -n "${WEZTERM_PANE:-}" || -n "${WEZTERM_UNIX_SOCKET:-}" ]]; then
     local marker="${PWD}:$$:${RANDOM}"
     mkdir -p "$HOME/.cache"

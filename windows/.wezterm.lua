@@ -55,14 +55,56 @@ local function pane_cwd(pane)
   return nil
 end
 
--- WezTerm 起動時は Azure devbox の mux ドメインに接続する。
--- セッションはリモート側の wezterm-mux-server に残るため、休止/切断後に
--- WezTerm を開き直すだけでペイン/プロセス(Claude Code 含む)ごと復帰する。
+-- devbox に SSH して tmux セッションに attach するコマンド（無ければ作成）。
+-- セッション層は #214 でリモート側 tmux に一本化した。
+local function devbox_tmux_args(session)
+  return {
+    "ssh.exe",
+    "-i", wezterm.home_dir .. "\\.ssh\\id_ed25519",
+    "-t", DEVBOX_USER .. "@" .. DEVBOX_HOST,
+    "tmux", "new-session", "-A", "-s", session or "main",
+  }
+end
+
+-- 現在ペインが devbox 上の tmux クライアント（ssh + tmux のタブ）かどうか。
+-- mux ドメイン（フォールバック用）のペインは除外する。
+local function is_tmux_client_pane(pane)
+  local ok_domain, domain = pcall(function()
+    return pane:get_domain_name()
+  end)
+  if ok_domain and domain == DEVBOX_DOMAIN then
+    return false
+  end
+  local ok_cwd, cwd = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  local host = (ok_cwd and cwd and cwd.host) and cwd.host or nil
+  return host ~= nil and host:lower() == DEVBOX_HOSTNAME
+end
+
+local TMUX_PREFIX = "\x02" -- C-b
+
+-- devbox の tmux クライアント上なら prefix+keys を tmux に送り、
+-- それ以外（ローカルペイン・mux フォールバック）は WezTerm ネイティブ動作。
+-- ペイン管理を tmux 側に一本化するためのブリッジ (#214 Phase 2)。
+local function tmux_bridge(keys, fallback_action)
+  return wezterm.action_callback(function(window, pane)
+    if is_tmux_client_pane(pane) then
+      window:perform_action(act.SendString(TMUX_PREFIX .. keys), pane)
+    else
+      window:perform_action(fallback_action, pane)
+    end
+  end)
+end
+
+-- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
+-- セッションの実体はリモート側 tmux が持つため、休止/切断後に WezTerm を
+-- 開き直すだけでペイン/プロセス(Claude Code 含む)ごと復帰する。
 -- 接続前に devbox.ps1 ensure で VM 起動と NSG(現在IPの許可)を担保する。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
   local args = cmd or {}
-  args.domain = { DomainName = DEVBOX_DOMAIN }
+  args.args = args.args or devbox_tmux_args("main")
   local ok = pcall(function()
     wezterm.mux.spawn_window(args)
   end)
@@ -112,13 +154,20 @@ config.ssh_domains = {
   },
 }
 
-config.default_domain = DEVBOX_DOMAIN
+-- default_domain は local のまま (#214: セッション層は tmux に一本化。
+-- mux ドメインは切り分け用フォールバックとして ssh_domains に残置)
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
   {
-    -- 永続 mux ドメイン。切断/スリープでも Azure 側セッションが生き残る。
-    label = "Azure devbox (mux 永続)",
+    -- 通常の入口: ssh + tmux main セッション（セッションはリモート tmux が保持）
+    label = "Azure devbox (tmux main)",
+    domain = { DomainName = "local" },
+    args = devbox_tmux_args("main"),
+  },
+  {
+    -- 旧 mux ドメイン（切り分け用フォールバック。通常は使わない）
+    label = "Azure devbox (mux フォールバック)",
     domain = { DomainName = DEVBOX_DOMAIN },
   },
   {
@@ -238,14 +287,18 @@ wezterm.on("update-right-status", function(window, pane)
   end
 
   local label, color
-  if host and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
-    -- ペイン内から素の ssh で別ホストに入っている状態。切断するとセッションも消える
-    label = "SSH:" .. host
-    color = "#f7768e"
-  elseif domain == DEVBOX_DOMAIN then
-    -- 永続 mux ドメイン。切断/スリープしてもリモート側でセッションが生き残る
+  if domain == DEVBOX_DOMAIN then
+    -- 旧 mux ドメイン（切り分け用フォールバック）
     label = "MUX:" .. (host or DEVBOX_DOMAIN)
     color = "#e0af68"
+  elseif host and host:lower() == DEVBOX_HOSTNAME then
+    -- ssh + tmux の通常運用（セッションはリモート tmux が保持）
+    label = "devbox"
+    color = "#9ece6a"
+  elseif host and host ~= "" then
+    -- さらに別ホストへ素の ssh で入っている状態。切断でセッションも消える
+    label = "SSH:" .. host
+    color = "#f7768e"
   else
     label = domain
     color = "#9ece6a"
@@ -380,36 +433,15 @@ local function cycle_window_mode()
   end)
 end
 
--- Azure mux ドメインの新規タブを開く（切断してもセッションがリモート側に残る）。
--- devbox のペインから開いた場合は同じディレクトリを引き継ぐ。
--- VM 停止中はドメイン未接続で失敗するため、その場合は <leader> a（ensure してから開く）を使う。
-local function spawn_mux_tab()
-  return wezterm.action_callback(function(window, pane)
-    local cwd
-    local ok, pane_domain = pcall(function()
-      return pane:get_domain_name()
-    end)
-    if ok and pane_domain == DEVBOX_DOMAIN then
-      cwd = pane_cwd(pane)
-    end
-    window:perform_action(
-      act.SpawnCommandInNewTab({
-        domain = { DomainName = DEVBOX_DOMAIN },
-        cwd = cwd,
-      }),
-      pane
-    )
-  end)
-end
-
--- devbox の VM 起動と NSG を担保してから、Azure mux ドメインの新規タブを開く。
--- 休止明けや VM 停止中はこちらを使う（Ctrl+t は ensure しない分だけ速い）。
-local function spawn_devbox_tab()
+-- devbox の VM 起動と NSG を担保してから、ssh + tmux main セッションのタブを開く。
+-- 休止/切断後の復帰はこれ（セッションはリモート tmux が保持しているので丸ごと戻る）。
+local function spawn_devbox_tmux_tab()
   return wezterm.action_callback(function(window, pane)
     ensure_devbox()
     window:perform_action(
       act.SpawnCommandInNewTab({
-        domain = { DomainName = DEVBOX_DOMAIN },
+        domain = { DomainName = "local" },
+        args = devbox_tmux_args("main"),
       }),
       pane
     )
@@ -417,7 +449,7 @@ local function spawn_devbox_tab()
 end
 
 -- devbox の VM 起動と NSG を担保してから、Azure mux ドメインに attach する。
--- 既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。休止/切断後の復帰はこれ。
+-- 旧 mux セッションの切り分け用フォールバック。
 local function attach_devbox_domain()
   return wezterm.action_callback(function(window, pane)
     ensure_devbox()
@@ -448,6 +480,11 @@ end
 
 local function open_nvim_with_agent(agent_command)
   return wezterm.action_callback(function(window, pane)
+    if is_tmux_client_pane(pane) then
+      -- tmux タブ: nvimc (zshrc) が tmux split-window で agent ペインごと開く
+      window:perform_action(act.SendString("nvimc .\n"), pane)
+      return
+    end
     local cwd = pane_cwd(pane)
     local split = {
       direction = "Right",
@@ -642,11 +679,11 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成: Azure mux ドメインで開く（永続。VM 停止中は <leader> a で起こしてから）
+  -- Tab新規作成: tmux 内なら tmux の新規ウィンドウ (prefix+c)、それ以外はローカルタブ
   {
     key = "t",
     mods = "CTRL",
-    action = spawn_mux_tab(),
+    action = tmux_bridge("c", act.SpawnTab("CurrentPaneDomain")),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
@@ -662,11 +699,11 @@ config.keys = {
   -- 貼り付け
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
-  -- Pane作成 leader + r or d（現在ペインと同じドメイン・同じディレクトリで分割）
-  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
-  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
+  -- Pane作成 leader + r or d（tmux 内は tmux 側で分割、それ以外は WezTerm ペイン）
+  { key = "d", mods = "LEADER", action = tmux_bridge("-", act.SplitVertical({ domain = "CurrentPaneDomain" })) },
+  { key = "r", mods = "LEADER", action = tmux_bridge("|", act.SplitHorizontal({ domain = "CurrentPaneDomain" })) },
   -- Paneを閉じる leader + x
-  { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
+  { key = "x", mods = "LEADER", action = tmux_bridge("x", act({ CloseCurrentPane = { confirm = true } })) },
   -- Pane移動 Alt + hjkl
   -- その方向に WezTerm pane があれば移動し、無ければアプリ側へ Alt+hjkl を渡す
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
@@ -675,8 +712,8 @@ config.keys = {
   { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
   -- Pane選択
   { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
-  -- 選択中のPaneのみ表示
-  { key = "z", mods = "LEADER", action = act.TogglePaneZoomState },
+  -- 選択中のPaneのみ表示（tmux 内は tmux の zoom）
+  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.TogglePaneZoomState) },
 
   -- フォントサイズ切替
   { key = "+", mods = "CTRL", action = act.IncreaseFontSize },
@@ -728,10 +765,10 @@ config.keys = {
     }),
   },
   {
-    -- Azure devbox を新規タブで開く（停止中なら自動起動してから mux 接続）
+    -- Azure devbox を新規タブで開く（停止中なら自動起動してから ssh + tmux main に attach）
     key = "a",
     mods = "LEADER",
-    action = spawn_devbox_tab(),
+    action = spawn_devbox_tmux_tab(),
   },
   {
     -- 最後に通知が来た Claude Code のペインへジャンプ（通知トーストの代わり）
