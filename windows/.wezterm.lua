@@ -621,103 +621,63 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
 end)
 
 config.keys = {
-  {
-    -- workspaceの切り替え
-    key = "w",
-    mods = "LEADER",
-    action = act.ShowLauncherArgs({ flags = "WORKSPACES", title = "Select workspace" }),
-  },
-  {
-    -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
-    key = "v",
-    mods = "LEADER",
-    action = open_nvim_with_agent("claude -y"),
-  },
-  {
-    --workspaceの名前変更
-    key = "E",
-    mods = "ALT",
-    action = act.PromptInputLine({
-      description = "(wezterm) Set workspace title:",
-      action = wezterm.action_callback(function(win, pane, line)
-        if line then
-          wezterm.mux.rename_workspace(wezterm.mux.get_active_workspace(), line)
-        end
-      end),
-    }),
-  },
-  {
-    -- タブ名変更（tmux 内は tmux のウィンドウ名変更 prefix+,）
-    key = "e",
-    mods = "ALT",
-    action = tmux_bridge(",", act.PromptInputLine({
-      description = "タブ名を入力してください",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:active_tab():set_title(line)
-        end
-      end),
-    })),
-  },
-  {
-    key = "W",
-    mods = "LEADER|SHIFT",
-    action = act.PromptInputLine({
-      description = "(wezterm) Create new workspace:",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:perform_action(
-            act.SwitchToWorkspace({
-              name = line,
-            }),
-            pane
-          )
-        end
-      end),
-    }),
-  },
-  -- コマンドパレット表示
-  { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
-  -- Tab移動（tmux 内は tmux の次/前ウィンドウ）
-  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.ActivateTabRelative(1)) },
-  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.ActivateTabRelative(-1)) },
-  -- Tab入れ替え（tmux 内は tmux ウィンドウの入れ替え。.tmux.conf の < > バインド）
-  { key = ",", mods = "ALT", action = tmux_bridge("<", act({ MoveTabRelative = -1 })) },
-  -- Tab新規作成: tmux 内なら tmux の新規ウィンドウ (prefix+c)、それ以外はローカルタブ
-  {
-    key = "t",
-    mods = "CTRL",
-    action = tmux_bridge("c", act.SpawnTab("CurrentPaneDomain")),
-  },
-  -- Tabを閉じる（tmux 内は tmux ウィンドウを閉じる。prefix+& は tmux 側で確認あり）
-  { key = "w", mods = "CTRL", action = tmux_bridge("&", act({ CloseCurrentTab = { confirm = true } })) },
-  { key = ".", mods = "ALT", action = tmux_bridge(">", act({ MoveTabRelative = 1 })) },
+  ----------------------------------------------------
+  -- Window/Tab/Pane 管理は tmux に一本化 (#214)。
+  -- 以下のタブ/ペイン系キーは devbox の tmux 上でのみ動作し、tmux の prefix
+  -- シーケンスに変換される。ローカルペイン (PowerShell 等) では何もしない。
+  ----------------------------------------------------
 
-  -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
-  { key = "Enter", mods = "ALT", action = cycle_window_mode() },
+  -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
+  { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
+  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.Nop) }, -- 次へ
+  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.Nop) }, -- 前へ
+  { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
+  { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
+  { key = "e", mods = "ALT", action = tmux_bridge(",", act.Nop) }, -- 名前変更
+  { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
+  -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
+  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.Nop) },
+  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.Nop) },
+  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.Nop) },
+  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.Nop) },
+  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.Nop) },
+  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.Nop) },
+  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.Nop) },
+  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.Nop) },
+  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.Nop) },
 
-  -- コピーモード
-  { key = "[", mods = "LEADER", action = act.ActivateCopyMode },
-  -- コピー
-  { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
-  -- 貼り付け
-  { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
-
-  -- Pane作成 leader + r or d（tmux 内は tmux 側で分割、それ以外は WezTerm ペイン）
-  { key = "d", mods = "LEADER", action = tmux_bridge("-", act.SplitVertical({ domain = "CurrentPaneDomain" })) },
-  { key = "r", mods = "LEADER", action = tmux_bridge("|", act.SplitHorizontal({ domain = "CurrentPaneDomain" })) },
-  -- Paneを閉じる leader + x
-  { key = "x", mods = "LEADER", action = tmux_bridge("x", act({ CloseCurrentPane = { confirm = true } })) },
-  -- Pane移動 Alt + hjkl
-  -- その方向に WezTerm pane があれば移動し、無ければアプリ側へ Alt+hjkl を渡す
+  -- Pane (tmux ペイン)
+  { key = "d", mods = "LEADER", action = tmux_bridge("-", act.Nop) }, -- 上下分割
+  { key = "r", mods = "LEADER", action = tmux_bridge("|", act.Nop) }, -- 左右分割
+  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
+  { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
+  -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
   { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
   { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
   { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
-  -- Pane選択
-  { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
-  -- 選択中のPaneのみ表示（tmux 内は tmux の zoom）
-  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.TogglePaneZoomState) },
+  -- ペインサイズ調整は tmux 側 (prefix + H/J/K/L、またはマウスドラッグ)
+
+  -- Session (tmux セッション。旧 workspace の代替。tm <名前> で作成)
+  { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択
+
+  -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
+  { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },
+  -- クリップボード
+  { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
+  { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
+
+  {
+    -- シェルから nvim + agent の2ペイン構成で開く (tmux 内は nvimc に委譲)
+    key = "v",
+    mods = "LEADER",
+    action = open_nvim_with_agent("claude -y"),
+  },
+
+  -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
+  { key = "Enter", mods = "ALT", action = cycle_window_mode() },
 
   -- フォントサイズ切替
   { key = "+", mods = "CTRL", action = act.IncreaseFontSize },
@@ -725,34 +685,13 @@ config.keys = {
   -- フォントサイズのリセット
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
-  -- タブ切替 Ctrl + 数字（tmux 内は tmux のウィンドウ番号。base-index 1 に対応）
-  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.ActivateTab(0)) },
-  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.ActivateTab(1)) },
-  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.ActivateTab(2)) },
-  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.ActivateTab(3)) },
-  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.ActivateTab(4)) },
-  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.ActivateTab(5)) },
-  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.ActivateTab(6)) },
-  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.ActivateTab(7)) },
-  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.ActivateTab(-1)) },
-
   -- コマンドパレット
+  { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
   { key = "p", mods = "SHIFT|CTRL", action = act.ActivateCommandPalette },
   -- 設定再読み込み
   { key = "r", mods = "SHIFT|CTRL", action = act.ReloadConfiguration },
   -- デバッグオーバーレイ（問題調査用）
   { key = "l", mods = "SHIFT|CTRL", action = act.ShowDebugOverlay },
-  -- キーテーブル用
-  { key = "s", mods = "LEADER", action = act.ActivateKeyTable({ name = "resize_pane", one_shot = false }) },
-  -- Pane入れ替え Alt + n/p
-  { key = "n", mods = "ALT", action = act.RotatePanes("Clockwise") },
-  { key = "p", mods = "ALT", action = act.RotatePanes("CounterClockwise") },
-  {
-    -- ペインをオーバーレイ表示して選択（tmux display-panes 相当）
-    key = "p",
-    mods = "LEADER",
-    action = act.PaneSelect({ alphabet = "1234567890", show_pane_ids = true }),
-  },
   {
     -- ランチャーメニュー表示（Azure devbox / PowerShell 切り替えなど）
     key = "l",
@@ -796,19 +735,7 @@ config.keys = {
 }
 
 config.key_tables = {
-  resize_pane = {
-    { key = "h", action = act.AdjustPaneSize({ "Left", 1 }) },
-    { key = "l", action = act.AdjustPaneSize({ "Right", 1 }) },
-    { key = "k", action = act.AdjustPaneSize({ "Up", 1 }) },
-    { key = "j", action = act.AdjustPaneSize({ "Down", 1 }) },
-    { key = "Enter", action = "PopKeyTable" },
-  },
-  activate_pane = {
-    { key = "h", action = act.ActivatePaneDirection("Left") },
-    { key = "l", action = act.ActivatePaneDirection("Right") },
-    { key = "k", action = act.ActivatePaneDirection("Up") },
-    { key = "j", action = act.ActivatePaneDirection("Down") },
-  },
+  -- WezTerm copy mode (ローカルペイン用。tmux 内は tmux copy-mode を使う)
   copy_mode = {
     { key = "h", mods = "NONE", action = act.CopyMode("MoveLeft") },
     { key = "j", mods = "NONE", action = act.CopyMode("MoveDown") },
