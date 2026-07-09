@@ -105,6 +105,10 @@ end)
 
 
 config.automatically_reload_config = true
+-- ウィンドウを閉じるときの確認を出さない。
+-- セッションの実体は devbox の tmux が保持しているので (#214)、
+-- WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
+config.window_close_confirmation = "NeverPrompt"
 -- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
 -- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
 config.notification_handling = "SuppressFromFocusedPane"
