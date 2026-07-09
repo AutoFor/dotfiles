@@ -57,3 +57,6 @@ $RECYCLE.BIN/
 
 # ===== nvim マシンローカル機能上書き =====
 nvim/lua/features_local.lua
+
+# ===== Claude Code マシンローカルメモ =====
+CLAUDE.local.md
