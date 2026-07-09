@@ -75,6 +75,13 @@ Link-File -Source "$DotfilesWindows\.wezterm.lua" -Destination "$WinHome\.wezter
 Link-File -Source "$DotfilesWindows\.gitconfig"   -Destination "$WinHome\.gitconfig"
 Link-File -Source "$DotfilesWindows\.bashrc"      -Destination "$WinHome\.bashrc"
 
+# SSH 設定 (#214 Phase 3: `ssh devbox` を全クライアント共通の入口にする)
+$SshDir = Join-Path $WinHome ".ssh"
+if (-not (Test-Path $SshDir)) {
+    New-Item -ItemType Directory -Path $SshDir | Out-Null
+}
+Link-File -Source "$DotfilesWindows\.ssh\config" -Destination "$SshDir\config"
+
 Write-Host ""
 Write-Host "=== devbox CLI のリンク ==="
 

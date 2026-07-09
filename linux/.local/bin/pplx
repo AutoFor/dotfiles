@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+API_ENDPOINT="https://api.perplexity.ai/v1/sonar"
+KEYVAULT_NAME="${PPLX_KEYVAULT_NAME:-autofor-kv}"
+KEYVAULT_SECRET_NAME="${PPLX_KEYVAULT_SECRET_NAME:-perplexity-api-key}"
+DEFAULT_MODEL="sonar"
+SYSTEM_PROMPT="Be precise and concise. Cite sources when relevant. Respond in the same language as the user's question."
+
+log()  { printf '[INFO] %s\n' "$*"; }
+warn() { printf '[WARN] %s\n' "$*" >&2; }
+die()  { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
+
+require_cmd() {
+  local cmd="$1" hint="${2:-}"
+  command -v "$cmd" >/dev/null 2>&1 && return 0
+  if [[ -n "$hint" ]]; then die "required command not found: $cmd ($hint)"
+  else die "required command not found: $cmd"; fi
+}
+
+usage() {
+  cat <<'EOF'
+pplx - Perplexity API を Claude Code 風に呼び出す CLI
+
+使い方:
+  pplx                       対話モード（複数ターンの会話、exit/quit/Ctrl+Dで終了、/resetで履歴クリア）
+  pplx "質問文"               単発モード（1回answerして終了）
+  pplx -m MODEL "質問文"      モデルを指定（既定: sonar。PPLX_MODEL でも上書き可）
+
+APIキーは Azure Key Vault（既定: autofor-kv / シークレット名: perplexity-api-key）から毎回取得する。
+PERPLEXITY_API_KEY 環境変数が設定されていればそちらを優先する（Key Vault 取得はスキップ）。
+EOF
+}
+
+fetch_api_key() {
+  if [[ -n "${PERPLEXITY_API_KEY:-}" ]]; then
+    log "PERPLEXITY_API_KEY 環境変数を使用（Key Vault 取得はスキップ）"
+    return 0
+  fi
+
+  local account
+  if account=$(az account show --query '{user:user.name, sub:name}' -o tsv 2>/dev/null); then
+    log "Azure account: ${account}"
+  else
+    die "Azure にログインしていません。\`az login\` を実行してください。"
+  fi
+
+  log "Azure Key Vault (${KEYVAULT_NAME}) からシークレット '${KEYVAULT_SECRET_NAME}' を取得中..."
+  local err_file value
+  err_file=$(mktemp)
+  if value=$(az keyvault secret show \
+        --vault-name "$KEYVAULT_NAME" \
+        --name "$KEYVAULT_SECRET_NAME" \
+        --query value -o tsv 2>"$err_file"); then
+    rm -f "$err_file"
+  else
+    local err; err=$(cat "$err_file"); rm -f "$err_file"
+    case "$err" in
+      *Forbidden*|*"does not have secrets"*) die "Key Vault '${KEYVAULT_NAME}' へのアクセス権がありません: ${err}" ;;
+      *SecretNotFound*) die "シークレット '${KEYVAULT_SECRET_NAME}' が Key Vault '${KEYVAULT_NAME}' に見つかりません: ${err}" ;;
+      *) die "Key Vault からの取得に失敗しました: ${err}" ;;
+    esac
+  fi
+  [[ -n "$value" ]] || die "Key Vault から取得した値が空でした。"
+  export PERPLEXITY_API_KEY="$value"
+  log "Azure Key Vault 連携 OK"
+}
+
+build_request() {
+  # $1 = messages JSON array (compact)
+  jq -nc --arg model "$MODEL" --argjson messages "$1" \
+    '{model: $model, messages: $messages}'
+}
+
+call_api() {
+  # $1 = request body JSON; sets API_BODY / API_HTTP_CODE; returns 1 on failure
+  local raw
+  raw=$(curl -sS --max-time 60 -X POST "$API_ENDPOINT" \
+    -H "Authorization: Bearer $PERPLEXITY_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$1" \
+    -w $'\n%{http_code}') || { warn "curl request failed (network error)"; return 1; }
+  API_HTTP_CODE="${raw##*$'\n'}"
+  API_BODY="${raw%$'\n'*}"
+  if (( API_HTTP_CODE < 200 || API_HTTP_CODE >= 300 )); then
+    local err_msg
+    err_msg=$(jq -r '.error.message // .error // "unknown error"' <<<"$API_BODY" 2>/dev/null || echo "$API_BODY")
+    warn "API request failed (HTTP ${API_HTTP_CODE}): ${err_msg}"
+    return 1
+  fi
+  return 0
+}
+
+print_answer() {
+  local answer sources
+  answer=$(jq -r '.choices[0].message.content // empty' <<<"$API_BODY")
+  [[ -n "$answer" ]] || { warn "API returned no answer content"; return 1; }
+
+  if command -v glow >/dev/null 2>&1 && [[ -t 1 ]]; then
+    printf '%s\n' "$answer" | glow -
+  else
+    printf '%s\n' "$answer"
+  fi
+
+  sources=$(jq -r '
+    if ((.search_results // []) | length) > 0 then
+      (.search_results // []) | to_entries[] | "[\(.key+1)] \(.value.title // .value.url) - \(.value.url)"
+    elif ((.citations // []) | length) > 0 then
+      (.citations // []) | to_entries[] | "[\(.key+1)] \(.value)"
+    else empty end' <<<"$API_BODY")
+  if [[ -n "$sources" ]]; then
+    printf '\nSources:\n%s\n' "$sources"
+  fi
+}
+
+single_shot() {
+  local question="$1"
+  local messages
+  messages=$(jq -nc --arg s "$SYSTEM_PROMPT" --arg q "$question" \
+    '[{role:"system",content:$s},{role:"user",content:$q}]')
+  local body; body=$(build_request "$messages")
+  if call_api "$body"; then
+    print_answer
+  else
+    die "request failed; see error above"
+  fi
+}
+
+repl() {
+  log "pplx 対話モード（model: ${MODEL}）。'exit'/'quit'/Ctrl+D で終了、'/reset' で履歴クリア。"
+  local messages line
+  messages=$(jq -nc --arg s "$SYSTEM_PROMPT" '[{role:"system",content:$s}]')
+
+  while true; do
+    if ! IFS= read -e -r -p "pplx> " line; then
+      printf '\n'
+      break
+    fi
+    [[ -z "${line// /}" ]] && continue
+    case "$line" in
+      exit|quit) break ;;
+      /reset)
+        messages=$(jq -nc --arg s "$SYSTEM_PROMPT" '[{role:"system",content:$s}]')
+        log "conversation reset"
+        continue ;;
+    esac
+
+    messages=$(jq -c --arg c "$line" '. + [{role:"user", content:$c}]' <<<"$messages")
+    local body; body=$(build_request "$messages")
+
+    if call_api "$body"; then
+      print_answer
+      local answer
+      answer=$(jq -r '.choices[0].message.content' <<<"$API_BODY")
+      messages=$(jq -c --arg c "$answer" '. + [{role:"assistant", content:$c}]' <<<"$messages")
+    else
+      warn "request failed; conversation continues (last question not saved to history)"
+      messages=$(jq -c '.[:-1]' <<<"$messages")
+    fi
+  done
+  log "goodbye"
+}
+
+MODEL="${PPLX_MODEL:-$DEFAULT_MODEL}"
+ARGS=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -m|--model) [[ $# -ge 2 ]] || die "$1 requires a value"; MODEL="$2"; shift 2 ;;
+    -h|--help)  usage; exit 0 ;;
+    --) shift; ARGS+=("$@"); break ;;
+    *) ARGS+=("$1"); shift ;;
+  esac
+done
+
+require_cmd curl "should already be present on Ubuntu/WSL2; check PATH"
+require_cmd jq "install with: sudo apt-get install -y jq"
+require_cmd az "Azure CLI が必要です: https://learn.microsoft.com/cli/azure/install-azure-cli"
+
+fetch_api_key
+
+if [[ ${#ARGS[@]} -eq 0 ]]; then
+  repl
+else
+  single_shot "${ARGS[*]}"
+fi

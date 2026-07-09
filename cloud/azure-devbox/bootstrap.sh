@@ -83,6 +83,16 @@ if ! /usr/bin/wezterm --version 2>/dev/null | grep -q "$WEZTERM_VERSION"; then
 fi
 echo "wezterm: $(/usr/bin/wezterm --version)"
 
+echo "########## 4.7) Tailscale ##########"
+# iPad/iPhone 等のモバイルクライアント対応 (#214 Phase 4)。
+# モバイル回線は IP が頻繁に変わり NSG の許可 IP 運用が破綻するため、
+# Tailscale のプライベートネットワーク経由で SSH できるようにする。
+# 初回は `sudo tailscale up` の表示する URL でブラウザ認証が必要。
+if ! command -v tailscale >/dev/null 2>&1; then
+  curl -fsSL https://tailscale.com/install.sh | sh
+fi
+echo "tailscale: $(tailscale version | head -1) (認証状態: $(tailscale status >/dev/null 2>&1 && echo OK || echo '未認証 - sudo tailscale up を実行'))"
+
 echo "########## 5) dotfiles clone & install ##########"
 if [ ! -d "$HOME/dotfiles" ]; then
   git clone https://github.com/AutoFor/dotfiles.git "$HOME/dotfiles"
