@@ -216,8 +216,10 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
--- タブが一つの時も表示
-config.hide_tab_bar_if_only_one_tab = false
+-- タブが1つだけなら WezTerm のタブバーは隠す (#214: タブ表示は tmux の
+-- ステータスライン〈上部・WezTerm タブ風スタイル〉が担う。ローカル PowerShell
+-- タブ等で WezTerm タブが複数になったときだけ表示される)
+config.hide_tab_bar_if_only_one_tab = true
 -- falseにするとタブバーの透過が効かなくなる
 -- config.use_fancy_tab_bar = false
 
