@@ -1,0 +1,33 @@
+name: Sync Backlog Documents
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "__DOCS_DIR__/**/*.md"
+  workflow_dispatch: {}
+
+concurrency:
+  group: backlog-document-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Sync __DOCS_DIR__/ to Backlog Documents
+        env:
+          BACKLOG_SPACE_HOST: ${{ secrets.BACKLOG_SPACE_HOST }}
+          BACKLOG_API_KEY: ${{ secrets.BACKLOG_API_KEY }}
+          BACKLOG_PROJECT_ID: ${{ secrets.BACKLOG_PROJECT_ID }}
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: node scripts/sync-backlog-documents.mjs
