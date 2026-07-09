@@ -4,6 +4,7 @@ local config = wezterm.config_builder()
 
 -- Azure 開発サーバー (devbox) 関連の定数
 local DEVBOX_DOMAIN = "azure"
+local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
 local DEVBOX_HOST = "20.46.165.130"   -- Standard SKU の静的 IP（停止/再開で不変）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
@@ -55,24 +56,16 @@ local function pane_cwd(pane)
   return nil
 end
 
--- devbox に SSH して tmux セッションに attach するコマンド（無ければ作成）。
--- セッション層は #214 でリモート側 tmux に一本化した。
-local function devbox_tmux_args(session)
-  return {
-    "ssh.exe",
-    "-i", wezterm.home_dir .. "\\.ssh\\id_ed25519",
-    "-t", DEVBOX_USER .. "@" .. DEVBOX_HOST,
-    "tmux", "new-session", "-A", "-s", session or "main",
-  }
-end
-
--- 現在ペインが devbox 上の tmux クライアント（ssh + tmux のタブ）かどうか。
--- mux ドメイン（フォールバック用）のペインは除外する。
+-- 現在ペインが devbox 上の tmux クライアント（devbox-tmux ドメインのタブ）かどうか。
+-- ドメイン名で確実に判定できる。手動 ssh + tmux（ローカルタブから）も host で拾う。
 local function is_tmux_client_pane(pane)
   local ok_domain, domain = pcall(function()
     return pane:get_domain_name()
   end)
-  if ok_domain and domain == DEVBOX_DOMAIN then
+  if ok_domain and domain == DEVBOX_TMUX_DOMAIN then
+    return true
+  end
+  if ok_domain and domain ~= "local" then
     return false
   end
   local ok_cwd, cwd = pcall(function()
@@ -104,13 +97,13 @@ end
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
   local args = cmd or {}
-  args.args = args.args or devbox_tmux_args("main")
+  args.domain = args.domain or { DomainName = DEVBOX_TMUX_DOMAIN }
   local ok = pcall(function()
     wezterm.mux.spawn_window(args)
   end)
   if not ok then
     -- 接続できない場合はローカル PowerShell にフォールバック
-    wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo" } })
+    wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo" }, domain = { DomainName = "local" } })
   end
 end)
 
@@ -142,6 +135,21 @@ config.macos_window_background_blur = 20
 -- 事前: Azure に同一版 wezterm 導入済み(bootstrap.sh が導入)、
 --       Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
 config.ssh_domains = {
+  -- 通常の入口 (#214): WezTerm ネイティブ SSH (libssh) で接続し tmux main に attach。
+  -- ssh.exe (ConPTY 経由) だと DA 応答の二重化やマウスシーケンスの欠落で
+  -- ペインにゴミ文字が流れるため、必ずネイティブ SSH ドメインを使う。
+  {
+    name = DEVBOX_TMUX_DOMAIN,
+    remote_address = DEVBOX_HOST,
+    username = DEVBOX_USER,
+    ssh_option = {
+      identityfile = wezterm.home_dir .. "\\.ssh\\id_ed25519",
+    },
+    multiplexing = "None",
+    assume_shell = "Posix",
+    default_prog = { "tmux", "new-session", "-A", "-s", "main" },
+  },
+  -- 旧 wezterm mux ドメイン（切り分け用フォールバック）
   {
     name = DEVBOX_DOMAIN,
     remote_address = DEVBOX_HOST,
@@ -160,10 +168,9 @@ config.ssh_domains = {
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
   {
-    -- 通常の入口: ssh + tmux main セッション（セッションはリモート tmux が保持）
+    -- 通常の入口: ネイティブ SSH + tmux main セッション（セッションはリモート tmux が保持）
     label = "Azure devbox (tmux main)",
-    domain = { DomainName = "local" },
-    args = devbox_tmux_args("main"),
+    domain = { DomainName = DEVBOX_TMUX_DOMAIN },
   },
   {
     -- 旧 mux ドメイン（切り分け用フォールバック。通常は使わない）
@@ -291,14 +298,14 @@ wezterm.on("update-right-status", function(window, pane)
     -- 旧 mux ドメイン（切り分け用フォールバック）
     label = "MUX:" .. (host or DEVBOX_DOMAIN)
     color = "#e0af68"
-  elseif host and host:lower() == DEVBOX_HOSTNAME then
-    -- ssh + tmux の通常運用（セッションはリモート tmux が保持）
-    label = "devbox"
-    color = "#9ece6a"
-  elseif host and host ~= "" then
-    -- さらに別ホストへ素の ssh で入っている状態。切断でセッションも消える
+  elseif host and host ~= "" and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
+    -- devbox からさらに別ホストへ素の ssh で入っている状態。切断でセッションも消える
     label = "SSH:" .. host
     color = "#f7768e"
+  elseif domain == DEVBOX_TMUX_DOMAIN or (host and host:lower() == DEVBOX_HOSTNAME) then
+    -- ネイティブ SSH + tmux の通常運用（セッションはリモート tmux が保持）
+    label = "devbox"
+    color = "#9ece6a"
   else
     label = domain
     color = "#9ece6a"
@@ -440,8 +447,7 @@ local function spawn_devbox_tmux_tab()
     ensure_devbox()
     window:perform_action(
       act.SpawnCommandInNewTab({
-        domain = { DomainName = "local" },
-        args = devbox_tmux_args("main"),
+        domain = { DomainName = DEVBOX_TMUX_DOMAIN },
       }),
       pane
     )
