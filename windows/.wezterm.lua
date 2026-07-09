@@ -647,17 +647,17 @@ config.keys = {
     }),
   },
   {
-    -- タブ名変更
+    -- タブ名変更（tmux 内は tmux のウィンドウ名変更 prefix+,）
     key = "e",
     mods = "ALT",
-    action = act.PromptInputLine({
+    action = tmux_bridge(",", act.PromptInputLine({
       description = "タブ名を入力してください",
       action = wezterm.action_callback(function(window, pane, line)
         if line then
           window:active_tab():set_title(line)
         end
       end),
-    }),
+    })),
   },
   {
     key = "W",
@@ -678,20 +678,20 @@ config.keys = {
   },
   -- コマンドパレット表示
   { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
-  -- Tab移動
-  { key = "Tab", mods = "CTRL", action = act.ActivateTabRelative(1) },
-  { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
-  -- Tab入れ替え
-  { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
+  -- Tab移動（tmux 内は tmux の次/前ウィンドウ）
+  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.ActivateTabRelative(1)) },
+  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.ActivateTabRelative(-1)) },
+  -- Tab入れ替え（tmux 内は tmux ウィンドウの入れ替え。.tmux.conf の < > バインド）
+  { key = ",", mods = "ALT", action = tmux_bridge("<", act({ MoveTabRelative = -1 })) },
   -- Tab新規作成: tmux 内なら tmux の新規ウィンドウ (prefix+c)、それ以外はローカルタブ
   {
     key = "t",
     mods = "CTRL",
     action = tmux_bridge("c", act.SpawnTab("CurrentPaneDomain")),
   },
-  -- Tabを閉じる
-  { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
-  { key = ".", mods = "ALT", action = act({ MoveTabRelative = 1 }) },
+  -- Tabを閉じる（tmux 内は tmux ウィンドウを閉じる。prefix+& は tmux 側で確認あり）
+  { key = "w", mods = "CTRL", action = tmux_bridge("&", act({ CloseCurrentTab = { confirm = true } })) },
+  { key = ".", mods = "ALT", action = tmux_bridge(">", act({ MoveTabRelative = 1 })) },
 
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
   { key = "Enter", mods = "ALT", action = cycle_window_mode() },
@@ -725,16 +725,16 @@ config.keys = {
   -- フォントサイズのリセット
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
-  -- タブ切替 Ctrl + 数字
-  { key = "1", mods = "CTRL", action = act.ActivateTab(0) },
-  { key = "2", mods = "CTRL", action = act.ActivateTab(1) },
-  { key = "3", mods = "CTRL", action = act.ActivateTab(2) },
-  { key = "4", mods = "CTRL", action = act.ActivateTab(3) },
-  { key = "5", mods = "CTRL", action = act.ActivateTab(4) },
-  { key = "6", mods = "CTRL", action = act.ActivateTab(5) },
-  { key = "7", mods = "CTRL", action = act.ActivateTab(6) },
-  { key = "8", mods = "CTRL", action = act.ActivateTab(7) },
-  { key = "9", mods = "CTRL", action = act.ActivateTab(-1) },
+  -- タブ切替 Ctrl + 数字（tmux 内は tmux のウィンドウ番号。base-index 1 に対応）
+  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.ActivateTab(0)) },
+  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.ActivateTab(1)) },
+  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.ActivateTab(2)) },
+  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.ActivateTab(3)) },
+  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.ActivateTab(4)) },
+  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.ActivateTab(5)) },
+  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.ActivateTab(6)) },
+  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.ActivateTab(7)) },
+  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.ActivateTab(-1)) },
 
   -- コマンドパレット
   { key = "p", mods = "SHIFT|CTRL", action = act.ActivateCommandPalette },
