@@ -194,11 +194,9 @@ vim.api.nvim_create_autocmd("VimEnter", {
           vim.fn.system({ "wezterm.exe", "cli", "split-pane", "--right", "--percent", "30", "--cwd", vim.fn.getcwd() })
         end
       else
-        -- WSL: Windows 側 wezterm バイナリを /mnt/c から叩く
-        if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" then
-          local wezterm = "/mnt/c/Program Files/WezTerm/wezterm.exe"
-          local cwd_win = vim.fn.trim(vim.fn.system("wslpath -w " .. vim.fn.shellescape(vim.fn.getcwd())))
-          vim.fn.system({ wezterm, "cli", "split-pane", "--right", "--percent", "30", "--cwd", cwd_win })
+        -- リモート Linux (devbox): mux サーバー経由で wezterm CLI を叩く
+        if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" and executable("wezterm") then
+          vim.fn.system({ "wezterm", "cli", "split-pane", "--right", "--percent", "30", "--cwd", vim.fn.getcwd() })
         end
       end
     end)
