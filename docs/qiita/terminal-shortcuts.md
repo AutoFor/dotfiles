@@ -50,7 +50,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
-| `Ctrl+t` | 新規タブを開く | ブラウザ由来（**t**ab） |
+| `Ctrl+t` | Azure mux ドメインの新規タブを開く（`MUX:devbox`。切断してもセッション維持。VM 停止中は `<leader> →a` で起こしてから） | ブラウザ由来（**t**ab） |
 | `Ctrl+w` | 現在のタブを閉じる | ブラウザ由来（**w**indow close） |
 | `Ctrl+Tab` | 次のタブへ移動 | ブラウザ由来 |
 | `Ctrl+Shift+Tab` | 前のタブへ移動 | 上記の逆 |
@@ -60,6 +60,7 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。
 | `Alt+e` | 現在のタブ名を変更 | **e**dit name |
 | `<leader> →Shift+P` | PowerShell タブを新規で開く | **P**owerShell |
 | `<leader> →l` | ランチャーメニューを表示（PowerShell / WSL 等） | **l**aunch |
+| `<leader> →a` | Azure devbox を素の SSH で開く（VM 停止中でも自動起動して接続。`SSH:devbox` 表示） | **a**zure |
 | `<leader> →Shift+A` | Azure mux ドメインに attach（既存の永続タブ/ペイン〈claude 等〉を丸ごと呼び戻す。スリープ/切断後の再接続用、VM は起動済みである必要あり） | **A**ttach |
 | `<leader> →Shift+D` | Azure mux ドメインから detach（ローカル表示を切り離す。Azure 側セッションは生存継続） | **D**etach |
 
@@ -154,11 +155,8 @@ config.default_domain = "WSL:Ubuntu"
 
 ### WSL への接続: native 既定（SSH は手動時のみ）
 
-起動時・新規ウィンドウ・`Ctrl+t` はすべて **WSL ネイティブ統合**（`WSL_NATIVE_DOMAIN`）を使う。
-
-- `config.default_domain = WSL_NATIVE_DOMAIN`
-- `CTRL_T_DOMAIN = WSL_NATIVE_DOMAIN`
-- `gui-startup` は native で即起動（SSH 待機はしない）
+ローカル WSL を開く場合は **WSL ネイティブ統合**（`WSL_NATIVE_DOMAIN`）を使う（`config.default_domain = WSL_NATIVE_DOMAIN`）。
+なお現在は Azure devbox が開発の主戦場のため、起動時は devbox への SSH、`Ctrl+t` は Azure mux ドメインで開く構成になっている（前掲の Tab 表を参照）。
 
 **なぜ SSH を既定にしないか:** 一時は体感速度を狙って SSH（`127.0.0.1:2222`）を既定にしていたが、
 ① 起動時に SSH 待機すると WezTerm が空プロセス化して GUI が出ない、
@@ -203,22 +201,25 @@ systemd ベースの WSL では sshd のポートを決めているのは `sshd_
 
 接続確認: `ssh -i ~/.ssh/wezterm_wsl -p 2222 ubuntu@127.0.0.1 'echo ok'`。`ssh.socket` は `enabled` なので WSL 再起動後も自動で 2222 番が上がる。
 
-### 右下ステータスに接続ドメインを表示
+### 右上ステータスに接続状態を表示（mux / SSH / ローカル）
 
-「今開いているペインが Azure の WezTerm mux なのか、ローカルの WSL なのか分からない」問題の対策として、タブバーを画面下部（`config.tab_bar_at_bottom = true`）に移し、右端のステータスに **workspace 名・接続ドメイン名・アクティブなキーテーブル** を常時表示している。
+「今開いているペインが Azure の WezTerm mux 経由なのか、素の SSH なのか、ローカル WSL なのか分からない」問題の対策として、タブバー右端のステータスに **workspace 名・接続状態・アクティブなキーテーブル** を常時表示している。
 
 表示例:
 
 ```
-default    azure
+default    MUX:devbox
 ```
 
-ドメイン名の色で接続先を見分けられる（`WSL*` / `local` 以外はすべてリモート扱い）:
+接続状態はラベルと色の3値で見分けられる:
 
-| 色 | ドメイン例 | 意味 |
-|----|-----------|------|
-| 緑 | `WSL:Ubuntu`, `WSL-SSH`, `local` | ローカル（WSL / Windows） |
-| オレンジ | `azure`（mux 永続）, `SSHMUX:xxx`, `SSH:xxx` | リモート（Azure devbox など） |
+| 表示 | 色 | 意味 |
+|------|----|------|
+| `MUX:devbox` | オレンジ | **mux ドメイン経由**（永続。切断/スリープしてもリモート側でセッションが生き残る） |
+| `SSH:devbox` | 赤 | **素の SSH**（WSL ペイン内から `ssh` した状態。切断するとセッションも消える） |
+| `WSL:Ubuntu` / `local` | 緑 | ローカル（WSL / Windows） |
+
+仕組み: mux 接続はドメイン名（`azure`）で判定できるが、素の SSH はドメインが `WSL:Ubuntu` のままなのでドメイン名では検出できない。そこでシェルが OSC 7 で報告するホスト名（`pane:get_current_working_dir().host`）をローカルのホスト名と比較し、異なればリモートと判定している（リモート側のシェルが OSC 7 を発行していることが前提。dotfiles の zsh 設定なら発行される）。
 
 シェルからも確認したい場合は `echo $WEZTERM_EXECUTABLE` を実行し、`wezterm-mux-server` を含めば mux セッション、空または `wezterm` ならローカルと判断できる。
 
@@ -344,6 +345,18 @@ sudo apt install zenity
 
 WSL パス（`/mnt/c/...`）・Windows パス（`C:\...` / `C:/...`）どちらも受け付ける。
 実体は `C:\tools\pptx-meiryo\pptx-meiryo.exe`（PowerPoint COM Interop、要 PowerPoint インストール済み）。
+
+### pplx（Perplexity API 連携）
+
+| コマンド | 動作 |
+|---------|------|
+| `pplx` | 対話モード（`pplx>` プロンプトで複数ターンの会話、`exit`/`quit`/Ctrl+D で終了、`/reset` で履歴クリア） |
+| `pplx "質問文"` | 単発モード。1回answerして終了 |
+| `pplx -m sonar-pro "質問文"` | モデルを指定（既定は `sonar`、`PPLX_MODEL` 環境変数でも上書き可） |
+
+Web 検索で根拠付けされた回答を返す Perplexity Sonar API（`/v1/sonar`）を呼び出す。
+APIキーはローカルに保存せず、起動のたびに Azure Key Vault（既定: `autofor-kv` / シークレット名: `perplexity-api-key`）から取得する。これにより毎回の起動時に Azure へのログイン状態・Key Vault への権限が正しいかを確認できる（`az login` が必要な場合はエラーで案内される）。テスト用に `PERPLEXITY_API_KEY` 環境変数を設定すると、その値が優先され Key Vault 取得はスキップされる。
+実体は `wsl/.local/bin/pplx`。
 
 ---
 

@@ -43,6 +43,8 @@ local WSL_HOME = wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "p
 local WSL_USER = getenv("WEZTERM_WSL_USER")
   or wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "sh", "-lc", "printf %s \"$USER\"" })
   or "root"
+-- ローカル WSL のホスト名（ステータス表示でリモート SSH 先と区別するために使う）
+local WSL_HOSTNAME = (wsl_output({ "wsl.exe", "-d", WSL_DISTRO, "-e", "hostname" }) or ""):lower()
 
 -- WSL の ~/.last_dir から直近のディレクトリを取得
 local function get_last_dir(reason)
@@ -189,13 +191,10 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
--- タブバー（右ステータス含む）を画面下部に表示
--- tab_bar_at_bottom はレトロタブバー（use_fancy_tab_bar = false）でのみ有効
--- （fancy のままだと下に移動しない。透過は opacity=1.0 のため未使用で実害なし）
-config.use_fancy_tab_bar = false
-config.tab_bar_at_bottom = true
 -- タブが一つの時も表示
 config.hide_tab_bar_if_only_one_tab = false
+-- falseにするとタブバーの透過が効かなくなる
+-- config.use_fancy_tab_bar = false
 
 -- タブバーの透過
 config.window_frame = {
@@ -215,8 +214,6 @@ config.show_new_tab_button_in_tab_bar = false
 config.colors = {
   tab_bar = {
     inactive_tab_edge = "none",
-    -- レトロタブバーの地色を背景（黒）に合わせる
-    background = "#000000",
   },
 }
 
@@ -255,28 +252,47 @@ end)
 -- keybinds
 ----------------------------------------------------
 
--- 右下ステータス: workspace / 接続ドメイン / アクティブなキーテーブル
--- ドメイン名で mux（SSHMUX: など）かローカル（WSL:Ubuntu など）かを見分けられるようにする
+-- 右ステータス: workspace / 接続状態 / アクティブなキーテーブル
+-- 接続状態は「mux 経由（永続）」「素の SSH（切断で消える）」「ローカル」の3値で表示する。
+-- ドメイン名だけでは素の SSH（WSL ペイン内から ssh した場合）を検出できないため、
+-- シェルが OSC 7 で報告するホスト名（pane:get_current_working_dir().host）も併用する。
 wezterm.on("update-right-status", function(window, pane)
   local ok, domain = pcall(function()
     return pane:get_domain_name()
   end)
   domain = (ok and domain) and domain or "?"
-  -- WSL*/local 以外（azure mux, SSH:, SSHMUX: など）はリモート接続として扱う
-  local domain_color = "#e0af68"
-  if domain:match("^WSL") or domain == "local" then
-    domain_color = "#9ece6a"
+
+  local host
+  local ok_cwd, cwd = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  if ok_cwd and cwd and cwd.host and cwd.host ~= "" then
+    host = cwd.host
+  end
+
+  local label, color
+  if domain == "azure" then
+    -- 永続 mux ドメイン。切断/スリープしてもリモート側でセッションが生き残る
+    label = "MUX:" .. (host or "azure")
+    color = "#e0af68"
+  elseif host and host:lower() ~= WSL_HOSTNAME then
+    -- ローカルペインから素の ssh でリモートに入っている状態。切断するとセッションも消える
+    label = "SSH:" .. host
+    color = "#f7768e"
+  else
+    label = domain
+    color = "#9ece6a"
   end
 
   local items = {
     { Foreground = { Color = "#7aa2f7" } },
     { Text = wezterm.mux.get_active_workspace() },
-    { Foreground = { Color = domain_color } },
-    { Text = "  " .. wezterm.nerdfonts.md_server_network .. " " .. domain },
+    { Foreground = { Color = color } },
+    { Text = "  " .. wezterm.nerdfonts.md_server_network .. " " .. label },
   }
   local key_table = window:active_key_table()
   if key_table then
-    table.insert(items, { Foreground = { Color = "#f7768e" } })
+    table.insert(items, { Foreground = { Color = "#bb9af7" } })
     table.insert(items, { Text = "  TABLE: " .. key_table })
   end
   table.insert(items, { Text = "  " })
@@ -434,6 +450,28 @@ local function spawn_devbox_tab()
         domain = { DomainName = WSL_NATIVE_DOMAIN },
         args = DEVBOX_LAUNCH_ARGS,
         cwd = current_pane_cwd(pane) or WSL_HOME,
+      }),
+      pane
+    )
+  end)
+end
+
+-- Azure mux ドメインの新規タブを開く（切断してもセッションがリモート側に残る）。
+-- リモート（devbox）のペインから開いた場合は同じディレクトリを引き継ぐ。
+-- VM 停止中は接続できないため、その場合は <leader> a（devbox: 自動起動して SSH）で先に起こす。
+local function spawn_mux_tab()
+  return wezterm.action_callback(function(window, pane)
+    local cwd
+    local ok, uri = pcall(function()
+      return pane:get_current_working_dir()
+    end)
+    if ok and uri and uri.host and uri.host:lower() ~= WSL_HOSTNAME and uri.file_path then
+      cwd = uri.file_path
+    end
+    window:perform_action(
+      act.SpawnCommandInNewTab({
+        domain = { DomainName = "azure" },
+        cwd = cwd,
       }),
       pane
     )
@@ -676,11 +714,11 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
   -- Tab入れ替え
   { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成: Azure 開発サーバー(devbox)に接続する（停止中なら自動起動して SSH）
+  -- Tab新規作成: Azure mux ドメインで開く（永続。VM 停止中は <leader> a で起こしてから）
   {
     key = "t",
     mods = "CTRL",
-    action = spawn_devbox_tab(),
+    action = spawn_mux_tab(),
   },
   -- Tabを閉じる
   { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
