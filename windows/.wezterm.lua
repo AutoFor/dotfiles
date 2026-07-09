@@ -7,10 +7,27 @@ local DEVBOX_DOMAIN = "azure"
 local DEVBOX_HOST = "20.46.165.130"   -- Standard SKU の静的 IP（停止/再開で不変）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
--- VM 起動 + NSG の現在IP許可を担保するスクリプト（windows/bin/devbox.ps1）。
--- dotfiles を ~/dotfiles 以外に clone した場合は環境変数 DOTFILES_DIR で上書きする。
-local DOTFILES_DIR = os.getenv("DOTFILES_DIR") or (wezterm.home_dir .. "\\dotfiles")
-local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
+-- VM 起動 + NSG の現在IP許可を担保するスクリプト（windows/bin/devbox.ps1）を探す。
+-- 環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
+local function find_devbox_ps1()
+  local candidates = {
+    os.getenv("DOTFILES_DIR"),
+    wezterm.home_dir .. "\\ghq\\github.com\\AutoFor\\dotfiles",
+    wezterm.home_dir .. "\\dotfiles",
+  }
+  for _, dir in ipairs(candidates) do
+    if dir then
+      local path = dir .. "\\windows\\bin\\devbox.ps1"
+      local f = io.open(path, "r")
+      if f then
+        f:close()
+        return path
+      end
+    end
+  end
+  return wezterm.home_dir .. "\\dotfiles\\windows\\bin\\devbox.ps1"
+end
+local DEVBOX_PS1 = find_devbox_ps1()
 
 local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"

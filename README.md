@@ -77,6 +77,7 @@ winget install --id Git.Git -e
 winget install --id GitHub.cli -e
 winget install --id wez.wezterm -e
 winget install --id Microsoft.AzureCLI -e
+winget install --id x-motemen.ghq -e
 ```
 
 ログインする。
@@ -86,16 +87,16 @@ gh auth login
 az login
 ```
 
-リポジトリを clone してリンクを張る（シンボリックリンク作成に管理者権限または開発者モードが必要）。
+ghq でリポジトリを取得し、リンクを張る（シンボリックリンク作成に管理者権限または開発者モードが必要）。
 
 ```powershell
-git clone https://github.com/AutoFor/dotfiles.git $env:USERPROFILE\dotfiles
-Set-Location $env:USERPROFILE\dotfiles
+ghq get AutoFor/dotfiles
+Set-Location "$env:USERPROFILE\ghq\github.com\AutoFor\dotfiles"
 .\install-windows.ps1
 ```
 
-`~/dotfiles` 以外に clone した場合は、ユーザー環境変数 `DOTFILES_DIR` にそのパスを設定する
-（WezTerm が `devbox.ps1` を見つけるために使う）。
+WezTerm は `devbox.ps1` を「環境変数 `DOTFILES_DIR` → ghq 既定パス → `~/dotfiles`」の順で探すので、
+標準配置なら追加設定は不要。別の場所に置いた場合だけ `DOTFILES_DIR` を設定する。
 
 SSH 鍵が無ければ作成する。公開鍵は devbox の `~/.ssh/authorized_keys` に登録する
 （`create-vm.sh` で VM を作った場合は作成時に登録済み）。
@@ -149,10 +150,10 @@ WezTerm を開き直すか `LEADER Shift+A` で元の画面がそのまま戻る
 ### VM の起動・停止（課金対策）
 
 ```powershell
-# どこからでも（~/.local/bin にリンク済みなら devbox.ps1 だけでよい）
-pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 status
-pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 up
-pwsh -File $env:USERPROFILE\dotfiles\windows\bin\devbox.ps1 down   # deallocate（課金はディスク代のみ）
+# install-windows.ps1 が ~/.local/bin/devbox.ps1 にリンクしている
+pwsh -File $env:USERPROFILE\.local\bin\devbox.ps1 status
+pwsh -File $env:USERPROFILE\.local\bin\devbox.ps1 up
+pwsh -File $env:USERPROFILE\.local\bin\devbox.ps1 down   # deallocate（課金はディスク代のみ）
 ```
 
 毎日 22:00 の自動シャットダウンも設定済み（create-vm.sh）。
