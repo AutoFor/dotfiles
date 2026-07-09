@@ -309,7 +309,7 @@ end)
 -- keybinds
 ----------------------------------------------------
 
--- 右ステータス: workspace / 接続状態 / アクティブなキーテーブル
+-- 右ステータス: 接続状態 / アクティブなキーテーブル / 日時
 -- 接続状態は「mux 経由（永続）」「素の SSH（切断で消える）」「ローカル」の3値で表示する。
 -- ドメイン名だけでは素の SSH（devbox ペイン内からさらに ssh した場合）を検出できないため、
 -- シェルが OSC 7 で報告するホスト名（pane:get_current_working_dir().host）も併用する。
@@ -346,10 +346,8 @@ wezterm.on("update-right-status", function(window, pane)
   end
 
   local items = {
-    { Foreground = { Color = "#7aa2f7" } },
-    { Text = wezterm.mux.get_active_workspace() },
     { Foreground = { Color = color } },
-    { Text = "  " .. wezterm.nerdfonts.md_server_network .. " " .. label },
+    { Text = wezterm.nerdfonts.md_server_network .. " " .. label },
   }
   local key_table = window:active_key_table()
   if key_table then
