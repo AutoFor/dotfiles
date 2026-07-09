@@ -1,13 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ===== dotfiles インストーラ（Linux / WSL 用） =====
+# ===== dotfiles インストーラ（Linux 用: Azure devbox 等） =====
 # 既存ファイルをバックアップしてからシンボリックリンクを作成する。
 # 冪等: 何度実行しても安全。
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKUP_SUFFIX=".backup.$(date +%Y%m%d)"
-INSTALL_SYSTEM_CONFIG="${INSTALL_SYSTEM_CONFIG:-auto}"
 
 # --- ヘルパー関数 ---
 
@@ -57,17 +56,17 @@ sync_dir_links() {
   done
 }
 
-echo "=== Linux / WSL 設定ファイルのリンク ==="
+echo "=== Linux 設定ファイルのリンク ==="
 
-# --- WSL ホームディレクトリ直下 ---
-link_file "$DOTFILES_DIR/wsl/.zshenv"   "$HOME/.zshenv"
-link_file "$DOTFILES_DIR/wsl/.zshrc"     "$HOME/.zshrc"
-link_file "$DOTFILES_DIR/wsl/.bashrc"    "$HOME/.bashrc"
-link_file "$DOTFILES_DIR/wsl/.gitconfig" "$HOME/.gitconfig"
+# --- ホームディレクトリ直下 ---
+link_file "$DOTFILES_DIR/linux/.zshenv"   "$HOME/.zshenv"
+link_file "$DOTFILES_DIR/linux/.zshrc"     "$HOME/.zshrc"
+link_file "$DOTFILES_DIR/linux/.bashrc"    "$HOME/.bashrc"
+link_file "$DOTFILES_DIR/linux/.gitconfig" "$HOME/.gitconfig"
 
-# --- WSL .config 配下 ---
-link_file "$DOTFILES_DIR/wsl/.config/gh/config.yml" "$HOME/.config/gh/config.yml"
-link_file "$DOTFILES_DIR/wsl/.config/git/ignore"    "$HOME/.config/git/ignore"
+# --- .config 配下 ---
+link_file "$DOTFILES_DIR/linux/.config/gh/config.yml" "$HOME/.config/gh/config.yml"
+link_file "$DOTFILES_DIR/linux/.config/git/ignore"    "$HOME/.config/git/ignore"
 link_file "$DOTFILES_DIR/nvim"          "$HOME/.config/nvim"
 
 echo ""
@@ -93,7 +92,7 @@ echo ""
 echo "=== ~/.local/bin スクリプトのリンク ==="
 
 mkdir -p "$HOME/.local/bin"
-for bin_file in "$DOTFILES_DIR/wsl/.local/bin"/*; do
+for bin_file in "$DOTFILES_DIR/linux/.local/bin"/*; do
   bin_name="$(basename "$bin_file")"
   link_file "$bin_file" "$HOME/.local/bin/$bin_name"
 done
@@ -107,43 +106,6 @@ mkdir -p "$CODEX_DIR/skills"
 link_file "$DOTFILES_DIR/codex/config.toml" "$CODEX_DIR/config.toml"
 
 sync_dir_links "$DOTFILES_DIR/codex/skills" "$CODEX_DIR/skills"
-
-echo ""
-echo "=== システム設定 ==="
-
-is_wsl() {
-  grep -qi microsoft /proc/version 2>/dev/null || [ -n "${WSL_DISTRO_NAME:-}" ]
-}
-
-# /etc/wsl.conf のコピー（シンボリックリンク不可のためコピー）
-WSL_CONF_SRC="$DOTFILES_DIR/wsl/etc/wsl.conf"
-WSL_CONF_DEST="/etc/wsl.conf"
-if [ "$INSTALL_SYSTEM_CONFIG" = "0" ] || [ "$INSTALL_SYSTEM_CONFIG" = "false" ]; then
-  echo "  [skip] system config → INSTALL_SYSTEM_CONFIG=$INSTALL_SYSTEM_CONFIG"
-elif is_wsl && [ -f "$WSL_CONF_SRC" ]; then
-  if sudo diff -q "$WSL_CONF_SRC" "$WSL_CONF_DEST" > /dev/null 2>&1; then
-    echo "  [skip] $WSL_CONF_DEST → 既に最新"
-  else
-    sudo cp "$WSL_CONF_SRC" "$WSL_CONF_DEST"
-    echo "  [copy] $WSL_CONF_DEST"
-  fi
-else
-  echo "  [skip] /etc/wsl.conf → WSL ではないためスキップ"
-fi
-
-# SSH 自動起動を有効化（systemd が有効な場合のみ）
-if ! is_wsl; then
-  echo "  [skip] SSH 自動起動 → WSL ではないためスキップ"
-elif systemctl is-system-running --quiet 2>/dev/null || [ "$(ps -p 1 -o comm=)" = "systemd" ]; then
-  if ! systemctl is-enabled ssh --quiet 2>/dev/null; then
-    sudo systemctl enable ssh
-    echo "  [enable] SSH 自動起動を有効化しました"
-  else
-    echo "  [skip] SSH 自動起動 → 既に有効"
-  fi
-else
-  echo "  [skip] SSH 自動起動 → systemd が無効のためスキップ"
-fi
 
 echo ""
 echo "=== 完了 ==="

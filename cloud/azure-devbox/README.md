@@ -1,7 +1,10 @@
 # Azure CLI 開発サーバー (devbox)
 
 Azure 上に CLI 専用の Linux 開発サーバー (Ubuntu 24.04) を立て、
-この dotfiles をベースに Claude Code / tmux / Neovim などをセットアップするための一式。
+この dotfiles をベースに Claude Code / wezterm-mux-server / Neovim などをセットアップするための一式。
+
+Windows 側からの日常の起動・接続は `windows/bin/devbox.ps1` を使う
+(WezTerm の起動時にも `devbox.ps1 ensure` が自動で呼ばれる)。
 
 ## 構成
 
@@ -45,6 +48,8 @@ claude            # 初回起動で認証
 ```
 
 ## 運用コマンド
+
+Windows からは `devbox.ps1 up / down / status` が同じことをする。
 
 ```bash
 # 使わない時は停止 → 課金はディスク代だけ (最大の節約)
