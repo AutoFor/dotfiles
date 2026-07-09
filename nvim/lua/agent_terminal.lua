@@ -33,11 +33,36 @@ end
 local function set_wezterm_user_var(name, value)
   local encoded = vim.base64.encode(value)
   local osc = string.format("\027]1337;SetUserVar=%s=%s\007", name, encoded)
+  if vim.env.TMUX and vim.env.TMUX ~= "" then
+    -- tmux 内では passthrough でラップしないと tmux に飲まれる
+    osc = "\027Ptmux;" .. osc:gsub("\027", "\027\027") .. "\027\\"
+  end
   local ok = pcall(vim.api.nvim_chan_send, vim.v.stderr, osc)
   return ok
 end
 
+-- tmux 内なら右隣のペインに直接送る (WezTerm 非依存)。右にペインが無ければ false
+local function send_tmux_right_pane(text)
+  if not (vim.env.TMUX and vim.env.TMUX ~= "") then
+    return false
+  end
+  local at_right = vim.fn.trim(vim.fn.system({ "tmux", "display-message", "-p", "#{pane_at_right}" }))
+  if at_right ~= "0" then
+    return false
+  end
+  vim.fn.system({ "tmux", "send-keys", "-t", "{right-of}", "-l", text })
+  if vim.v.shell_error ~= 0 then
+    return false
+  end
+  vim.fn.system({ "tmux", "select-pane", "-R" })
+  return true
+end
+
 function M.send_wezterm_right_pane(text)
+  if send_tmux_right_pane(text) then
+    M.debug("send: tmux right pane", { text = text })
+    return true, "tmux-right-pane"
+  end
   local ok = set_wezterm_user_var("send_to_right_agent_pane", text)
   if ok then
     M.debug("send: fallback to wezterm right pane", { text = text })

@@ -194,8 +194,14 @@ vim.api.nvim_create_autocmd("VimEnter", {
           vim.fn.system({ "wezterm.exe", "cli", "split-pane", "--right", "--percent", "30", "--cwd", vim.fn.getcwd() })
         end
       else
-        -- リモート Linux (devbox): mux サーバー経由で wezterm CLI を叩く
-        if vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" and executable("wezterm") then
+        -- リモート Linux (devbox):
+        -- tmux 内なら tmux split-window、wezterm mux 内なら wezterm CLI で右ペインを分割
+        if vim.env.TMUX and vim.env.TMUX ~= "" and executable("tmux") then
+          local panes = vim.fn.trim(vim.fn.system({ "tmux", "display-message", "-p", "#{window_panes}" }))
+          if panes == "1" then
+            vim.fn.system({ "tmux", "split-window", "-h", "-l", "30%", "-d", "-c", vim.fn.getcwd() })
+          end
+        elseif vim.env.WEZTERM_UNIX_SOCKET and vim.env.WEZTERM_UNIX_SOCKET ~= "" and executable("wezterm") then
           vim.fn.system({ "wezterm", "cli", "split-pane", "--right", "--percent", "30", "--cwd", vim.fn.getcwd() })
         end
       end

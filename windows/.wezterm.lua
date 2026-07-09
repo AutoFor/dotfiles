@@ -4,6 +4,7 @@ local config = wezterm.config_builder()
 
 -- Azure 開発サーバー (devbox) 関連の定数
 local DEVBOX_DOMAIN = "azure"
+local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
 local DEVBOX_HOST = "20.46.165.130"   -- Standard SKU の静的 IP（停止/再開で不変）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
@@ -55,25 +56,59 @@ local function pane_cwd(pane)
   return nil
 end
 
--- WezTerm 起動時は Azure devbox の mux ドメインに接続する。
--- セッションはリモート側の wezterm-mux-server に残るため、休止/切断後に
--- WezTerm を開き直すだけでペイン/プロセス(Claude Code 含む)ごと復帰する。
+-- 現在ペインが devbox 上の tmux クライアント（devbox-tmux ドメインのタブ）かどうか。
+-- ドメイン名で確実に判定できる。手動 ssh + tmux（ローカルタブから）も host で拾う。
+local function is_tmux_client_pane(pane)
+  local ok_domain, domain = pcall(function()
+    return pane:get_domain_name()
+  end)
+  if ok_domain and domain == DEVBOX_TMUX_DOMAIN then
+    return true
+  end
+  if ok_domain and domain ~= "local" then
+    return false
+  end
+  local ok_cwd, cwd = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  local host = (ok_cwd and cwd and cwd.host) and cwd.host or nil
+  return host ~= nil and host:lower() == DEVBOX_HOSTNAME
+end
+
+local TMUX_PREFIX = "\x02" -- C-b
+
+-- devbox の tmux クライアント上なら prefix+keys を tmux に送り、
+-- それ以外（ローカルペイン・mux フォールバック）は WezTerm ネイティブ動作。
+-- ペイン管理を tmux 側に一本化するためのブリッジ (#214 Phase 2)。
+local function tmux_bridge(keys, fallback_action)
+  return wezterm.action_callback(function(window, pane)
+    if is_tmux_client_pane(pane) then
+      window:perform_action(act.SendString(TMUX_PREFIX .. keys), pane)
+    else
+      window:perform_action(fallback_action, pane)
+    end
+  end)
+end
+
+-- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
+-- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
+-- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
+-- 二重に開くレースがあるため、gui-startup では VM の起動担保だけ行う。
 -- 接続前に devbox.ps1 ensure で VM 起動と NSG(現在IPの許可)を担保する。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
-  local args = cmd or {}
-  args.domain = { DomainName = DEVBOX_DOMAIN }
-  local ok = pcall(function()
-    wezterm.mux.spawn_window(args)
-  end)
-  if not ok then
-    -- 接続できない場合はローカル PowerShell にフォールバック
-    wezterm.mux.spawn_window({ args = { "pwsh.exe", "-NoLogo" } })
+  if cmd then
+    -- CLI から明示的にコマンド指定された場合 (wezterm start -- ...) はそれを尊重
+    wezterm.mux.spawn_window(cmd)
   end
 end)
 
 
 config.automatically_reload_config = true
+-- ウィンドウを閉じるときの確認を出さない。
+-- セッションの実体は devbox の tmux が保持しているので (#214)、
+-- WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
+config.window_close_confirmation = "NeverPrompt"
 -- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
 -- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
 config.notification_handling = "SuppressFromFocusedPane"
@@ -100,6 +135,21 @@ config.macos_window_background_blur = 20
 -- 事前: Azure に同一版 wezterm 導入済み(bootstrap.sh が導入)、
 --       Windows の id_ed25519 公開鍵を authorized_keys 登録済み。
 config.ssh_domains = {
+  -- 通常の入口 (#214): WezTerm ネイティブ SSH (libssh) で接続し tmux main に attach。
+  -- ssh.exe (ConPTY 経由) だと DA 応答の二重化やマウスシーケンスの欠落で
+  -- ペインにゴミ文字が流れるため、必ずネイティブ SSH ドメインを使う。
+  {
+    name = DEVBOX_TMUX_DOMAIN,
+    remote_address = DEVBOX_HOST,
+    username = DEVBOX_USER,
+    ssh_option = {
+      identityfile = wezterm.home_dir .. "\\.ssh\\id_ed25519",
+    },
+    multiplexing = "None",
+    assume_shell = "Posix",
+    default_prog = { "tmux", "new-session", "-A", "-s", "main" },
+  },
+  -- 旧 wezterm mux ドメイン（切り分け用フォールバック）
   {
     name = DEVBOX_DOMAIN,
     remote_address = DEVBOX_HOST,
@@ -112,13 +162,21 @@ config.ssh_domains = {
   },
 }
 
-config.default_domain = DEVBOX_DOMAIN
+-- 既定ドメインはネイティブ SSH + tmux (#214)。起動時のウィンドウはここに生成される。
+-- VM 停止中に接続失敗した場合はウィンドウにエラーが表示されるので、
+-- LEADER+l のランチャーから PowerShell を開いて切り分けする。
+config.default_domain = DEVBOX_TMUX_DOMAIN
 
 -- ランチャーメニュー（LEADER + l で表示）
 config.launch_menu = {
   {
-    -- 永続 mux ドメイン。切断/スリープでも Azure 側セッションが生き残る。
-    label = "Azure devbox (mux 永続)",
+    -- 通常の入口: ネイティブ SSH + tmux main セッション（セッションはリモート tmux が保持）
+    label = "Azure devbox (tmux main)",
+    domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+  },
+  {
+    -- 旧 mux ドメイン（切り分け用フォールバック。通常は使わない）
+    label = "Azure devbox (mux フォールバック)",
     domain = { DomainName = DEVBOX_DOMAIN },
   },
   {
@@ -158,8 +216,10 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
--- タブが一つの時も表示
+-- タブが一つの時も表示 (#214: tmux のウィンドウ一覧をタブバーに描画するため常時表示)
 config.hide_tab_bar_if_only_one_tab = false
+-- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
+config.tab_max_width = 999
 -- falseにするとタブバーの透過が効かなくなる
 -- config.use_fancy_tab_bar = false
 
@@ -190,7 +250,37 @@ local SOLID_LEFT_ARROW = wezterm.nerdfonts.ple_lower_right_triangle
 -- タブの右側の装飾
 local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 
+-- 1つの tmux ウィンドウを WezTerm タブ風のセグメントとして描画する
+local function tmux_tab_segment(items, text, is_active)
+  local edge_background = "none"
+  local background = is_active and "#ae8b2d" or "#5c6d74"
+  table.insert(items, { Background = { Color = edge_background } })
+  table.insert(items, { Foreground = { Color = background } })
+  table.insert(items, { Text = SOLID_LEFT_ARROW })
+  table.insert(items, { Background = { Color = background } })
+  table.insert(items, { Foreground = { Color = "#FFFFFF" } })
+  table.insert(items, { Text = " " .. text .. " " })
+  table.insert(items, { Background = { Color = edge_background } })
+  table.insert(items, { Foreground = { Color = background } })
+  table.insert(items, { Text = SOLID_RIGHT_ARROW })
+  table.insert(items, { Text = " " })
+end
+
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+  -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
+  -- 通知）をタブ風セグメントで並べる。切り替えは Ctrl+Tab / Ctrl+数字（表示専用）
+  local store = wezterm.GLOBAL.tmux_windows or {}
+  local data = tab.active_pane and store[tostring(tab.active_pane.pane_id)] or nil
+  if data and data ~= "" then
+    local items = {}
+    for entry in data:gmatch("[^\t]+") do
+      local is_active = entry:sub(-1) == "*"
+      local text = is_active and entry:sub(1, -2) or entry
+      tmux_tab_segment(items, text, is_active)
+    end
+    return items
+  end
+
   local background = "#5c6d74"
   local foreground = "#FFFFFF"
   local edge_background = "none"
@@ -219,7 +309,7 @@ end)
 -- keybinds
 ----------------------------------------------------
 
--- 右ステータス: workspace / 接続状態 / アクティブなキーテーブル
+-- 右ステータス: 接続状態 / アクティブなキーテーブル / 日時
 -- 接続状態は「mux 経由（永続）」「素の SSH（切断で消える）」「ローカル」の3値で表示する。
 -- ドメイン名だけでは素の SSH（devbox ペイン内からさらに ssh した場合）を検出できないため、
 -- シェルが OSC 7 で報告するホスト名（pane:get_current_working_dir().host）も併用する。
@@ -238,30 +328,34 @@ wezterm.on("update-right-status", function(window, pane)
   end
 
   local label, color
-  if host and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
-    -- ペイン内から素の ssh で別ホストに入っている状態。切断するとセッションも消える
-    label = "SSH:" .. host
-    color = "#f7768e"
-  elseif domain == DEVBOX_DOMAIN then
-    -- 永続 mux ドメイン。切断/スリープしてもリモート側でセッションが生き残る
+  if domain == DEVBOX_DOMAIN then
+    -- 旧 mux ドメイン（切り分け用フォールバック）
     label = "MUX:" .. (host or DEVBOX_DOMAIN)
     color = "#e0af68"
+  elseif host and host ~= "" and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
+    -- devbox からさらに別ホストへ素の ssh で入っている状態。切断でセッションも消える
+    label = "SSH:" .. host
+    color = "#f7768e"
+  elseif domain == DEVBOX_TMUX_DOMAIN or (host and host:lower() == DEVBOX_HOSTNAME) then
+    -- ネイティブ SSH + tmux の通常運用（セッションはリモート tmux が保持）
+    label = "devbox"
+    color = "#9ece6a"
   else
     label = domain
     color = "#9ece6a"
   end
 
   local items = {
-    { Foreground = { Color = "#7aa2f7" } },
-    { Text = wezterm.mux.get_active_workspace() },
     { Foreground = { Color = color } },
-    { Text = "  " .. wezterm.nerdfonts.md_server_network .. " " .. label },
+    { Text = wezterm.nerdfonts.md_server_network .. " " .. label },
   }
   local key_table = window:active_key_table()
   if key_table then
     table.insert(items, { Foreground = { Color = "#bb9af7" } })
     table.insert(items, { Text = "  TABLE: " .. key_table })
   end
+  table.insert(items, { Foreground = { Color = "#a9b1d6" } })
+  table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })
   table.insert(items, { Text = "  " })
   window:set_right_status(wezterm.format(items))
 end)
@@ -284,75 +378,9 @@ end
 
 local window_mode_by_id = {}
 
-local function maximize_with_taskbar_excluded()
-  return wezterm.action_callback(function(window, pane)
-    local success, output = wezterm.run_child_process({
-      "powershell.exe",
-      "-NoProfile",
-      "-Command",
-      [[
-        Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-
-public class MonitorInfo {
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RECT {
-        public int left;
-        public int top;
-        public int right;
-        public int bottom;
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MONITORINFOEX {
-        public uint cbSize;
-        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-        public char[] szDevice;
-        public RECT rcMonitor;
-        public RECT rcWork;
-        public uint dwFlags;
-    }
-
-    [DllImport("user32.dll")]
-    public static extern bool GetMonitorInfoA(IntPtr hMonitor, ref MONITORINFOEX lpmi);
-
-    [DllImport("user32.dll")]
-    public static extern IntPtr MonitorFromPoint([In] System.Drawing.Point pt, uint dwFlags);
-}
-"@
-
-        $monitor = [MonitorInfo]::MonitorFromPoint(
-            [System.Drawing.Point]::new([System.Windows.Forms.Screen]::PrimaryScreen.Bounds.X,
-                                       [System.Windows.Forms.Screen]::PrimaryScreen.Bounds.Y),
-            0x00000001
-        )
-        $info = New-Object MonitorInfo+MONITORINFOEX
-        $info.cbSize = [System.Runtime.InteropServices.Marshal]::SizeOf($info)
-        [MonitorInfo]::GetMonitorInfoA($monitor, [ref]$info)
-
-        [int]$x = $info.rcWork.left
-        [int]$y = $info.rcWork.top
-        [int]$w = $info.rcWork.right - $info.rcWork.left
-        [int]$h = $info.rcWork.bottom - $info.rcWork.top
-
-        Write-Output "$x,$y,$w,$h"
-      ]],
-    })
-
-    if success and output then
-      local dims = output:match("^([0-9,-]+)")
-      if dims then
-        local x, y, w, h = dims:match("([^,]+),([^,]+),([^,]+),([^,]+)")
-        if x and y and w and h then
-          window:set_position(tonumber(x), tonumber(y))
-          window:set_inner_size(tonumber(w), tonumber(h))
-        end
-      end
-    end
-  end)
-end
-
+-- 画面モード切り替え: 通常 -> 最大化 -> フルスクリーン -> 通常。
+-- 「タスクバーを覆わない最大化」は OS 標準の最大化そのものなので
+-- ネイティブの window:maximize() を使う（座標計算は不要）
 local function cycle_window_mode()
   return wezterm.action_callback(function(window, pane)
     local window_id = window:window_id()
@@ -364,7 +392,7 @@ local function cycle_window_mode()
     end
 
     if mode == "normal" then
-      window:perform_action(maximize_with_taskbar_excluded(), pane)
+      window:maximize()
       window_mode_by_id[window_id] = "maximized"
     elseif mode == "maximized" then
       window:toggle_fullscreen()
@@ -380,36 +408,14 @@ local function cycle_window_mode()
   end)
 end
 
--- Azure mux ドメインの新規タブを開く（切断してもセッションがリモート側に残る）。
--- devbox のペインから開いた場合は同じディレクトリを引き継ぐ。
--- VM 停止中はドメイン未接続で失敗するため、その場合は <leader> a（ensure してから開く）を使う。
-local function spawn_mux_tab()
-  return wezterm.action_callback(function(window, pane)
-    local cwd
-    local ok, pane_domain = pcall(function()
-      return pane:get_domain_name()
-    end)
-    if ok and pane_domain == DEVBOX_DOMAIN then
-      cwd = pane_cwd(pane)
-    end
-    window:perform_action(
-      act.SpawnCommandInNewTab({
-        domain = { DomainName = DEVBOX_DOMAIN },
-        cwd = cwd,
-      }),
-      pane
-    )
-  end)
-end
-
--- devbox の VM 起動と NSG を担保してから、Azure mux ドメインの新規タブを開く。
--- 休止明けや VM 停止中はこちらを使う（Ctrl+t は ensure しない分だけ速い）。
-local function spawn_devbox_tab()
+-- devbox の VM 起動と NSG を担保してから、ssh + tmux main セッションのタブを開く。
+-- 休止/切断後の復帰はこれ（セッションはリモート tmux が保持しているので丸ごと戻る）。
+local function spawn_devbox_tmux_tab()
   return wezterm.action_callback(function(window, pane)
     ensure_devbox()
     window:perform_action(
       act.SpawnCommandInNewTab({
-        domain = { DomainName = DEVBOX_DOMAIN },
+        domain = { DomainName = DEVBOX_TMUX_DOMAIN },
       }),
       pane
     )
@@ -417,7 +423,7 @@ local function spawn_devbox_tab()
 end
 
 -- devbox の VM 起動と NSG を担保してから、Azure mux ドメインに attach する。
--- 既存の永続タブ/ペイン(claude 等)を丸ごと呼び戻す。休止/切断後の復帰はこれ。
+-- 旧 mux セッションの切り分け用フォールバック。
 local function attach_devbox_domain()
   return wezterm.action_callback(function(window, pane)
     ensure_devbox()
@@ -448,6 +454,11 @@ end
 
 local function open_nvim_with_agent(agent_command)
   return wezterm.action_callback(function(window, pane)
+    if is_tmux_client_pane(pane) then
+      -- tmux タブ: nvimc (zshrc) が tmux split-window で agent ペインごと開く
+      window:perform_action(act.SendString("nvimc .\n"), pane)
+      return
+    end
     local cwd = pane_cwd(pane)
     local split = {
       direction = "Right",
@@ -520,6 +531,14 @@ wezterm.on("pane-focus-changed", function(window, pane)
 end)
 
 wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name == "tmux_windows" then
+    -- tmux のウィンドウ一覧 (wezterm-tabs-sync が送信)。タブバー描画に使う
+    local store = wezterm.GLOBAL.tmux_windows or {}
+    store[tostring(pane:pane_id())] = value
+    wezterm.GLOBAL.tmux_windows = store
+    return
+  end
+
   if name == "send_to_right_agent_pane" then
     local tab = window:active_tab()
     local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
@@ -580,103 +599,63 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
 end)
 
 config.keys = {
-  {
-    -- workspaceの切り替え
-    key = "w",
-    mods = "LEADER",
-    action = act.ShowLauncherArgs({ flags = "WORKSPACES", title = "Select workspace" }),
-  },
-  {
-    -- シェルから nvim + agent を WezTerm の2ペイン構成で開く
-    key = "v",
-    mods = "LEADER",
-    action = open_nvim_with_agent("claude -y"),
-  },
-  {
-    --workspaceの名前変更
-    key = "E",
-    mods = "ALT",
-    action = act.PromptInputLine({
-      description = "(wezterm) Set workspace title:",
-      action = wezterm.action_callback(function(win, pane, line)
-        if line then
-          wezterm.mux.rename_workspace(wezterm.mux.get_active_workspace(), line)
-        end
-      end),
-    }),
-  },
-  {
-    -- タブ名変更
-    key = "e",
-    mods = "ALT",
-    action = act.PromptInputLine({
-      description = "タブ名を入力してください",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:active_tab():set_title(line)
-        end
-      end),
-    }),
-  },
-  {
-    key = "W",
-    mods = "LEADER|SHIFT",
-    action = act.PromptInputLine({
-      description = "(wezterm) Create new workspace:",
-      action = wezterm.action_callback(function(window, pane, line)
-        if line then
-          window:perform_action(
-            act.SwitchToWorkspace({
-              name = line,
-            }),
-            pane
-          )
-        end
-      end),
-    }),
-  },
-  -- コマンドパレット表示
-  { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
-  -- Tab移動
-  { key = "Tab", mods = "CTRL", action = act.ActivateTabRelative(1) },
-  { key = "Tab", mods = "SHIFT|CTRL", action = act.ActivateTabRelative(-1) },
-  -- Tab入れ替え
-  { key = ",", mods = "ALT", action = act({ MoveTabRelative = -1 }) },
-  -- Tab新規作成: Azure mux ドメインで開く（永続。VM 停止中は <leader> a で起こしてから）
-  {
-    key = "t",
-    mods = "CTRL",
-    action = spawn_mux_tab(),
-  },
-  -- Tabを閉じる
-  { key = "w", mods = "CTRL", action = act({ CloseCurrentTab = { confirm = true } }) },
-  { key = ".", mods = "ALT", action = act({ MoveTabRelative = 1 }) },
+  ----------------------------------------------------
+  -- Window/Tab/Pane 管理は tmux に一本化 (#214)。
+  -- 以下のタブ/ペイン系キーは devbox の tmux 上でのみ動作し、tmux の prefix
+  -- シーケンスに変換される。ローカルペイン (PowerShell 等) では何もしない。
+  ----------------------------------------------------
 
-  -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
-  { key = "Enter", mods = "ALT", action = cycle_window_mode() },
+  -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
+  { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
+  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.Nop) }, -- 次へ
+  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.Nop) }, -- 前へ
+  { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
+  { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
+  { key = "e", mods = "ALT", action = tmux_bridge(",", act.Nop) }, -- 名前変更
+  { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
+  -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
+  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.Nop) },
+  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.Nop) },
+  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.Nop) },
+  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.Nop) },
+  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.Nop) },
+  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.Nop) },
+  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.Nop) },
+  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.Nop) },
+  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.Nop) },
 
-  -- コピーモード
-  { key = "[", mods = "LEADER", action = act.ActivateCopyMode },
-  -- コピー
-  { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
-  -- 貼り付け
-  { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
-
-  -- Pane作成 leader + r or d（現在ペインと同じドメイン・同じディレクトリで分割）
-  { key = "d", mods = "LEADER", action = act.SplitVertical({ domain = "CurrentPaneDomain" }) },
-  { key = "r", mods = "LEADER", action = act.SplitHorizontal({ domain = "CurrentPaneDomain" }) },
-  -- Paneを閉じる leader + x
-  { key = "x", mods = "LEADER", action = act({ CloseCurrentPane = { confirm = true } }) },
-  -- Pane移動 Alt + hjkl
-  -- その方向に WezTerm pane があれば移動し、無ければアプリ側へ Alt+hjkl を渡す
+  -- Pane (tmux ペイン)
+  { key = "d", mods = "LEADER", action = tmux_bridge("-", act.Nop) }, -- 上下分割
+  { key = "r", mods = "LEADER", action = tmux_bridge("|", act.Nop) }, -- 左右分割
+  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
+  { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
+  -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
   { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
   { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
   { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
-  -- Pane選択
-  { key = "[", mods = "CTRL|SHIFT", action = act.PaneSelect },
-  -- 選択中のPaneのみ表示
-  { key = "z", mods = "LEADER", action = act.TogglePaneZoomState },
+  -- ペインサイズ調整は tmux 側 (prefix + H/J/K/L、またはマウスドラッグ)
+
+  -- Session (tmux セッション。旧 workspace の代替。tm <名前> で作成)
+  { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択
+
+  -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
+  { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },
+  -- クリップボード
+  { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
+  { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
+
+  {
+    -- シェルから nvim + agent の2ペイン構成で開く (tmux 内は nvimc に委譲)
+    key = "v",
+    mods = "LEADER",
+    action = open_nvim_with_agent("claude -y"),
+  },
+
+  -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
+  { key = "Enter", mods = "ALT", action = cycle_window_mode() },
 
   -- フォントサイズ切替
   { key = "+", mods = "CTRL", action = act.IncreaseFontSize },
@@ -684,34 +663,13 @@ config.keys = {
   -- フォントサイズのリセット
   { key = "0", mods = "CTRL", action = act.ResetFontSize },
 
-  -- タブ切替 Ctrl + 数字
-  { key = "1", mods = "CTRL", action = act.ActivateTab(0) },
-  { key = "2", mods = "CTRL", action = act.ActivateTab(1) },
-  { key = "3", mods = "CTRL", action = act.ActivateTab(2) },
-  { key = "4", mods = "CTRL", action = act.ActivateTab(3) },
-  { key = "5", mods = "CTRL", action = act.ActivateTab(4) },
-  { key = "6", mods = "CTRL", action = act.ActivateTab(5) },
-  { key = "7", mods = "CTRL", action = act.ActivateTab(6) },
-  { key = "8", mods = "CTRL", action = act.ActivateTab(7) },
-  { key = "9", mods = "CTRL", action = act.ActivateTab(-1) },
-
   -- コマンドパレット
+  { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
   { key = "p", mods = "SHIFT|CTRL", action = act.ActivateCommandPalette },
   -- 設定再読み込み
   { key = "r", mods = "SHIFT|CTRL", action = act.ReloadConfiguration },
   -- デバッグオーバーレイ（問題調査用）
   { key = "l", mods = "SHIFT|CTRL", action = act.ShowDebugOverlay },
-  -- キーテーブル用
-  { key = "s", mods = "LEADER", action = act.ActivateKeyTable({ name = "resize_pane", one_shot = false }) },
-  -- Pane入れ替え Alt + n/p
-  { key = "n", mods = "ALT", action = act.RotatePanes("Clockwise") },
-  { key = "p", mods = "ALT", action = act.RotatePanes("CounterClockwise") },
-  {
-    -- ペインをオーバーレイ表示して選択（tmux display-panes 相当）
-    key = "p",
-    mods = "LEADER",
-    action = act.PaneSelect({ alphabet = "1234567890", show_pane_ids = true }),
-  },
   {
     -- ランチャーメニュー表示（Azure devbox / PowerShell 切り替えなど）
     key = "l",
@@ -728,10 +686,10 @@ config.keys = {
     }),
   },
   {
-    -- Azure devbox を新規タブで開く（停止中なら自動起動してから mux 接続）
+    -- Azure devbox を新規タブで開く（停止中なら自動起動してから ssh + tmux main に attach）
     key = "a",
     mods = "LEADER",
-    action = spawn_devbox_tab(),
+    action = spawn_devbox_tmux_tab(),
   },
   {
     -- 最後に通知が来た Claude Code のペインへジャンプ（通知トーストの代わり）
@@ -755,19 +713,7 @@ config.keys = {
 }
 
 config.key_tables = {
-  resize_pane = {
-    { key = "h", action = act.AdjustPaneSize({ "Left", 1 }) },
-    { key = "l", action = act.AdjustPaneSize({ "Right", 1 }) },
-    { key = "k", action = act.AdjustPaneSize({ "Up", 1 }) },
-    { key = "j", action = act.AdjustPaneSize({ "Down", 1 }) },
-    { key = "Enter", action = "PopKeyTable" },
-  },
-  activate_pane = {
-    { key = "h", action = act.ActivatePaneDirection("Left") },
-    { key = "l", action = act.ActivatePaneDirection("Right") },
-    { key = "k", action = act.ActivatePaneDirection("Up") },
-    { key = "j", action = act.ActivatePaneDirection("Down") },
-  },
+  -- WezTerm copy mode (ローカルペイン用。tmux 内は tmux copy-mode を使う)
   copy_mode = {
     { key = "h", mods = "NONE", action = act.CopyMode("MoveLeft") },
     { key = "j", mods = "NONE", action = act.CopyMode("MoveDown") },

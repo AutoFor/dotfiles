@@ -75,17 +75,38 @@ export PATH="$HOME/.npm-global/bin:$PATH"
 export PATH="$HOME/go/bin:$PATH"
 export PATH="$PATH:$HOME/.dotnet/tools"
 
+# エスケープシーケンスを最前面の端末 (WezTerm) まで届ける。
+# tmux 内では passthrough (ESC P tmux; ... ESC \) でラップしないと tmux に飲まれる
+# (.tmux.conf の allow-passthrough on とセット)
+__term_emit() {
+  local seq="$1"
+  if [[ -n "${TMUX:-}" ]]; then
+    printf '\033Ptmux;%s\033\\' "${seq//$'\033'/$'\033\033'}"
+  else
+    printf '%s' "$seq"
+  fi
+}
+
 __wezterm_set_user_var() {
   local name="$1"
   local value="$2"
   local encoded
   encoded=$(printf '%s' "$value" | base64 | tr -d '\n') || return
-  printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded"
+  __term_emit "$(printf '\033]1337;SetUserVar=%s=%s\007' "$name" "$encoded")"
 }
 
 # nvim: プレーン（素の nvim / nvim-tree のみ）
-# nvimc: WezTerm 上で右に claude -y ペインを開いてから nvim を起動する
+# nvimc: 右に claude -y ペインを開いてから nvim を起動する
+#   tmux 内なら tmux split-window で直接開く（WezTerm 非依存: iPad 等の SSH クライアントでも動く）
+#   tmux 外 (wezterm mux 等) は従来どおり user var で WezTerm 側に依頼する
 nvimc() {
+  if [[ -n "${TMUX:-}" ]]; then
+    if [[ "$(tmux display-message -p '#{window_panes}')" == "1" ]]; then
+      tmux split-window -h -l '30%' -d -c "$PWD" 'claude -y; exec zsh -l'
+    fi
+    command nvim "$@"
+    return
+  fi
   if [[ -n "${SSH_CONNECTION:-}" || -n "${WEZTERM_PANE:-}" || -n "${WEZTERM_UNIX_SOCKET:-}" ]]; then
     local marker="${PWD}:$$:${RANDOM}"
     mkdir -p "$HOME/.cache"
@@ -113,8 +134,10 @@ tmp() {
 }
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
+# tmux 内でも __term_emit がラップして届ける。WezTerm 側はこれで host=devbox を
+# 認識し、ステータス表示や tmux ブリッジ判定 (is_tmux_client_pane) が機能する
 __wezterm_osc7() {
-  printf '\e]7;file://%s%s\e\\' "$(hostname)" "$PWD"
+  __term_emit "$(printf '\033]7;file://%s%s\007' "$(hostname)" "$PWD")"
 }
 precmd_functions+=(__wezterm_osc7)
 

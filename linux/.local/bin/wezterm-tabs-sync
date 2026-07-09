@@ -1,0 +1,14 @@
+#!/bin/sh
+# tmux のウィンドウ一覧を SetUserVar (OSC 1337) で全クライアントの tty に通知する。
+# .wezterm.lua の format-tab-title がタブバー描画に使う (#214)。
+# クライアント tty へ直接書くため tmux passthrough は不要。
+# 呼び出し元: .tmux.conf の set-hook (ウィンドウの増減・切替・改名・入替時)
+
+tmux list-clients -F '#{client_tty}|#{session_name}' 2>/dev/null |
+while IFS='|' read -r tty sess; do
+  [ -n "$tty" ] && [ -w "$tty" ] || continue
+  list=$(tmux list-windows -t "$sess" -F '#{window_index}:#{window_name}#{?window_active,*,}' 2>/dev/null | tr '\n' '\t')
+  payload=$(printf '%s' "$list" | base64 | tr -d '\n')
+  printf '\033]1337;SetUserVar=tmux_windows=%s\007' "$payload" > "$tty" 2>/dev/null
+done
+exit 0
