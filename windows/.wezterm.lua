@@ -216,10 +216,10 @@ end)
 config.window_decorations = "RESIZE"
 -- タブバーの表示
 config.show_tabs_in_tab_bar = true
--- タブが1つだけなら WezTerm のタブバーは隠す (#214: タブ表示は tmux の
--- ステータスライン〈上部・WezTerm タブ風スタイル〉が担う。ローカル PowerShell
--- タブ等で WezTerm タブが複数になったときだけ表示される)
-config.hide_tab_bar_if_only_one_tab = true
+-- タブが一つの時も表示 (#214: tmux のウィンドウ一覧をタブバーに描画するため常時表示)
+config.hide_tab_bar_if_only_one_tab = false
+-- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
+config.tab_max_width = 999
 -- falseにするとタブバーの透過が効かなくなる
 -- config.use_fancy_tab_bar = false
 
@@ -250,7 +250,37 @@ local SOLID_LEFT_ARROW = wezterm.nerdfonts.ple_lower_right_triangle
 -- タブの右側の装飾
 local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 
+-- 1つの tmux ウィンドウを WezTerm タブ風のセグメントとして描画する
+local function tmux_tab_segment(items, text, is_active)
+  local edge_background = "none"
+  local background = is_active and "#ae8b2d" or "#5c6d74"
+  table.insert(items, { Background = { Color = edge_background } })
+  table.insert(items, { Foreground = { Color = background } })
+  table.insert(items, { Text = SOLID_LEFT_ARROW })
+  table.insert(items, { Background = { Color = background } })
+  table.insert(items, { Foreground = { Color = "#FFFFFF" } })
+  table.insert(items, { Text = " " .. text .. " " })
+  table.insert(items, { Background = { Color = edge_background } })
+  table.insert(items, { Foreground = { Color = background } })
+  table.insert(items, { Text = SOLID_RIGHT_ARROW })
+  table.insert(items, { Text = " " })
+end
+
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
+  -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
+  -- 通知）をタブ風セグメントで並べる。切り替えは Ctrl+Tab / Ctrl+数字（表示専用）
+  local store = wezterm.GLOBAL.tmux_windows or {}
+  local data = tab.active_pane and store[tostring(tab.active_pane.pane_id)] or nil
+  if data and data ~= "" then
+    local items = {}
+    for entry in data:gmatch("[^\t]+") do
+      local is_active = entry:sub(-1) == "*"
+      local text = is_active and entry:sub(1, -2) or entry
+      tmux_tab_segment(items, text, is_active)
+    end
+    return items
+  end
+
   local background = "#5c6d74"
   local foreground = "#FFFFFF"
   local edge_background = "none"
@@ -326,6 +356,8 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#bb9af7" } })
     table.insert(items, { Text = "  TABLE: " .. key_table })
   end
+  table.insert(items, { Foreground = { Color = "#a9b1d6" } })
+  table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })
   table.insert(items, { Text = "  " })
   window:set_right_status(wezterm.format(items))
 end)
@@ -567,6 +599,14 @@ wezterm.on("pane-focus-changed", function(window, pane)
 end)
 
 wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name == "tmux_windows" then
+    -- tmux のウィンドウ一覧 (wezterm-tabs-sync が送信)。タブバー描画に使う
+    local store = wezterm.GLOBAL.tmux_windows or {}
+    store[tostring(pane:pane_id())] = value
+    wezterm.GLOBAL.tmux_windows = store
+    return
+  end
+
   if name == "send_to_right_agent_pane" then
     local tab = window:active_tab()
     local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
