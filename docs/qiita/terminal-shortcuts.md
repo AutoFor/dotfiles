@@ -167,8 +167,13 @@ Claude Code の Stop / Notification hook は `~/.claude/notify.sh` を呼び、O
 WezTerm 側では以下が動く:
 
 - 通知元ペインのタブタイトルに `🔔 ディレクトリ名` のマークが付く（そのペインにフォーカスすると元のタイトルに復元）
-- `<leader> →j` で「最後に通知が来たペイン」へジャンプできる（別ウィンドウ・別タブでも可。トーストのクリックでは特定タブに飛べないため、その代替）
-- 見ているペインからの通知はトーストにしない（`notification_handling = "SuppressFromFocusedPane"`、WezTerm 20240127 以降）
+- **クリック可能な Windows トーストが出る**。クリックすると WezTerm がフォーカスされ、通知元の **tmux ウィンドウ/ペインまで自動で切り替わる**（BurntToast + `wezterm-jump:` カスタム URI。初回のみ `windows/bin/register-wezterm-jump.ps1` で URI スキームを HKCU に登録する。管理者権限不要）
+- `<leader> →j` でも「最後に通知が来たペイン」へジャンプできる（トーストを消してしまった後の代替。tmux 側の切り替えまで行う）
+- 見ているペインからの通知はマークもトーストも出さない
+
+ジャンプの tmux 側切り替えは devbox の `~/.local/bin/tmux-jump-pane` が行う。`tm` のグループセッションで
+複数クライアントが繋がっている場合は「同一セッション > 同一グループ > その他」の優先順で、最後に
+アクティブだったクライアントの表示を切り替える。
 
 なお tmux を挟む場合（#214 以降の標準構成）は、`.tmux.conf` の `set -g allow-passthrough on` に加えて、
 送信側が OSC を `ESC Ptmux; ... ESC \` の passthrough 形式でラップする必要がある（`notify.sh` / zshrc の
