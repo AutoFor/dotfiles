@@ -175,6 +175,18 @@ WezTerm 側では以下が動く:
 複数クライアントが繋がっている場合は「同一セッション > 同一グループ > その他」の優先順で、最後に
 アクティブだったクライアントの表示を切り替える。
 
+#### iPhone / Apple Watch へのプッシュ通知（ntfy）
+
+devbox の `~/.config/ntfy-topic`（git 管理外）にトピック名を置くと、`notify.sh` は
+**tmux にクライアントが 1 つも attach していない（= 誰も画面を見ていない）ときだけ**
+[ntfy.sh](https://ntfy.sh) にプッシュを送る。席にいるときは WezTerm トーストだけになり、二重通知しない。
+
+- 本文に `(セッション名:ウィンドウ番号 ウィンドウ名 %ペインID)` が入るので、どのセッションが
+  返事待ちかが外出先でも分かる（iPad の Termius で入って該当ウィンドウへ移動する）
+- iPhone に ntfy アプリを入れて同じトピックを購読すれば、Apple Watch にも自動でミラーされる
+- トピック名は実質パスワードなので推測されにくいランダム文字列にする（例: `claude-devbox-<乱数>`）
+- ファイルが無ければ何もしない。セルフホストは環境変数 `NTFY_SERVER` で切り替え
+
 なお tmux を挟む場合（#214 以降の標準構成）は、`.tmux.conf` の `set -g allow-passthrough on` に加えて、
 送信側が OSC を `ESC Ptmux; ... ESC \` の passthrough 形式でラップする必要がある（`notify.sh` / zshrc の
 `__term_emit` / nvim の `agent_terminal.lua` が対応済み）。素の OSC 7 や OSC 1337 は tmux に飲まれて届かない。
