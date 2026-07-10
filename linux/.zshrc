@@ -292,9 +292,29 @@ alias ccusage='npx ccusage@latest'
 # リモート側で tsz <file> → ローカルにダウンロード
 alias tssh='trzsz -d ssh'
 
-# tm: tmux のメインセッションに attach（無ければ作成）。tm <名前> で別セッション
+# tm: tmux セッションに attach（無ければ作成）。tm <名前> で別セッション。
+# 既存セッションにはグループセッション（ウィンドウ共有・ビュー独立）で入る:
+#   - 端末ごとにアクティブウィンドウを独立して切り替えられる
+#   - status line を表示（iPad/iPhone 等、WezTerm のタブバーが無いクライアント向け。
+#     WezTerm は直接 attach (new -As main) するので status off のまま）
+#   - detach で自動削除（destroy-unattached on）
 tm() {
-  tmux new-session -A -s "${1:-main}"
+  local base="${1:-main}"
+  if [[ -n "${TMUX:-}" ]]; then
+    # tmux 内から呼ばれたらセッション切り替え
+    tmux switch-client -t "=$base" 2>/dev/null || {
+      tmux new-session -d -s "$base" && tmux switch-client -t "=$base"
+    }
+    return
+  fi
+  if ! tmux has-session -t "=$base" 2>/dev/null; then
+    tmux new-session -s "$base"
+    return
+  fi
+  local view="${base}-view-$$"
+  tmux new-session -t "=$base" -s "$view" \; \
+    set-option destroy-unattached on \; \
+    set-option status on
 }
 
 # gh worktree branch: Issue作成 + worktree作成
