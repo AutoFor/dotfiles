@@ -5,10 +5,10 @@ local config = wezterm.config_builder()
 -- Azure 開発サーバー (devbox) 関連の定数
 local DEVBOX_DOMAIN = "azure"
 local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
-local DEVBOX_HOST = "20.46.165.130"   -- Standard SKU の静的 IP（停止/再開で不変）
+local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
--- VM 起動 + NSG の現在IP許可を担保するスクリプト（windows/bin/devbox.ps1）を探す。
+-- VM 起動を担保するスクリプト（windows/bin/devbox.ps1）を探す。
 -- 環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
 local function find_devbox_ps1()
   local candidates = {
@@ -34,7 +34,7 @@ local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
--- devbox の VM 起動と NSG を担保する。22番に届く場合は az を呼ばず即 return するため、
+-- devbox の VM 起動を担保する。22番に届く場合は az を呼ばず即 return するため、
 -- VM 起動中の普段は 1 秒程度で終わる（詳細は devbox.ps1 ensure）。
 local function ensure_devbox()
   local ok = pcall(function()
@@ -94,7 +94,7 @@ end
 -- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
 -- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
 -- 二重に開くレースがあるため、gui-startup では VM の起動担保だけ行う。
--- 接続前に devbox.ps1 ensure で VM 起動と NSG(現在IPの許可)を担保する。
+-- 接続前に devbox.ps1 ensure で VM の起動を担保する（接続は Tailscale 経由なので NSG 操作は不要）。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
   if cmd then
@@ -408,7 +408,7 @@ local function cycle_window_mode()
   end)
 end
 
--- devbox の VM 起動と NSG を担保してから、ssh + tmux main セッションのタブを開く。
+-- devbox の VM 起動を担保してから、ssh + tmux main セッションのタブを開く。
 -- 休止/切断後の復帰はこれ（セッションはリモート tmux が保持しているので丸ごと戻る）。
 local function spawn_devbox_tmux_tab()
   return wezterm.action_callback(function(window, pane)
@@ -422,7 +422,7 @@ local function spawn_devbox_tmux_tab()
   end)
 end
 
--- devbox の VM 起動と NSG を担保してから、Azure mux ドメインに attach する。
+-- devbox の VM 起動を担保してから、Azure mux ドメインに attach する。
 -- 旧 mux セッションの切り分け用フォールバック。
 local function attach_devbox_domain()
   return wezterm.action_callback(function(window, pane)
