@@ -96,6 +96,26 @@ else
   echo "tailscale: 未ログイン。後で 'sudo tailscale up' を実行し、表示される URL をブラウザで開いて認証する"
 fi
 
+echo "########## 4.8) swap + earlyoom (メモリ枯渇ハング対策) ##########"
+# 4GB RAM + スワップ無しだと、暴走プロセス 1 つで OOM killer が動く前に
+# システム全体が窒息して SSH ごと応答不能になる (2026-07-10 の障害)。
+# スワップで即死を防ぎ、earlyoom が限界前に最大プロセスだけを kill する。
+if ! swapon --show | grep -q /swapfile; then
+  sudo fallocate -l 4G /swapfile
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile >/dev/null
+  sudo swapon /swapfile
+fi
+grep -q "^/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab >/dev/null
+echo "swap: $(swapon --show=SIZE --noheadings | head -1)"
+
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq earlyoom >/dev/null
+# 接続・セッション維持に必須のプロセスは kill 対象から除外する
+echo "EARLYOOM_ARGS=\"-m 5 --avoid '^(sshd|systemd|tailscaled|tmux)'\"" | sudo tee /etc/default/earlyoom >/dev/null
+sudo systemctl enable --now earlyoom >/dev/null 2>&1
+sudo systemctl restart earlyoom
+echo "earlyoom: $(systemctl is-active earlyoom)"
+
 echo "########## 5) dotfiles clone & install ##########"
 if [ ! -d "$HOME/dotfiles" ]; then
   git clone https://github.com/AutoFor/dotfiles.git "$HOME/dotfiles"

@@ -103,5 +103,8 @@ sudo tailscale up   # 表示される URL をブラウザで開いて認証
 ## メモ
 
 - 公開 IP は Standard SKU のため **静的**。停止→再開しても変わらない。
+- **swap 4GB + earlyoom 導入済み**（bootstrap.sh 4.8）。RAM 4GB スワップ無しだと暴走プロセス 1 つで
+  システムごと窒息する（2026-07-10 の障害: OOM killer が動く前に sshd/tailscaled が応答不能）。
+  earlyoom は sshd / tmux / tailscaled を除外して最大プロセスだけを kill する。
 - `.zshrc` 内の WSL 専用関数 (`wpath` / `wcd` / clip.exe 連携等) は存在チェックで
   ガードされており、純 Linux VM では no-op になる。
