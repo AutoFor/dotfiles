@@ -719,6 +719,8 @@ config.keys = {
     mods = "LEADER",
     action = act.QuickSelect,
   },
+  -- 画面に見えているペイン全体をまるごとコピー (tmux の prefix+Y にブリッジ)
+  { key = "y", mods = "LEADER", action = tmux_bridge("Y", act.Nop) },
   {
     -- PowerShell を新規タブで開く
     key = "P",
