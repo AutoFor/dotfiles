@@ -68,7 +68,8 @@ az disk update -g rg-devbox -n "$DISK" --size-gb 64
 az vm start -g rg-devbox -n devbox
 # VM 内で反映: sudo growpart /dev/sda 1 && sudo resize2fs /dev/sda1
 
-# 自宅 IP が変わって SSH できなくなったら許可元を更新
+# 公開IP直結フォールバック時のみ: NSG の許可元に現在 IP を追加
+# （通常の接続は Tailscale 経由なので不要。Windows からは `devbox.ps1 nsg` で同等）
 MY_IP=$(curl -s https://ifconfig.me)
 az network nsg rule update -g rg-devbox --nsg-name devboxNSG \
   -n allow-ssh-home --source-address-prefixes "${MY_IP}/32"
@@ -79,7 +80,9 @@ az group delete -n rg-devbox --yes
 
 ## Tailscale (VPN)
 
-iPad / iPhone / 外出先クライアントから NSG の許可 IP に依存せず SSH するための VPN (#214 Phase 4)。
+**全クライアント（Windows / iPad / iPhone）の SSH は Tailscale 経由が正** (#214 Phase 4)。
+NSG の許可 IP リスト (`allow-ssh-home`) は Tailscale 障害時のフォールバック用に残しているだけで、
+通常運用では触らない。
 bootstrap.sh がインストールまで行うので、初回のみ VM 内で認証する:
 
 ```bash
@@ -88,10 +91,11 @@ sudo tailscale up   # 表示される URL をブラウザで開いて認証
 
 | 項目 | 値 |
 |---|---|
-| Tailscale IP | `tailscale ip -4` で確認 (100.x.x.x、ノード固有で不変) |
-| MagicDNS 名 | `devbox.<tailnet>.ts.net` (`tailscale status --json` の `Self.DNSName`) |
+| Tailscale IP | `100.126.96.27` (`tailscale ip -4` で確認。ノード固有で不変) |
+| MagicDNS 名 | `devbox.tail7bb5be.ts.net` (`tailscale status --json` の `Self.DNSName`) |
 
-- クライアント側 (iPad の Blink/Termius、Windows 等) にも Tailscale を入れて同じアカウントでログインすれば、`ssh azureuser@devbox.<tailnet>.ts.net` で NSG を経由せず接続できる（SSH 鍵は従来どおり必要）。
+- クライアント側 (Windows は `winget install Tailscale.Tailscale`、iPad は App Store) にも Tailscale を入れて同じアカウントでログインすれば、`ssh devbox` (Windows) や `ssh azureuser@100.126.96.27` で NSG を経由せず接続できる（SSH 鍵は従来どおり必要）。
+- Tailscale 障害時のフォールバック: `devbox.ps1 nsg` で現在 IP を NSG に許可してから `ssh devbox-public`（公開 IP 直結）。
 - tailnet 内の通信は WireGuard トンネル (アウトバウンド UDP) なので **NSG の受信規則は不要**。将来的に 22 番のグローバル公開 (`allow-ssh-home`) を閉じることも可能。
 - 直接接続が張れない場合は DERP リレー経由になる（動作はするがレイテンシ増）。改善したい場合は NSG で UDP 41641 の受信を許可する。
 - ノードキーは既定 180 日で失効する。管理コンソールで devbox の「Disable key expiry」を設定すると再認証が不要になる。
