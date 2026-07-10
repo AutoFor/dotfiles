@@ -713,6 +713,13 @@ config.keys = {
     action = act.ShowLauncherArgs({ flags = "LAUNCH_MENU_ITEMS", title = "Launch" }),
   },
   {
+    -- QuickSelect: 画面上の URL / パス / ハッシュ等にラベルを振り、
+    -- ラベルを打つとクリップボードへコピー。折り返した URL もマウス不要で拾える
+    key = "u",
+    mods = "LEADER",
+    action = act.QuickSelect,
+  },
+  {
     -- PowerShell を新規タブで開く
     key = "P",
     mods = "LEADER|SHIFT",
