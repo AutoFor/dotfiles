@@ -77,6 +77,25 @@ az network nsg rule update -g rg-devbox --nsg-name devboxNSG \
 az group delete -n rg-devbox --yes
 ```
 
+## Tailscale (VPN)
+
+iPad / iPhone / 外出先クライアントから NSG の許可 IP に依存せず SSH するための VPN (#214 Phase 4)。
+bootstrap.sh がインストールまで行うので、初回のみ VM 内で認証する:
+
+```bash
+sudo tailscale up   # 表示される URL をブラウザで開いて認証
+```
+
+| 項目 | 値 |
+|---|---|
+| Tailscale IP | `tailscale ip -4` で確認 (100.x.x.x、ノード固有で不変) |
+| MagicDNS 名 | `devbox.<tailnet>.ts.net` (`tailscale status --json` の `Self.DNSName`) |
+
+- クライアント側 (iPad の Blink/Termius、Windows 等) にも Tailscale を入れて同じアカウントでログインすれば、`ssh azureuser@devbox.<tailnet>.ts.net` で NSG を経由せず接続できる（SSH 鍵は従来どおり必要）。
+- tailnet 内の通信は WireGuard トンネル (アウトバウンド UDP) なので **NSG の受信規則は不要**。将来的に 22 番のグローバル公開 (`allow-ssh-home`) を閉じることも可能。
+- 直接接続が張れない場合は DERP リレー経由になる（動作はするがレイテンシ増）。改善したい場合は NSG で UDP 41641 の受信を許可する。
+- ノードキーは既定 180 日で失効する。管理コンソールで devbox の「Disable key expiry」を設定すると再認証が不要になる。
+
 ## メモ
 
 - 公開 IP は Standard SKU のため **静的**。停止→再開しても変わらない。

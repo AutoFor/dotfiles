@@ -84,14 +84,17 @@ fi
 echo "wezterm: $(/usr/bin/wezterm --version)"
 
 echo "########## 4.7) Tailscale ##########"
-# iPad/iPhone 等のモバイルクライアント対応 (#214 Phase 4)。
-# モバイル回線は IP が頻繁に変わり NSG の許可 IP 運用が破綻するため、
-# Tailscale のプライベートネットワーク経由で SSH できるようにする。
-# 初回は `sudo tailscale up` の表示する URL でブラウザ認証が必要。
+# iPad / iPhone / 外出先クライアントから NSG の許可 IP に依存せず SSH するための VPN (#214 Phase 4)。
+# モバイル回線は IP が頻繁に変わり NSG の許可 IP 運用が破綻するため。
+# 認証は対話が必要なため、ここではインストールまでを行い URL 案内のみ。
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://tailscale.com/install.sh | sh
 fi
-echo "tailscale: $(tailscale version | head -1) (認証状態: $(tailscale status >/dev/null 2>&1 && echo OK || echo '未認証 - sudo tailscale up を実行'))"
+if tailscale status >/dev/null 2>&1; then
+  echo "tailscale: ログイン済み ($(tailscale ip -4 2>/dev/null | head -1))"
+else
+  echo "tailscale: 未ログイン。後で 'sudo tailscale up' を実行し、表示される URL をブラウザで開いて認証する"
+fi
 
 echo "########## 5) dotfiles clone & install ##########"
 if [ ! -d "$HOME/dotfiles" ]; then
@@ -111,4 +114,4 @@ else
 fi
 
 echo "########## 完了 ##########"
-echo "次にやること:  gh auth login   /   claude  (初回ログイン)"
+echo "次にやること:  gh auth login   /   claude  (初回ログイン)   /   sudo tailscale up (VPN 認証)"
