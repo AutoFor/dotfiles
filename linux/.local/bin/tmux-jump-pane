@@ -1,0 +1,34 @@
+#!/bin/sh
+# 指定した tmux ペインが見えるよう、最適なクライアントの表示を切り替える。
+# 使い方: tmux-jump-pane <ペインID (%N または N)>
+# Claude Code 通知のジャンプ（トーストクリック → wezterm-jump.ps1 / LEADER+j）から
+# ssh 経由で呼ばれる。クライアントは 同一セッション > 同一グループ > 任意 の優先順で、
+# それぞれ最後にアクティブだったものを選ぶ（tm のグループセッション対応）。
+p="${1:?usage: tmux-jump-pane <pane-id>}"
+case "$p" in %*) ;; *) p="%$p" ;; esac
+
+target_session=$(tmux display-message -p -t "$p" '#{session_name}') || exit 1
+group=$(tmux display-message -p -t "$p" '#{session_group}')
+
+clients=$(tmux list-clients -F '#{client_activity}:#{client_name}:#{client_session}' | sort -n)
+same_sess=""; same_group=""; any=""
+OLDIFS=$IFS
+IFS='
+'
+for line in $clients; do
+  IFS=$OLDIFS
+  name=${line#*:}; name=${name%%:*}
+  sess=${line##*:}
+  any=$name
+  [ "$sess" = "$target_session" ] && same_sess=$name
+  if [ -n "$group" ] && [ "$(tmux display-message -p -t "$sess:" '#{session_group}' 2>/dev/null)" = "$group" ]; then
+    same_group=$name
+  fi
+  IFS='
+'
+done
+IFS=$OLDIFS
+
+client=${same_sess:-${same_group:-$any}}
+[ -n "$client" ] || exit 1
+exec tmux switch-client -c "$client" -t "$p"

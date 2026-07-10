@@ -8,9 +8,8 @@ local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
 local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
--- VM 起動を担保するスクリプト（windows/bin/devbox.ps1）を探す。
--- 環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
-local function find_devbox_ps1()
+-- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
+local function find_dotfiles_dir()
   local candidates = {
     os.getenv("DOTFILES_DIR"),
     wezterm.home_dir .. "\\ghq\\github.com\\AutoFor\\dotfiles",
@@ -18,17 +17,21 @@ local function find_devbox_ps1()
   }
   for _, dir in ipairs(candidates) do
     if dir then
-      local path = dir .. "\\windows\\bin\\devbox.ps1"
-      local f = io.open(path, "r")
+      local f = io.open(dir .. "\\windows\\bin\\devbox.ps1", "r")
       if f then
         f:close()
-        return path
+        return dir
       end
     end
   end
-  return wezterm.home_dir .. "\\dotfiles\\windows\\bin\\devbox.ps1"
+  return wezterm.home_dir .. "\\dotfiles"
 end
-local DEVBOX_PS1 = find_devbox_ps1()
+local DOTFILES_DIR = find_dotfiles_dir()
+-- VM 起動を担保するスクリプト
+local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
+-- クリックで通知元ペインへジャンプできるトーストを出すスクリプト（BurntToast）。
+-- クリック時の wezterm-jump: URI は windows/bin/register-wezterm-jump.ps1 で登録したハンドラが処理する。
+local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
 
 local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
@@ -479,9 +482,11 @@ end
 -- タブタイトルに 🔔 を付ける。フォーカスすると解除。LEADER+j で最後に通知したペインへジャンプ。
 local claude_notified = {} -- pane_id -> 通知前の明示タブタイトル（"" = 明示タイトルなし）
 local claude_notify_order = {} -- 通知順の pane_id（新しいものが末尾）
+local claude_notify_tmux = {} -- pane_id -> 通知元 tmux ペイン番号（%なし。最新の通知が勝つ）
 
 local function claude_notify_forget(pane_id)
   claude_notified[pane_id] = nil
+  claude_notify_tmux[pane_id] = nil
   for i = #claude_notify_order, 1, -1 do
     if claude_notify_order[i] == pane_id then
       table.remove(claude_notify_order, i)
@@ -507,6 +512,8 @@ local function jump_to_notified_pane()
       local target = claude_notify_order[#claude_notify_order]
       local mux_pane = wezterm.mux.get_pane(target)
       if mux_pane then
+        -- フォーカス変更でマークが消える前に通知元 tmux ペインを取り出しておく
+        local tmux_pane = claude_notify_tmux[target]
         local mux_win = mux_pane:window()
         local gui_win = mux_win and mux_win:gui_window() or nil
         if gui_win then
@@ -517,6 +524,16 @@ local function jump_to_notified_pane()
           tab:activate()
         end
         mux_pane:activate()
+        -- tmux 側も通知元ペインへ移動する。キーストローク注入は経路によって tmux に
+        -- 届かないことがあるため、devbox 側の tmux-jump-pane を ssh で呼ぶ
+        -- （最適なクライアントの選択もそちらに集約。tm のグループセッション対応）。
+        if tmux_pane then
+          pcall(wezterm.background_child_process, {
+            (os.getenv("SystemRoot") or "C:\\Windows") .. "\\System32\\OpenSSH\\ssh.exe",
+            "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+            "devbox", "~/.local/bin/tmux-jump-pane '%" .. tmux_pane .. "'",
+          })
+        end
         return
       end
       -- ペインが既に閉じられていたら履歴から捨てて次を試す
@@ -550,13 +567,20 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
   end
 
   if name == "claude_notify" then
-    -- payload: "ディレクトリ名\tタイトル\tメッセージ"（notify.sh が base64 で送信、WezTerm が復号済み）
+    -- payload: "ディレクトリ名\tタイトル\tメッセージ\ttmuxペイン番号"
+    -- （notify.sh が base64 で送信、WezTerm が復号済み。4番目は旧形式だと無い）
     local pane_id = pane:pane_id()
-    -- 通知元ペインを見ているときはマーク不要
+    -- 通知元ペインを見ているときはマーク・トースト不要
     if window:is_focused() and window:active_pane():pane_id() == pane_id then
       return
     end
-    local dir = value:match("^([^\t]*)") or ""
+    local dir, title, message, tmux_pane =
+      value:match("^([^\t]*)\t([^\t]*)\t([^\t]*)\t?([^\t]*)")
+    if not dir then
+      dir = value:match("^([^\t]*)") or ""
+      title, message, tmux_pane = "", "", ""
+    end
+    claude_notify_tmux[pane_id] = (tmux_pane ~= "" and tmux_pane) or nil
     local mux_pane = wezterm.mux.get_pane(pane_id)
     local tab = mux_pane and mux_pane:tab() or nil
     if tab then
@@ -571,6 +595,18 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
       end
     end
     table.insert(claude_notify_order, pane_id)
+    -- クリックで通知元ペインへジャンプできる Windows トーストを出す
+    local url = "wezterm-jump:" .. pane_id
+    if tmux_pane ~= "" then
+      url = url .. "/" .. tmux_pane
+    end
+    pcall(wezterm.background_child_process, {
+      "pwsh.exe", "-NoProfile", "-NonInteractive",
+      "-File", NOTIFY_PS1,
+      "-Title", (title ~= "" and title) or "Claude Code",
+      "-Message", message or "",
+      "-LaunchUri", url,
+    })
     return
   end
 

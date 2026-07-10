@@ -27,10 +27,12 @@ if command -v wslpath >/dev/null 2>&1 && [ -x "$PWSH" ]; then
 fi
 
 # SSH リモート: OSC 1337 SetUserVar を書き込み、手元の WezTerm の
-# user-var-changed ハンドラ（.wezterm.lua）がタブの 🔔 マーク付けを行う。
+# user-var-changed ハンドラ（.wezterm.lua）がタブの 🔔 マーク付けとトースト表示を行う。
+# payload: ディレクトリ名 \t タイトル \t メッセージ \t tmuxペイン番号（%なし。tmux 外は空）
+# 4番目のフィールドは LEADER+j / トーストクリックでの通知元ペインへのジャンプに使う。
 HOST=$(hostname -s 2>/dev/null || echo remote)
 FULL_TITLE="[$HOST:$DIR] $TITLE"
-PAYLOAD=$(printf '%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" | base64 | tr -d '\n')
+PAYLOAD=$(printf '%s\t%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" "${TMUX_PANE#%}" | base64 | tr -d '\n')
 
 # tmux 内: 自ペインの pty に passthrough（ESC 二重化 + ESC Ptmux; ラップ）で書く。
 # allow-passthrough on（.tmux.conf）とセットで tmux を透過して WezTerm に届く。
