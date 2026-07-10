@@ -32,6 +32,28 @@ fi
 # 4番目のフィールドは LEADER+j / トーストクリックでの通知元ペインへのジャンプに使う。
 HOST=$(hostname -s 2>/dev/null || echo remote)
 FULL_TITLE="[$HOST:$DIR] $TITLE"
+
+# ntfy プッシュ通知（iPhone / Apple Watch 用。issue #221）:
+# ~/.config/ntfy-topic にトピック名があり、かつ tmux にクライアントが 1 つも
+# attach していない（= 誰も画面を見ていない）ときだけ送る。
+# 席にいるときは WezTerm トースト（下の OSC）だけになり、二重通知しない。
+# サーバは NTFY_SERVER で上書き可（既定 https://ntfy.sh）。
+NTFY_TOPIC_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/ntfy-topic"
+if [ -r "$NTFY_TOPIC_FILE" ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  NTFY_TOPIC=$(head -n1 "$NTFY_TOPIC_FILE" | tr -d '[:space:]')
+  if [ -n "$NTFY_TOPIC" ] && ! tmux list-clients 2>/dev/null | grep -q .; then
+    # どのセッションからの通知か分かるよう、tmux のウィンドウ/ペイン情報を本文に足す
+    PANE_INFO=""
+    if [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
+      PANE_INFO=$(tmux display-message -t "$TMUX_PANE" -p ' (#{session_name}:#{window_index} #{window_name} #{pane_id})' 2>/dev/null)
+    fi
+    jq -cn --arg topic "$NTFY_TOPIC" --arg title "$FULL_TITLE" --arg msg "${MESSAGE}${PANE_INFO}" \
+      '{topic: $topic, title: $title, message: $msg}' |
+      curl -fsS --max-time 3 -H "Content-Type: application/json" \
+        -d @- "${NTFY_SERVER:-https://ntfy.sh}" >/dev/null 2>&1
+  fi
+fi
+
 PAYLOAD=$(printf '%s\t%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" "${TMUX_PANE#%}" | base64 | tr -d '\n')
 
 # tmux 内: 自ペインの pty に passthrough（ESC 二重化 + ESC Ptmux; ラップ）で書く。
