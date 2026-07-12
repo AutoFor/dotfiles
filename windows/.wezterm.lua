@@ -664,7 +664,7 @@ config.keys = {
   -- Pane (tmux ペイン)
   { key = "d", mods = "LEADER", action = tmux_bridge("-", act.Nop) }, -- 上下分割
   { key = "r", mods = "LEADER", action = tmux_bridge("|", act.Nop) }, -- 左右分割
-  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
   { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
   { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
   -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
