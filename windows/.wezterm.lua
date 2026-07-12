@@ -643,7 +643,7 @@ config.keys = {
 
   -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
   { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
-  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (tmux 側で確認)
+  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (確認なし)
   { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.Nop) }, -- 次へ
   { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.Nop) }, -- 前へ
   { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
