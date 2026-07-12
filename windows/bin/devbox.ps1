@@ -1,20 +1,21 @@
 ﻿# ===== Azure 開発サーバー (devbox) の起動・接続 CLI（Windows 用） =====
 # 旧 WSL 版 ~/.local/bin/devbox の移植。az CLI は Windows 側に導入して使う。
 #
-# 使い方: pwsh -File devbox.ps1 [connect|ensure|up|down|status|nsg]
-#   connect : VM 起動を担保してから ssh で接続する（既定。Tailscale 経由）
-#   ensure  : VM 起動の担保だけ行い、SSH はしない（WezTerm の gui-startup 用）
-#   up      : VM を起動するだけ
-#   down    : VM を停止(deallocate)して課金をディスク代だけにする
-#   status  : VM の電源状態を表示
-#   nsg     : 現在の公開IPを NSG の SSH 許可に追加する（Tailscale 障害時の
-#             公開IP直結フォールバック `ssh devbox-public` 用。通常運用では不要）
+# 使い方: pwsh -File devbox.ps1 [connect|ensure|up|down|status|nsg|nsg-close]
+#   connect  : VM 起動を担保してから ssh で接続する（既定。Tailscale 経由）
+#   ensure   : VM 起動の担保だけ行い、SSH はしない（WezTerm の gui-startup 用）
+#   up       : VM を起動するだけ
+#   down     : VM を停止(deallocate)して課金をディスク代だけにする
+#   status   : VM の電源状態を表示
+#   nsg      : 公開IP直結の緊急フォールバック路を開く（NSG ルールを現在の公開IPで
+#              作成/更新 → `ssh devbox-public`）。22番は通常閉鎖 (2026-07-10)
+#   nsg-close: 緊急フォールバック路を閉じる（NSG ルールを削除。使用後は必ず閉じる）
 #
 # 環境変数で上書き可:
 #   DEVBOX_RG / DEVBOX_VM / DEVBOX_USER / DEVBOX_IP / DEVBOX_PUBLIC_IP
 #   DEVBOX_NSG_RG / DEVBOX_NSG / DEVBOX_NSG_RULE
 param(
-    [ValidateSet("connect", "ensure", "up", "down", "status", "nsg")]
+    [ValidateSet("connect", "ensure", "up", "down", "status", "nsg", "nsg-close")]
     [string]$Action = "connect"
 )
 
@@ -70,12 +71,22 @@ function Get-PublicIp {
     return $null
 }
 
-# 現在の公開IPを NSG ルールの許可送信元に追加する（既に許可済みなら何もしない）
+# 公開IP直結のフォールバック路を開く。NSG ルールが無ければ現在の公開IPで作成し、
+# あれば許可送信元に現在の公開IPを追加する（既に許可済みなら何もしない）。
+# 22番は通常閉鎖 (2026-07-10 以降) なので、初回はほぼ「作成」になる。
 function Add-CurrentIpToNsg {
     $cur = Get-PublicIp
     if (-not $cur) {
         Write-Warning "現在の公開IPを取得できませんでした。"
         return $false
+    }
+    az network nsg rule show -g $NsgRg --nsg-name $Nsg -n $NsgRule -o none 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "NSG($NsgRule) を公開IP $cur で作成します..."
+        az network nsg rule create -g $NsgRg --nsg-name $Nsg -n $NsgRule `
+            --priority 1000 --access Allow --direction Inbound --protocol Tcp `
+            --destination-port-ranges 22 --source-address-prefixes "$cur/32" -o none
+        return ($LASTEXITCODE -eq 0)
     }
     $existing = az network nsg rule show -g $NsgRg --nsg-name $Nsg -n $NsgRule `
         --query "sourceAddressPrefixes" -o tsv 2>$null
@@ -134,7 +145,14 @@ switch ($Action) {
         if (-not (Test-Az)) { exit 1 }
         if (Add-CurrentIpToNsg) {
             Write-Host "NSG 許可済み。フォールバック接続: ssh devbox-public  (= $User@$PublicIP)"
+            Write-Host "復旧後は 'devbox.ps1 nsg-close' で必ず閉じること。"
         }
+        else { exit 1 }
+    }
+    "nsg-close" {
+        if (-not (Test-Az)) { exit 1 }
+        az network nsg rule delete -g $NsgRg --nsg-name $Nsg -n $NsgRule -o none
+        if ($LASTEXITCODE -eq 0) { Write-Host "NSG($NsgRule) を削除しました。22番は閉鎖状態です。" }
         else { exit 1 }
     }
     "up" {

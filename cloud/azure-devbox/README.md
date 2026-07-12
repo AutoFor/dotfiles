@@ -95,8 +95,9 @@ sudo tailscale up   # 表示される URL をブラウザで開いて認証
 | MagicDNS 名 | `devbox.tail7bb5be.ts.net` (`tailscale status --json` の `Self.DNSName`) |
 
 - クライアント側 (Windows は `winget install Tailscale.Tailscale`、iPad は App Store) にも Tailscale を入れて同じアカウントでログインすれば、`ssh devbox` (Windows) や `ssh azureuser@100.126.96.27` で NSG を経由せず接続できる（SSH 鍵は従来どおり必要）。
-- Tailscale 障害時のフォールバック: `devbox.ps1 nsg` で現在 IP を NSG に許可してから `ssh devbox-public`（公開 IP 直結）。
-- tailnet 内の通信は WireGuard トンネル (アウトバウンド UDP) なので **NSG の受信規則は不要**。将来的に 22 番のグローバル公開 (`allow-ssh-home`) を閉じることも可能。
+- **22 番のグローバル公開は閉鎖済み (2026-07-10)**。SSH の受信規則は NSG に存在しない（Tailscale 用 UDP 41641 のみ）。
+- Tailscale 障害時のフォールバック: `devbox.ps1 nsg` が NSG ルールを現在 IP で**作成**するので `ssh devbox-public`（公開 IP 直結）で入れる。復旧後は `devbox.ps1 nsg-close` で必ず閉じる。
+- tailnet 内の通信は WireGuard トンネル (アウトバウンド UDP) なので **NSG の受信規則は不要**。
 - 直接接続が張れない場合は DERP リレー経由になる（動作はするがレイテンシ増）。改善したい場合は NSG で UDP 41641 の受信を許可する。
 - ノードキーは既定 180 日で失効する。管理コンソールで devbox の「Disable key expiry」を設定すると再認証が不要になる。
 
