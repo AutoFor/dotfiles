@@ -667,6 +667,7 @@ config.keys = {
   { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
   { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
   { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
+  { key = "t", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
   -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
   { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
