@@ -115,8 +115,15 @@ config.window_close_confirmation = "NeverPrompt"
 -- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
 -- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
 config.notification_handling = "SuppressFromFocusedPane"
-config.font = wezterm.font("HackGen Console NF")
+-- HackGen 内蔵の Nerd Fonts アイコンより新しいコードポイント (U+E6B8 等) は
+-- Symbols Nerd Font Mono にフォールバックする（ユーザーローカルにインストール）
+config.font = wezterm.font_with_fallback({
+  "HackGen Console NF",
+  "Symbols Nerd Font Mono",
+})
 config.font_size = 12.0
+-- Nerd Fonts v2 の廃止コードポイント (U+F8F0 等) はどのフォントにも無いので警告を抑制
+config.warn_about_missing_glyphs = false
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
 -- config.front_end = "WebGpu"
 -- config.webgpu_power_preference = "HighPerformance"
