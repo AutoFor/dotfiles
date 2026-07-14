@@ -1,0 +1,48 @@
+#!/bin/sh
+# 画面上の URL を選んで Windows 側の既定ブラウザで開く (prefix+o)。
+# tmux は長い URL を物理行に折り返して再描画するため、WezTerm の
+# Ctrl+クリック (行単位の正規表現検出) では途中で切れた URL しか拾えない。
+# ここでは capture-pane -J で折り返しを結合してから URL を抽出するので、
+# 何行に折り返していても完全な URL で開ける。
+# 開く指示は SetUserVar (OSC 1337) open_url としてクライアント tty へ直接書き、
+# .wezterm.lua の user-var-changed が wezterm.open_with で既定ブラウザを開く。
+# 呼び出し元: .tmux.conf の bind o (popup)
+
+pane_id=${1:?usage: tmux-open-url <pane_id> [client_tty]}
+client_tty=$2
+
+# URL に使える文字は ASCII のみに限定する。空白区切りだと直後の日本語句読点まで
+# 巻き込むため。閉じ括弧 ) は Wikipedia 等の正当な URL 末尾にあるので残し、
+# 文末に食い込みがちな . , ; : ! ? だけ後段の sed で落とす。
+url_re="https?://[][A-Za-z0-9._~:/?#@!\$&'()*+,;=%-]+"
+
+# 表示中の画面 + 直近スクロールバック 2000 行から URL を抽出。
+# tac で新しいもの順に並べ、重複は最初 (=最新) だけ残す。
+urls=$(tmux capture-pane -Jp -S -2000 -t "$pane_id" |
+  grep -oE "$url_re" |
+  sed -e 's/[.,;:!?]*$//' |
+  tac | awk '!seen[$0]++')
+
+if [ -z "$urls" ]; then
+  tmux display-message "URL が見つかりません"
+  exit 0
+fi
+
+if [ "$(printf '%s\n' "$urls" | wc -l)" -eq 1 ]; then
+  url=$urls
+else
+  url=$(printf '%s\n' "$urls" | fzf --no-sort --prompt='open URL> ')
+fi
+[ -n "$url" ] || exit 0
+
+payload=$(printf '%s' "$url" | base64 | tr -d '\n')
+send_to() {
+  [ -n "$1" ] && [ -w "$1" ] && printf '\033]1337;SetUserVar=open_url=%s\007' "$payload" > "$1"
+}
+if ! send_to "$client_tty"; then
+  # client_tty が渡らない/書けないときは全クライアントへ (通常は WezTerm 1 つ)
+  tmux list-clients -F '#{client_tty}' 2>/dev/null | while read -r tty; do
+    send_to "$tty"
+  done
+fi
+exit 0

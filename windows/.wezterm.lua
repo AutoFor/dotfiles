@@ -573,6 +573,16 @@ wezterm.on("pane-focus-changed", function(window, pane)
 end)
 
 wezterm.on("user-var-changed", function(window, pane, name, value)
+  if name == "open_url" then
+    -- tmux-open-url (prefix+o) からの「この URL を既定ブラウザで開いて」通知。
+    -- ペイン内の任意の出力が偽装できる経路なので、http(s) 以外の URI
+    -- (file: や ms-settings: 等) は開かない
+    if value:match("^https?://") then
+      wezterm.open_with(value)
+    end
+    return
+  end
+
   if name == "tmux_windows" then
     -- tmux のウィンドウ一覧 (wezterm-tabs-sync が送信)。タブバー描画に使う
     local store = wezterm.GLOBAL.tmux_windows or {}
@@ -694,6 +704,7 @@ config.keys = {
   { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
   { key = "t", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
   { key = "f", mods = "LEADER", action = tmux_bridge("f", act.Nop) }, -- ファイラー (yazi) を浮遊ポップアップで開く
+  { key = "o", mods = "LEADER", action = tmux_bridge("o", act.Nop) }, -- 画面上の URL を選んでブラウザで開く (折り返し URL 対応)
   -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
   { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
