@@ -1,9 +1,11 @@
 #!/bin/sh
 # 画面上の URL を選んで Windows 側の既定ブラウザで開く (prefix+o)。
-# tmux は長い URL を物理行に折り返して再描画するため、WezTerm の
-# Ctrl+クリック (行単位の正規表現検出) では途中で切れた URL しか拾えない。
-# ここでは capture-pane -J で折り返しを結合してから URL を抽出するので、
-# 何行に折り返していても完全な URL で開ける。
+# tmux 配下では長い URL が物理行に折り返されて描画される (tmux 自身のソフト
+# 折り返し、または Claude Code など TUI アプリ自身のハード改行) ため、
+# WezTerm の Ctrl+クリック (行単位の正規表現検出) では途中で切れた URL しか
+# 拾えない。ここでは物理行ベースで抽出し、「URL が行末まで届いていて行がほぼ
+# 幅いっぱい」なら次行の行頭を継ぎ足した候補も併せて出す (誤結合しても
+# 「切れたまま」の候補が残るのでユーザーが選び分けられる)。
 # 開く指示は SetUserVar (OSC 1337) open_url としてクライアント tty へ直接書き、
 # .wezterm.lua の user-var-changed が wezterm.open_with で既定ブラウザを開く。
 # 呼び出し元: .tmux.conf の bind o (popup)
@@ -17,17 +19,61 @@ client_tty=$2
 case $pane_id in ''|'#'*) pane_id=$(tmux display-message -p '#{pane_id}') ;; esac
 case $client_tty in ''|'#'*) client_tty=$(tmux display-message -p '#{client_tty}') ;; esac
 
-# URL に使える文字は ASCII のみに限定する。空白区切りだと直後の日本語句読点まで
-# 巻き込むため。閉じ括弧 ) は Wikipedia 等の正当な URL 末尾にあるので残し、
-# 文末に食い込みがちな . , ; : ! ? だけ後段の sed で落とす。
-url_re="https?://[][A-Za-z0-9._~:/?#@!\$&'()*+,;=%-]+"
+# テスト用: pane_id に - を渡すと標準入力を画面内容として扱う
+# (幅は TMUX_OPEN_URL_WIDTH、既定 80。TMUX_OPEN_URL_LIST=1 と併用する)
+if [ "$pane_id" = "-" ]; then
+  width=${TMUX_OPEN_URL_WIDTH:-80}
+  capture() { cat; }
+else
+  width=$(tmux display-message -p -t "$pane_id" '#{pane_width}')
+  capture() { tmux capture-pane -p -S -2000 -t "$pane_id"; }
+fi
 
 # 表示中の画面 + 直近スクロールバック 2000 行から URL を抽出。
-# tac で新しいもの順に並べ、重複は最初 (=最新) だけ残す。
-urls=$(tmux capture-pane -Jp -S -2000 -t "$pane_id" |
-  grep -oE "$url_re" |
-  sed -e 's/[.,;:!?]*$//' |
-  tac | awk '!seen[$0]++')
+# URL に使える文字は ASCII のみに限定する (空白区切りだと直後の日本語句読点まで
+# 巻き込むため)。行末まで届いている URL は次行以降 (最大 4 行) の行頭を継ぎ足して、
+# 各段階をすべて候補に出す。継ぎ足しの終端は「URL 文字が行の途中で切れた」または
+# 「行が幅いっぱいでない」。文末に食い込みがちな . , ; : ! ? は sed で落とし、
+# tac で新しいもの順 (同じ URL なら結合が長い候補が上) にして重複を除く。
+# LC_ALL=C で awk の length() をバイト数に固定する (gawk だと UTF-8 の文字数に
+# なり、日本語行の「幅いっぱい」判定が崩れる。バイト数 >= 表示幅 は常に成立)。
+urls=$(capture | LC_ALL=C awk -v w="$width" '
+BEGIN {
+  cs = "[][A-Za-z0-9._~:/?#@!$&\047()*+,;=%-]"
+  re = "https?://" cs "+"
+}
+{ sub(/[ \t]+$/, ""); lines[NR] = $0 }
+END {
+  m = w - 4  # TUI は幅より数桁手前で折り返すことがあるので、その分のマージン
+  for (i = 1; i <= NR; i++) {
+    s = lines[i]
+    off = 0
+    while (match(s, re)) {
+      url = substr(s, RSTART, RLENGTH)
+      print url
+      if (off + RSTART + RLENGTH > length(lines[i]) && length(lines[i]) >= m) {
+        joined = url
+        for (j = i + 1; j <= i + 4 && j <= NR; j++) {
+          c = lines[j]
+          clen = length(c)
+          sub(/^[ \t]+/, "", c)
+          if (!match(c, "^" cs "+")) break
+          joined = joined substr(c, 1, RLENGTH)
+          print joined
+          if (RLENGTH < length(c) || clen < m) break
+        }
+      }
+      off += RSTART + RLENGTH - 1
+      s = substr(s, RSTART + RLENGTH)
+    }
+  }
+}' | sed -e 's/[.,;:!?]*$//' | tac | awk '!seen[$0]++')
+
+# テスト用: 抽出候補の一覧だけ出して終わる (fzf や WezTerm 通知に進まない)
+if [ -n "$TMUX_OPEN_URL_LIST" ]; then
+  printf '%s\n' "$urls"
+  exit 0
+fi
 
 if [ -z "$urls" ]; then
   tmux display-message "URL が見つかりません"
