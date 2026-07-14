@@ -370,6 +370,24 @@ wezterm.on("update-right-status", function(window, pane)
   window:set_right_status(wezterm.format(items))
 end)
 
+-- tmux が mouse on でクリックを掴んでいても、Ctrl+クリックだけは WezTerm が
+-- 横取りしてリンクを開く (mouse_reporting = true が「アプリのマウスモード中でも
+-- このバインドを効かせる」の意)。Down も潰して tmux に片割れイベントが漏れないようにする。
+config.mouse_bindings = {
+  {
+    event = { Up = { streak = 1, button = "Left" } },
+    mods = "CTRL",
+    mouse_reporting = true,
+    action = act.OpenLinkAtMouseCursor,
+  },
+  {
+    event = { Down = { streak = 1, button = "Left" } },
+    mods = "CTRL",
+    mouse_reporting = true,
+    action = act.Nop,
+  },
+}
+
 config.disable_default_key_bindings = true
 -- Ctrl+q を leader に使う
 config.leader = { key = "q", mods = "CTRL", timeout_milliseconds = 2000 }

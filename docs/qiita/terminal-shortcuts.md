@@ -195,6 +195,7 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | `<leader> →u` | **QuickSelect**: 画面上の URL / パス / ハッシュ等にラベルが振られ、ラベルを打つとそれをコピー。行の途中にある URL をマウス無しで拾える（**u**rl） |
 | `<leader> →y` | **画面に見えているペイン全体をまるごとコピー**（選択操作なし。表示中のコード/ログを全部持っていく最終手段。**y**ank） |
 | `Shift`+ドラッグ | tmux を素通りして WezTerm ネイティブ選択（ペイン border やステータスをまたいで選びたいとき用。こちらは `Ctrl+Shift+C` でコピー） |
+| `Ctrl`+クリック | カーソル下の **URL を Windows 側の既定ブラウザで開く**（tmux がマウスを掴んでいても WezTerm が横取りする。`.wezterm.lua` の `mouse_bindings` で `mouse_reporting = true` を指定） |
 
 nvim などマウスを自前で使うアプリのペインでは、クリック/ドラッグはアプリ側に渡る（nvim 内のコピーは nvim の `y`）。
 
