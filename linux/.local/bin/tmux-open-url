@@ -8,8 +8,14 @@
 # .wezterm.lua の user-var-changed が wezterm.open_with で既定ブラウザを開く。
 # 呼び出し元: .tmux.conf の bind o (popup)
 
-pane_id=${1:?usage: tmux-open-url <pane_id> [client_tty]}
+# 対象ペインと通知先クライアント。popup のコマンド文字列は tmux がフォーマット展開
+# しない (実測: tmux 3.4 では '#{pane_id}' がリテラルのまま届く) ため、引数に頼らず
+# popup 内から display-message で解決する。popup はアクティブペインを変えないので、
+# ここで取れるアクティブペイン = prefix+o を押したペイン。
+pane_id=$1
 client_tty=$2
+case $pane_id in ''|'#'*) pane_id=$(tmux display-message -p '#{pane_id}') ;; esac
+case $client_tty in ''|'#'*) client_tty=$(tmux display-message -p '#{client_tty}') ;; esac
 
 # URL に使える文字は ASCII のみに限定する。空白区切りだと直後の日本語句読点まで
 # 巻き込むため。閉じ括弧 ) は Wikipedia 等の正当な URL 末尾にあるので残し、
