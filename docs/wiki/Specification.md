@@ -75,7 +75,7 @@
 | ペイン閉じ | `Ctrl+q` → `x` |
 | コピーモード | `Ctrl+q` → `[`（vi ライク） |
 | Workspace 切替 | `leader → w` |
-| Workspace 名変更 | `Alt+E` |
+| Workspace 名変更 | `Ctrl+q` → `t` |
 | ステータスバー | 現在の Workspace 名を右端に表示 |
 | ウィンドウタイトル | カレントディレクトリ名を表示 |
 | キーバインド定義 | `windows/.wezterm.lua`（インライン管理） |

@@ -131,7 +131,45 @@ config.font = wezterm.font_with_fallback({
   "HackGen Console NF",
   "Symbols Nerd Font Mono",
 })
-config.font_size = 12.0
+-- フォントサイズは Ctrl+; / Ctrl+- で変更したとき状態ファイルに保存し、
+-- 次回起動時に引き継ぐ（WezTerm 標準の IncreaseFontSize 等はウィンドウ限りで消えるため自前実装）
+local DEFAULT_FONT_SIZE = 12.0
+local FONT_SIZE_FILE = wezterm.home_dir .. "\\.wezterm-font-size"
+
+local function load_font_size()
+  local f = io.open(FONT_SIZE_FILE, "r")
+  if f then
+    local v = tonumber(f:read("*l"))
+    f:close()
+    -- 手で壊れた値を書いてしまっても起動不能にならないよう範囲チェック
+    if v and v >= 6 and v <= 40 then
+      return v
+    end
+  end
+  return DEFAULT_FONT_SIZE
+end
+
+local function save_font_size(size)
+  local f = io.open(FONT_SIZE_FILE, "w")
+  if f then
+    f:write(tostring(size))
+    f:close()
+  end
+end
+
+-- delta を加算して保存。delta が nil ならデフォルトに戻す
+local function adjust_font_size(delta)
+  return wezterm.action_callback(function(window, pane)
+    local overrides = window:get_config_overrides() or {}
+    local current = overrides.font_size or window:effective_config().font_size
+    local new_size = delta and math.max(6, math.min(40, current + delta)) or DEFAULT_FONT_SIZE
+    overrides.font_size = new_size
+    window:set_config_overrides(overrides)
+    save_font_size(new_size)
+  end)
+end
+
+config.font_size = load_font_size()
 -- Nerd Fonts v2 の廃止コードポイント (U+F8F0 等) はどのフォントにも無いので警告を抑制
 config.warn_about_missing_glyphs = false
 -- WebGPU を試す（クラッシュするなら下の OpenGL に戻す）
@@ -426,7 +464,8 @@ end
 
 local window_mode_by_id = {}
 
--- 画面モード切り替え: 通常 -> 最大化 -> フルスクリーン -> 通常。
+-- 画面モード切り替え: 通常 <-> 最大化（タスクバーは常に見える）。
+-- タスクバーまで覆うフルスクリーンは誤爆しやすいので機能から外した。
 -- 「タスクバーを覆わない最大化」は OS 標準の最大化そのものなので
 -- ネイティブの window:maximize() を使う（座標計算は不要）
 local function cycle_window_mode()
@@ -435,21 +474,19 @@ local function cycle_window_mode()
     local dimensions = window:get_dimensions()
     local mode = window_mode_by_id[window_id] or "normal"
 
+    -- 何かの拍子にフルスクリーンになっていたら解除して通常に戻す
     if dimensions.is_full_screen then
-      mode = "fullscreen"
+      window:toggle_fullscreen()
+      wezterm.sleep_ms(50)
+      window:restore()
+      window_mode_by_id[window_id] = "normal"
+      return
     end
 
     if mode == "normal" then
       window:maximize()
       window_mode_by_id[window_id] = "maximized"
-    elseif mode == "maximized" then
-      window:toggle_fullscreen()
-      window_mode_by_id[window_id] = "fullscreen"
     else
-      if dimensions.is_full_screen then
-        window:toggle_fullscreen()
-        wezterm.sleep_ms(50)
-      end
       window:restore()
       window_mode_by_id[window_id] = "normal"
     end
@@ -723,7 +760,7 @@ config.keys = {
   { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.Nop) }, -- 前へ
   { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
   { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
-  { key = "e", mods = "ALT", action = tmux_bridge(",", act.Nop) }, -- 名前変更
+  { key = "t", mods = "LEADER", action = tmux_bridge(",", act.Nop) }, -- 名前変更
   { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
   -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
   { key = "1", mods = "CTRL", action = tmux_bridge("1", act.Nop) },
@@ -741,8 +778,8 @@ config.keys = {
   { key = "r", mods = "LEADER", action = tmux_bridge("|", act.Nop) }, -- 左右分割
   { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
   { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
-  { key = "p", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
-  { key = "t", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
+  { key = "p", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
+  { key = "q", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
   { key = "f", mods = "LEADER", action = tmux_bridge("f", act.Nop) }, -- ファイラー (yazi) を浮遊ポップアップで開く
   { key = "o", mods = "LEADER", action = tmux_bridge("o", act.Nop) }, -- 画面上の URL を選んでブラウザで開く (折り返し URL 対応)
   -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
@@ -774,11 +811,15 @@ config.keys = {
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
   { key = "Enter", mods = "ALT", action = cycle_window_mode() },
 
-  -- フォントサイズ切替
-  { key = "+", mods = "CTRL", action = act.IncreaseFontSize },
-  { key = "-", mods = "CTRL", action = act.DecreaseFontSize },
+  -- フォントサイズ切替（変更は ~/.wezterm-font-size に保存され次回起動に引き継がれる）
+  -- JIS キーボードでは「+」= Shift+; のため、環境によって key="+" mods=CTRL に
+  -- マッチしないことがある。SHIFT 付きと Shift 不要の Ctrl+; も併記して確実に拾う
+  { key = "+", mods = "CTRL", action = adjust_font_size(0.5) },
+  { key = "+", mods = "SHIFT|CTRL", action = adjust_font_size(0.5) },
+  { key = ";", mods = "CTRL", action = adjust_font_size(0.5) },
+  { key = "-", mods = "CTRL", action = adjust_font_size(-0.5) },
   -- フォントサイズのリセット
-  { key = "0", mods = "CTRL", action = act.ResetFontSize },
+  { key = "0", mods = "CTRL", action = adjust_font_size(nil) },
 
   -- コマンドパレット
   { key = "p", mods = "CTRL", action = act.ActivateCommandPalette },
