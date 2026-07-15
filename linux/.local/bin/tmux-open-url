@@ -49,11 +49,15 @@ END {
     s = lines[i]
     off = 0
     while (match(s, re)) {
-      url = substr(s, RSTART, RLENGTH)
+      # 結合ループ内の match() が RSTART/RLENGTH を上書きするので先に退避
+      st = RSTART; ln = RLENGTH
+      url = substr(s, st, ln)
       print url
-      if (off + RSTART + RLENGTH > length(lines[i]) && length(lines[i]) >= m) {
+      if (off + st + ln > length(lines[i]) && length(lines[i]) >= m) {
         joined = url
-        for (j = i + 1; j <= i + 4 && j <= NR; j++) {
+        # OAuth の認可 URL 等は 10 行以上に折り返すことがあるので上限は 30 行
+        # (停止条件は「URL 文字が行の途中で切れた」「行が幅いっぱいでない」)
+        for (j = i + 1; j <= i + 30 && j <= NR; j++) {
           c = lines[j]
           clen = length(c)
           sub(/^[ \t]+/, "", c)
@@ -63,8 +67,8 @@ END {
           if (RLENGTH < length(c) || clen < m) break
         }
       }
-      off += RSTART + RLENGTH - 1
-      s = substr(s, RSTART + RLENGTH)
+      off += st + ln - 1
+      s = substr(s, st + ln)
     }
   }
 }' | sed -e 's/[.,;:!?]*$//' | tac | awk '!seen[$0]++')
