@@ -252,6 +252,13 @@ bindkey '\ew' worktree-fzf
 # gh finish: Issue作成〜PRマージまで一括実行
 alias gf='bash ~/.claude/skills/gh-finish/gh-finish.sh'
 
+# claude の自動アップデートを無効化。
+# 22:00 の自動シャットダウンと裏の更新処理が競合し、実行ファイルが
+# 0 バイトに壊れて全ペインの claude --continue 復元が失敗した事例あり (2026-07-15)。
+# 更新は claude 起動時に新バージョンの案内が出たとき手動で行う:
+#   npm install -g @anthropic-ai/claude-code
+export DISABLE_AUTOUPDATER=1
+
 # claude: メモリ上限 12GB で起動
 # claude -y / claude da: --dangerously-skip-permissions の短縮
 unalias claude 2>/dev/null || true
