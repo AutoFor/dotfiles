@@ -223,7 +223,7 @@ export PATH=$PATH:$HOME/.dotnet
 # ghq + fzf でリポジトリを選択して cd（Ctrl+G）
 function ghq-fzf() {
   local repo
-  repo=$(ghq list | fzf --preview "ls $(ghq root)/{}") || return
+  repo=$(ghq list | fzf) || return
   cd "$(ghq root)/$repo"
   zle reset-prompt
 }
