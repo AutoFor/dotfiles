@@ -324,6 +324,18 @@ tm() {
     set-option status on
 }
 
+# SSH ログイン時に自動で tmux(main)へ入る — `tmux new -As main` を毎回打たなくてよくする。
+# 発動条件: 対話シェル / tmux 外 / 素の SSH(tty あり)。
+# 除外: WezTerm が管理するペイン(mux ドメイン・wezterm ssh。WEZTERM_PANE で判定)、
+#       NOTMUX=1 での明示回避(例: ssh -t devbox NOTMUX=1 zsh -l)。
+# tm 経由なので main が無ければ作成、既にあればグループセッション(ビュー独立)で入る。
+# detach (prefix+d) すると通常のシェルに戻る。
+if [[ -o interactive && -z "${TMUX:-}" && -z "${WEZTERM_PANE:-}" \
+      && -n "${SSH_TTY:-}" && -z "${NOTMUX:-}" ]] \
+    && command -v tmux >/dev/null 2>&1; then
+  tm
+fi
+
 # gh worktree branch: Issue作成 + worktree作成
 # gwb     → worktree作成してcd "path"をクリップボードにコピー
 # gwb r   → 右分割、gwb d → 下分割
