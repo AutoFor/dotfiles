@@ -133,6 +133,14 @@ tmp() {
   NVIM_TMP_NOTE_FILE="$file" command nvim --cmd "cd $dir" "$file"
 }
 
+# メモディレクトリ (~/memo。MEMO_DIR で変更可) を nvim で開く。
+# nvim 内で <leader>N を押すとタイムスタンプ付きメモ (yyyymmddhhmmss.md) が作られる
+memo() {
+  local dir="${MEMO_DIR:-$HOME/memo}"
+  mkdir -p "$dir" || return 1
+  command nvim --cmd "cd $dir" "$dir"
+}
+
 # WezTerm にカレントディレクトリを通知（OSC 7）
 # tmux 内でも __term_emit がラップして届ける。WezTerm 側はこれで host=devbox を
 # 認識し、ステータス表示や tmux ブリッジ判定 (is_tmux_client_pane) が機能する
