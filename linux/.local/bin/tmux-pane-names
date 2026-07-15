@@ -1,0 +1,28 @@
+#!/bin/sh
+# ペイン名 (@name。prefix+T / Alt+p で命名、ペイン上辺ボーダーに表示) の保存・復元。
+# tmux-resurrect はペインオプションを保存しないため、VM シャットダウンで消えてしまう。
+# .tmux.conf の resurrect フック (post-save-all / post-restore-all) から呼ばれる。
+# 保存形式: セッション名 \t ウィンドウ番号 \t ペイン番号 \t 名前 (名前ありのペインのみ)
+set -eu
+
+FILE="$HOME/.local/share/tmux/resurrect/pane-names.tsv"
+TAB=$(printf '\t')
+
+case "${1:-}" in
+save)
+  mkdir -p "$(dirname "$FILE")"
+  tmux list-panes -a -F "#{session_name}${TAB}#{window_index}${TAB}#{pane_index}${TAB}#{@name}" |
+    awk -F "$TAB" '$4 != ""' > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+  ;;
+restore)
+  [ -r "$FILE" ] || exit 0
+  while IFS="$TAB" read -r s w p name; do
+    [ -n "$name" ] || continue
+    tmux set-option -p -t "$s:$w.$p" @name "$name" 2>/dev/null || true
+  done < "$FILE"
+  ;;
+*)
+  echo "usage: tmux-pane-names save|restore" >&2
+  exit 1
+  ;;
+esac
