@@ -517,8 +517,10 @@ local function open_nvim_with_agent(agent_command)
 end
 
 -- Claude Code hook（~/.claude/notify.sh）からの通知。
--- リモート側が OSC 1337 SetUserVar "claude_notify" を発行すると、通知元ペインを記録して
--- タブタイトルに 🔔 を付ける。フォーカスすると解除。LEADER+j で最後に通知したペインへジャンプ。
+-- リモート側が OSC 1337 SetUserVar "claude_notify" を発行すると、トーストを表示し、
+-- 通知元ペインを記録してタブタイトルに 🔔 を付ける。フォーカスすると解除。
+-- トーストのクリック（wezterm-pane:// スキーム）または LEADER+j で通知元ペインへジャンプ。
+-- ※ トーストを Lua 側で出すのは、OSC 777 が mux ドメインを越えて届かないため。
 local claude_notified = {} -- pane_id -> 通知前の明示タブタイトル（"" = 明示タイトルなし）
 local claude_notify_order = {} -- 通知順の pane_id（新しいものが末尾）
 
@@ -593,11 +595,15 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
   if name == "claude_notify" then
     -- payload: "ディレクトリ名\tタイトル\tメッセージ"（notify.sh が base64 で送信、WezTerm が復号済み）
     local pane_id = pane:pane_id()
-    -- 通知元ペインを見ているときはマーク不要
+    -- 通知元ペインを見ているときはトーストもマークも不要
     if window:is_focused() and window:active_pane():pane_id() == pane_id then
       return
     end
-    local dir = value:match("^([^\t]*)") or ""
+    local dir, title, message = value:match("^([^\t]*)\t([^\t]*)\t(.*)$")
+    dir = dir or value:match("^([^\t]*)") or ""
+    -- クリックで通知元ペインへジャンプできるよう wezterm-pane:// URL を添える
+    -- （スキームは install-windows.ps1 が登録し、windows/wezterm-goto-pane.ps1 が処理）
+    window:toast_notification(title or "Claude Code", message or "", "wezterm-pane://" .. pane_id, 4000)
     local mux_pane = wezterm.mux.get_pane(pane_id)
     local tab = mux_pane and mux_pane:tab() or nil
     if tab then

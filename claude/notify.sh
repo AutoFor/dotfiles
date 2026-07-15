@@ -26,17 +26,23 @@ if command -v wslpath >/dev/null 2>&1 && [ -x "$PWSH" ]; then
     -Title "[$DIR] $TITLE" -Message "$MESSAGE" -Sound "$SOUND" </dev/null
 fi
 
-# SSH リモート: 端末エスケープシーケンスで手元の WezTerm に届ける
-if [ -w /dev/tty ]; then
+# SSH リモート: OSC 1337 SetUserVar を自ペインの pty に書き込み、手元の WezTerm の
+# user-var-changed ハンドラ（.wezterm.lua）がトースト表示とタブの 🔔 マークを行う。
+# ※ OSC 777 のトーストは mux ドメインを越えて手元に届かないため使わない。
+# ※ Claude Code の hook プロセスには制御端末が無く /dev/tty を開けないため、
+#    $WEZTERM_PANE から wezterm cli でペインの pty を特定する。
+TTY=""
+# サブシェルで開けるか試す（特殊ビルトインのリダイレクト失敗はシェルごと終了するため）
+if (exec >/dev/tty) 2>/dev/null; then
+  TTY=/dev/tty
+elif [ -n "$WEZTERM_PANE" ] && command -v wezterm >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+  TTY=$(wezterm cli list --format json 2>/dev/null |
+    jq -r --arg p "$WEZTERM_PANE" '.[] | select((.pane_id | tostring) == $p) | .tty_name // empty')
+fi
+if [ -n "$TTY" ] && [ -w "$TTY" ]; then
   HOST=$(hostname -s 2>/dev/null || echo remote)
   FULL_TITLE="[$HOST:$DIR] $TITLE"
   PAYLOAD=$(printf '%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" | base64 | tr -d '\n')
-  {
-    # OSC 777: WezTerm がトースト通知を表示（SSH 越しでも届く）
-    printf '\033]777;notify;%s;%s\033\\' "$FULL_TITLE" "$MESSAGE"
-    # OSC 1337 SetUserVar: 通知元ペインの記録とタブの 🔔 マーク付けを
-    # .wezterm.lua の user-var-changed ハンドラで行う
-    printf '\033]1337;SetUserVar=claude_notify=%s\033\\' "$PAYLOAD"
-  } 2>/dev/null > /dev/tty
+  printf '\033]1337;SetUserVar=claude_notify=%s\033\\' "$PAYLOAD" > "$TTY" 2>/dev/null
 fi
 exit 0
