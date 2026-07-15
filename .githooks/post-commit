@@ -1,0 +1,19 @@
+#!/bin/sh
+# post-commit: コミットしたら即 origin へ push する。
+# Windows (ghq) と devbox (~/dotfiles) の 2 クローンが両方 main に直コミットする
+# 運用なので、push 漏れで「両側で別々に進んでいる」状態になるのを構造的に防ぐ。
+# 有効化 (各クローンで一度だけ): git config core.hooksPath .githooks
+# Windows 側の認証はリポジトリローカルの credential 設定で通す (CLAUDE.local.md 参照)。
+# 一時的に自動 push を止めたいとき: DOTFILES_NO_AUTOPUSH=1 git commit ...
+
+[ -n "$DOTFILES_NO_AUTOPUSH" ] && exit 0
+
+# rebase 中に再生されるコミットや detached HEAD では何もしない
+git_dir=$(git rev-parse --git-dir)
+{ [ -d "$git_dir/rebase-merge" ] || [ -d "$git_dir/rebase-apply" ]; } && exit 0
+branch=$(git symbolic-ref --quiet --short HEAD) || exit 0
+
+if ! git push -u origin "$branch"; then
+  echo "[post-commit] auto-push に失敗しました。git pull してから git push してください" >&2
+fi
+exit 0
