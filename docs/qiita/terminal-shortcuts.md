@@ -196,7 +196,7 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | `<leader> →y` | **画面に見えているペイン全体をまるごとコピー**（選択操作なし。表示中のコード/ログを全部持っていく最終手段。**y**ank） |
 | `Shift`+ドラッグ | tmux を素通りして WezTerm ネイティブ選択（ペイン border やステータスをまたいで選びたいとき用。こちらは `Ctrl+Shift+C` でコピー） |
 | `Ctrl`+クリック | カーソル下の **URL を Windows 側の既定ブラウザで開く**（tmux がマウスを掴んでいても WezTerm が横取りする。`.wezterm.lua` の `mouse_bindings` で `mouse_reporting = true` を指定）。**折り返した URL は先頭行しか検出できない**ので、その場合は `<leader> →o` を使う |
-| `<leader> →o` | **画面上の URL を fzf ポップアップで選んでブラウザで開く**（**o**pen）。行末で切れた URL は次行を推測で継ぎ足すので、**tmux の折り返しも Claude Code 等の TUI がハード改行した URL も完全な形で開ける**（断片と結合後の両方が候補に出るので、誤結合していたら選び分ける）。1 件だけなら選択なしで即開く（`tmux-open-url` → SetUserVar `open_url` → WezTerm が既定ブラウザ起動） |
+| `<leader> →o` | **画面上の URL を fzf ポップアップで選んでブラウザで開く**（**o**pen）。行末で切れた URL は次行を推測で継ぎ足すので、**tmux の折り返しも Claude Code 等の TUI がハード改行した URL も完全な形で開ける**（断片と結合後の両方が候補に出るので、誤結合していたら選び分ける）。**表示テキストと URL が別になっている埋め込みリンク（OSC 8。Claude Code の青いリンク等）も候補に出る**。1 件だけなら選択なしで即開く（`tmux-open-url` → SetUserVar `open_url` → WezTerm が既定ブラウザ起動） |
 
 nvim などマウスを自前で使うアプリのペインでは、クリック/ドラッグはアプリ側に渡る（nvim 内のコピーは nvim の `y`）。
 
@@ -206,11 +206,11 @@ nvim などマウスを自前で使うアプリのペインでは、クリック
 |--------------|------|------|
 | `Ctrl+Shift+c` | クリップボードにコピー | OS 標準の **c**opy |
 | `Ctrl+Shift+v` | クリップボードから貼り付け | OS 標準の **v** = paste |
-| `Ctrl++` / `Ctrl+-` / `Ctrl+0` | フォントサイズを拡大 / 縮小 / リセット | `+`/`-`/0 |
+| `Ctrl+;` / `Ctrl+-` / `Ctrl+0` | フォントサイズを拡大 / 縮小 / リセット（拡大は `Ctrl++` でも可。JIS では `+` に Shift が要るので Shift 不要の `Ctrl+;` を主とする）。変更したサイズは `~/.wezterm-font-size` に保存され、WezTerm を閉じても次回起動に引き継がれる | `;` は `+` と同じキー |
 | `Ctrl+p` / `Ctrl+Shift+p` | コマンドパレットを開く | **p**alette（VS Code 由来） |
 | `Ctrl+Shift+r` | 設定を再読み込み | **r**eload |
 | `Ctrl+Shift+l` | デバッグオーバーレイ（問題調査用） | **l**og |
-| `Alt+Enter` | 通常 → 最大化（タスクバーを残す） → フルスクリーンを切り替え | Enter = 確定・最大化 |
+| `Alt+Enter` | 通常 ⇔ 最大化（タスクバーを残す）を切り替え | Enter = 確定・最大化 |
 
 ### Claude Code 通知連携
 

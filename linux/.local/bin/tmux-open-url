@@ -1,11 +1,15 @@
 #!/bin/sh
 # 画面上の URL を選んで Windows 側の既定ブラウザで開く (prefix+o)。
-# tmux 配下では長い URL が物理行に折り返されて描画される (tmux 自身のソフト
-# 折り返し、または Claude Code など TUI アプリ自身のハード改行) ため、
-# WezTerm の Ctrl+クリック (行単位の正規表現検出) では途中で切れた URL しか
-# 拾えない。ここでは物理行ベースで抽出し、「URL が行末まで届いていて行がほぼ
-# 幅いっぱい」なら次行の行頭を継ぎ足した候補も併せて出す (誤結合しても
-# 「切れたまま」の候補が残るのでユーザーが選び分けられる)。
+# 拾える URL は 2 種類:
+# 1) プレーンテキストの URL。tmux 配下では長い URL が物理行に折り返されて
+#    描画される (tmux 自身のソフト折り返し、または Claude Code など TUI アプリ
+#    自身のハード改行) ため、WezTerm の Ctrl+クリック (行単位の正規表現検出)
+#    では途中で切れた URL しか拾えない。ここでは「URL が行末まで届いていて
+#    行がほぼ幅いっぱい」なら次行の行頭を継ぎ足した候補も併せて出す
+#    (誤結合しても「切れたまま」の候補が残るのでユーザーが選び分けられる)。
+# 2) OSC 8 ハイパーリンク (Claude Code のリンク等)。表示テキストと URL が
+#    別物なのでプレーンテキストには現れない。capture-pane -e のエスケープ
+#    シーケンスから URI を回収する。
 # 開く指示は SetUserVar (OSC 1337) open_url としてクライアント tty へ直接書き、
 # .wezterm.lua の user-var-changed が wezterm.open_with で既定ブラウザを開く。
 # 呼び出し元: .tmux.conf の bind o (popup)
@@ -19,30 +23,63 @@ client_tty=$2
 case $pane_id in ''|'#'*) pane_id=$(tmux display-message -p '#{pane_id}') ;; esac
 case $client_tty in ''|'#'*) client_tty=$(tmux display-message -p '#{client_tty}') ;; esac
 
-# テスト用: pane_id に - を渡すと標準入力を画面内容として扱う
-# (幅は TMUX_OPEN_URL_WIDTH、既定 80。TMUX_OPEN_URL_LIST=1 と併用する)
+# テスト用: pane_id に - を渡すと標準入力を画面内容 (capture-pane -e 相当) として
+# 扱う (幅は TMUX_OPEN_URL_WIDTH、既定 80。TMUX_OPEN_URL_LIST=1 と併用する)
 if [ "$pane_id" = "-" ]; then
   width=${TMUX_OPEN_URL_WIDTH:-80}
-  capture() { cat; }
+  buf=$(cat)
+  capture() { printf '%s\n' "$buf"; }
 else
   width=$(tmux display-message -p -t "$pane_id" '#{pane_width}')
-  capture() { tmux capture-pane -p -S -2000 -t "$pane_id"; }
+  capture() { tmux capture-pane -pe -S -2000 -t "$pane_id"; }
 fi
 
 # 表示中の画面 + 直近スクロールバック 2000 行から URL を抽出。
-# URL に使える文字は ASCII のみに限定する (空白区切りだと直後の日本語句読点まで
-# 巻き込むため)。行末まで届いている URL は次行以降 (最大 4 行) の行頭を継ぎ足して、
-# 各段階をすべて候補に出す。継ぎ足しの終端は「URL 文字が行の途中で切れた」または
-# 「行が幅いっぱいでない」。文末に食い込みがちな . , ; : ! ? は sed で落とし、
-# tac で新しいもの順 (同じ URL なら結合が長い候補が上) にして重複を除く。
-# LC_ALL=C で awk の length() をバイト数に固定する (gawk だと UTF-8 の文字数に
-# なり、日本語行の「幅いっぱい」判定が崩れる。バイト数 >= 表示幅 は常に成立)。
+# ・各行からまず OSC 8 の URI を回収し、次にエスケープシーケンスを剥がした
+#   プレーンテキストに URL 正規表現をかける
+# ・URL に使える文字は ASCII のみに限定する (空白区切りだと直後の日本語句読点まで
+#   巻き込むため。OSC 8 の URI にもたまに句読点が混入しているので同じ字種で切る)
+# ・行末まで届いている URL は次行以降の行頭を継ぎ足して各段階を候補に出す。
+#   継ぎ足しの終端は「URL 文字が行の途中で切れた」または「行が幅いっぱいでない」。
+#   OAuth の認可 URL 等は 10 行以上に折り返すことがあるので上限は保険の 30 行
+# ・候補は「行番号\tURL」で出し、新しい行が先・同じ行では結合が長い候補が先に
+#   なるよう安定ソートしてから重複を除く
+# ・LC_ALL=C で awk の length() をバイト数に固定する (gawk だと UTF-8 の文字数に
+#   なり、日本語行の「幅いっぱい」判定が崩れる。バイト数 >= 表示幅 は常に成立)
 urls=$(capture | LC_ALL=C awk -v w="$width" '
 BEGIN {
   cs = "[][A-Za-z0-9._~:/?#@!$&\047()*+,;=%-]"
   re = "https?://" cs "+"
+  e = "\033"
+  osc8re = e "\\]8;[^;" e "]*;[^" e "\007]*"
 }
-{ sub(/[ \t]+$/, ""); lines[NR] = $0 }
+# 候補の仕上げ: 文末に食い込みがちな句読点と、markdown の (URL) 由来で残る
+# 末尾の閉じ括弧を落とす。Wikipedia 等 URL 内で対応が取れている ) は残す
+function clean(u,   tmp, no, nc) {
+  sub(/[.,;:!?]+$/, "", u)
+  tmp = u
+  no = gsub(/\(/, "(", tmp)
+  nc = gsub(/\)/, ")", tmp)
+  while (no < nc && sub(/\)$/, "", u)) nc--
+  sub(/[.,;:!?]+$/, "", u)
+  return u
+}
+{
+  raw = $0
+  t = raw
+  while (match(t, osc8re)) {
+    seg = substr(t, RSTART, RLENGTH)
+    t = substr(t, RSTART + RLENGTH)
+    sub("^" e "\\]8;[^;]*;", "", seg)
+    if (match(seg, "^https?://" cs "+"))
+      print NR "\t" clean(substr(seg, 1, RLENGTH))
+  }
+  gsub(e "\\][^" e "\007]*(\007|" e "\\\\)", "", raw)  # OSC (OSC 8 含む)
+  gsub(e "\\[[^@-~]*[@-~]", "", raw)                   # CSI (SGR 等)
+  gsub(e ".", "", raw)                                 # その他の短いエスケープ
+  sub(/[ \t]+$/, "", raw)
+  lines[NR] = raw
+}
 END {
   m = w - 4  # TUI は幅より数桁手前で折り返すことがあるので、その分のマージン
   for (i = 1; i <= NR; i++) {
@@ -51,27 +88,27 @@ END {
     while (match(s, re)) {
       # 結合ループ内の match() が RSTART/RLENGTH を上書きするので先に退避
       st = RSTART; ln = RLENGTH
-      url = substr(s, st, ln)
-      print url
+      nc = 0
+      cand[++nc] = substr(s, st, ln)
       if (off + st + ln > length(lines[i]) && length(lines[i]) >= m) {
-        joined = url
-        # OAuth の認可 URL 等は 10 行以上に折り返すことがあるので上限は 30 行
-        # (停止条件は「URL 文字が行の途中で切れた」「行が幅いっぱいでない」)
+        joined = cand[1]
         for (j = i + 1; j <= i + 30 && j <= NR; j++) {
           c = lines[j]
           clen = length(c)
           sub(/^[ \t]+/, "", c)
           if (!match(c, "^" cs "+")) break
           joined = joined substr(c, 1, RLENGTH)
-          print joined
+          cand[++nc] = joined
           if (RLENGTH < length(c) || clen < m) break
         }
       }
+      for (k = nc; k >= 1; k--)
+        print i "\t" clean(cand[k])
       off += st + ln - 1
       s = substr(s, st + ln)
     }
   }
-}' | sed -e 's/[.,;:!?]*$//' | tac | awk '!seen[$0]++')
+}' | sort -t "$(printf '\t')" -k1,1nr -s | cut -f2- | awk '!seen[$0]++')
 
 # テスト用: 抽出候補の一覧だけ出して終わる (fzf や WezTerm 通知に進まない)
 if [ -n "$TMUX_OPEN_URL_LIST" ]; then
