@@ -125,6 +125,16 @@ vim.keymap.set("n", "<leader>k", "<C-w>k", { silent = true, desc = "Up window" }
 vim.keymap.set("n", "<leader>w", "<C-w>w", { silent = true, desc = "Next window" })
 vim.keymap.set("n", "<leader>c", "<C-w>c", { silent = true, desc = "Close window" })
 
+-- <leader>N : カレントディレクトリに yyyymmddhhmmss.md の一時メモを作成して開く
+-- (メモ用フォルダで nvim を立ち上げて使う想定。ファイルは即座にディスクに作られる)
+vim.keymap.set("n", "<leader>N", function()
+  local path = os.date("%Y%m%d%H%M%S") .. ".md"
+  if vim.fn.filereadable(path) == 0 then
+    vim.fn.writefile({}, path)
+  end
+  vim.cmd.edit(path)
+end, { silent = true, desc = "New timestamped memo" })
+
 -- :Codex で CodexToggle を呼ぶエイリアス
 vim.api.nvim_create_user_command("Codex", function()
   vim.cmd("CodexToggle")
