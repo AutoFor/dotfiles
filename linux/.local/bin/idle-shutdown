@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# アイドル検知による自己シャットダウン (deallocate)。cron から 10 分ごとに呼ばれる。
+#
+# 「稼働中」の判定 (いずれかに該当すれば停止しない):
+#   1) いずれかの端末 (/dev/pts/*) に直近 IDLE_MIN 分以内の入出力がある
+#      - キー入力・tmux 操作だけでなく、Claude Code が出力を流している間も
+#        ペインの pts (書き込みで mtime 更新) が動くため「処理中」も検知できる。
+#        デタッチ中の tmux ペインの出力も対象。
+#   2) CPU 15 分平均負荷が閾値超え (端末出力を伴わないビルド等の保険)
+#
+# アイドルなら tmux 構成を保存してから az vm deallocate --no-wait で自己停止する。
+# (OS の shutdown ではなく deallocate。Stopped 状態は課金が続くため)
+#
+# 環境変数で上書き可: IDLE_SHUTDOWN_MIN (既定60) / IDLE_SHUTDOWN_LOAD (既定0.3)
+#                     DEVBOX_RG / DEVBOX_VM
+set -uo pipefail
+
+IDLE_MIN="${IDLE_SHUTDOWN_MIN:-60}"
+LOAD_MAX="${IDLE_SHUTDOWN_LOAD:-0.3}"
+RG="${DEVBOX_RG:-rg-devbox}"
+VM="${DEVBOX_VM:-devbox}"
+LOG="$HOME/.cache/idle-shutdown.log"
+
+mkdir -p "$(dirname "$LOG")"
+# ログは直近 500 行だけ残す
+[ -f "$LOG" ] && tail -n 500 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*" >> "$LOG"; }
+
+now=$(date +%s)
+
+# --- 1) 全端末の最終 I/O 時刻 ---
+last=0
+for p in /dev/pts/[0-9]*; do
+  [ -e "$p" ] || continue
+  m=$(stat -c %Y "$p" 2>/dev/null) || continue
+  [ "$m" -gt "$last" ] && last=$m
+done
+# 端末が 1 つも無ければ起動時刻を基準にする (起動したまま誰も接続していないケース)
+if [ "$last" -eq 0 ]; then
+  last=$(( now - $(cut -d. -f1 /proc/uptime) ))
+fi
+idle_min=$(( (now - last) / 60 ))
+
+# --- 2) CPU 負荷 ---
+load15=$(cut -d' ' -f3 /proc/loadavg)
+busy=$(awk -v l="$load15" -v t="$LOAD_MAX" 'BEGIN{print (l+0 > t+0) ? 1 : 0}')
+
+if [ "$idle_min" -lt "$IDLE_MIN" ] || [ "$busy" -eq 1 ]; then
+  log "稼働中: idle=${idle_min}min load15=${load15}"
+  exit 0
+fi
+
+log "アイドル ${idle_min} 分 / load15=${load15} → tmux 構成を保存して deallocate 実行"
+"$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet 2>>"$LOG" || true
+if az vm deallocate -g "$RG" -n "$VM" --no-wait >>"$LOG" 2>&1; then
+  log "deallocate 要求を送信"
+else
+  log "deallocate 失敗 (az ログイン切れ?)"
+fi

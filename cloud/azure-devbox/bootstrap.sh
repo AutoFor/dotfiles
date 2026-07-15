@@ -11,6 +11,14 @@ export DEBIAN_FRONTEND=noninteractive
 #   ssh azureuser@<IP> 'bash -s' < bootstrap.sh
 # =============================================================
 
+echo "########## 0) タイムゾーン (JST) ##########"
+# 既定は UTC。cron のスケジュール (21:59 の tmux 駆け込み保存など) を
+# 日本時間で書けるように Asia/Tokyo に合わせる。
+if [ "$(timedatectl show -p Timezone --value 2>/dev/null)" != "Asia/Tokyo" ]; then
+  sudo timedatectl set-timezone Asia/Tokyo
+  sudo systemctl restart cron 2>/dev/null || true
+fi
+
 echo "########## 1) apt パッケージ ##########"
 # neovim は apt 版が古すぎる(0.9.5)ため入れない。後段で stable tarball を入れる。
 sudo apt-get update -qq
@@ -123,6 +131,29 @@ else
   git -C "$HOME/dotfiles" pull --ff-only || true
 fi
 bash "$HOME/dotfiles/install.sh"
+
+echo "########## 5.5) tmux プラグイン (TPM + resurrect/continuum) ##########"
+# VM 再起動で tmux セッションが消えるため、構成を定期保存して起動時に自動復元する。
+# 設定本体は dotfiles の linux/.tmux.conf 側 (セッション永続化セクション)。
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  git clone --depth 1 https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+fi
+if [ ! -d "$HOME/.tmux/plugins/tmux-resurrect" ]; then
+  # install_plugins は tmux サーバーが設定を読んでいる必要がある。
+  # 一時セッションを作って読み込ませる (既存セッションには触れない)。
+  tmux new-session -d -s _bootstrap 2>/dev/null || true
+  "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
+  tmux kill-session -t _bootstrap 2>/dev/null || true
+fi
+# continuum の定期自動保存は status off 構成では発火しないため、cron で直接保存する。
+# 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存。
+# idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
+# linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
+( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown; \
+  echo '*/15 * * * * ~/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet >/dev/null 2>&1'; \
+  echo '59 21 * * * ~/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet >/dev/null 2>&1'; \
+  echo '*/10 * * * * $HOME/.local/bin/idle-shutdown >/dev/null 2>&1' ) | crontab -
+echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 
 echo "########## 6) デフォルトシェルを zsh に ##########"
 ZSH_PATH="$(command -v zsh)"
