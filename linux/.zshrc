@@ -133,12 +133,14 @@ tmp() {
   NVIM_TMP_NOTE_FILE="$file" command nvim --cmd "cd $dir" "$file"
 }
 
-# メモディレクトリ (~/memo。MEMO_DIR で変更可) を nvim で開く。
-# nvim 内で <leader>N を押すとタイムスタンプ付きメモ (yyyymmddhhmmss.md) が作られる
+# メモディレクトリ (~/memo。MEMO_DIR で変更可) にタイムスタンプ付きメモ
+# (yyyymmddhhmmss.md) を作成して nvim で開く。追加のメモは nvim 内で <leader>N
 memo() {
   local dir="${MEMO_DIR:-$HOME/memo}"
+  local file="${dir}/$(date '+%Y%m%d%H%M%S').md"
   mkdir -p "$dir" || return 1
-  command nvim --cmd "cd $dir" "$dir"
+  touch "$file" || return 1
+  command nvim --cmd "cd $dir" "$file"
 }
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
