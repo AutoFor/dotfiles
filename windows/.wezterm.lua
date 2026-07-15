@@ -9,29 +9,39 @@ local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
 -- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
+-- 注意: 候補テーブルに os.getenv() を直接並べると、未設定時に nil が混ざって
+-- ipairs がそこで走査を打ち切り、後続の候補が一切見られなくなる (Lua の配列は
+-- nil 穴で切れる)。env は非 nil のときだけ insert すること。
 local function find_dotfiles_dir()
   local candidates = {
-    os.getenv("DOTFILES_DIR"),
     wezterm.home_dir .. "\\ghq\\github.com\\AutoFor\\dotfiles",
     wezterm.home_dir .. "\\dotfiles",
   }
+  local env_dir = os.getenv("DOTFILES_DIR")
+  if env_dir and env_dir ~= "" then
+    table.insert(candidates, 1, env_dir)
+  end
   for _, dir in ipairs(candidates) do
-    if dir then
-      local f = io.open(dir .. "\\windows\\bin\\devbox.ps1", "r")
-      if f then
-        f:close()
-        return dir
-      end
+    local f = io.open(dir .. "\\windows\\bin\\devbox.ps1", "r")
+    if f then
+      f:close()
+      return dir
     end
   end
   return wezterm.home_dir .. "\\dotfiles"
 end
 local DOTFILES_DIR = find_dotfiles_dir()
+-- ~/.wezterm.lua は ghq リポジトリへのシンボリックリンクなので、リンク先を
+-- 直接編集しても自動リロードが発火しないことがある。実体パスも監視対象に加える
+wezterm.add_to_config_reload_watch_list(DOTFILES_DIR .. "\\windows\\.wezterm.lua")
 -- VM 起動を担保するスクリプト
 local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
 -- クリックで通知元ペインへジャンプできるトーストを出すスクリプト（BurntToast）。
 -- クリック時の wezterm-jump: URI は windows/bin/register-wezterm-jump.ps1 で登録したハンドラが処理する。
 local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
+-- クリップボードの内容 (画像/ファイル/フォルダ/パス文字列) を devbox へ scp する
+-- スクリプト（LEADER+v のクリップボード転送ペースト用）
+local CLIP_PASTE_PS1 = DOTFILES_DIR .. "\\windows\\bin\\send-clipboard.ps1"
 
 local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
@@ -364,6 +374,16 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#bb9af7" } })
     table.insert(items, { Text = "  TABLE: " .. key_table })
   end
+  -- Ctrl+Q (leader) 待ち受け中の可視化。押せているか分かるように表示する
+  if window:leader_is_active() then
+    table.insert(items, { Foreground = { Color = "#e0af68" } })
+    table.insert(items, { Text = "  LEADER" })
+  end
+  -- LEADER+v のクリップボード転送中の可視化（定期更新に上書きされないようこちらにも出す）
+  if wezterm.GLOBAL.clip_transferring then
+    table.insert(items, { Foreground = { Color = "#e0af68" } })
+    table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…" })
+  end
   table.insert(items, { Foreground = { Color = "#a9b1d6" } })
   table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })
   table.insert(items, { Text = "  " })
@@ -480,25 +500,45 @@ local function agent_command_with_debug(agent_command, cwd)
     .. "; exec zsh -l"
 end
 
-local function open_nvim_with_agent(agent_command)
+-- クリップボードの内容を devbox へ転送し、リモートパスをペインに流し込む (LEADER+v)。
+-- tmux 内の Claude Code プロンプトに画像・ファイル・フォルダを渡すための経路。
+-- クリップボードの中身そのものは SSH を越えられないため
+-- 「ローカル実体 → scp → パス入力」で代替する（Claude Code はプロンプト中の
+-- パスを Read して画像/ファイルとして読める）。対象は画像ビットマップ、
+-- Explorer でコピーしたファイル/フォルダ、実在するフルパスのテキストの3種。
+-- どれにも当たらなければ通常のテキストペーストにフォールバック。
+-- ※ Ctrl+V に割り当てないのは、devbox 側 nvim の矩形選択 (Ctrl+V) を潰さないため。
+local function paste_image_or_clipboard()
   return wezterm.action_callback(function(window, pane)
-    if is_tmux_client_pane(pane) then
-      -- tmux タブ: nvimc (zshrc) が tmux split-window で agent ペインごと開く
-      window:perform_action(act.SendString("nvimc .\n"), pane)
+    if not is_tmux_client_pane(pane) then
+      window:perform_action(act.PasteFrom("Clipboard"), pane)
       return
     end
-    local cwd = pane_cwd(pane)
-    local split = {
-      direction = "Right",
-      size = { Percent = 30 },
-      command = { args = { "zsh", "-lic", agent_command_with_debug(agent_command, cwd) } },
-    }
-    if cwd then
-      split.command.cwd = cwd
+    if wezterm.GLOBAL.clip_transferring then
+      return -- 転送中の二度押しは無視
     end
-
-    window:perform_action(act.SendString("nvim .\n"), pane)
-    window:perform_action(act.SplitPane(split), pane)
+    -- 転送 (run_child_process) は GUI スレッドを塞ぐため、進行表示を出してから
+    -- call_after で 1 フレーム逃がして実処理を始める（先に描画を済ませるため）。
+    wezterm.GLOBAL.clip_transferring = true
+    window:set_right_status(wezterm.format({
+      { Foreground = { Color = "#e0af68" } },
+      { Text = wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…  " },
+    }))
+    wezterm.time.call_after(0.1, function()
+      local ok, stdout, stderr = wezterm.run_child_process({
+        "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", CLIP_PASTE_PS1,
+      })
+      wezterm.GLOBAL.clip_transferring = false
+      local out = (stdout or ""):gsub("%s+$", "")
+      if ok and out == "NOCONTENT" then
+        window:perform_action(act.PasteFrom("Clipboard"), pane)
+      elseif ok and out ~= "" then
+        -- 続けて文章を打てるように末尾へスペースを 1 つ足す
+        window:perform_action(act.SendString(out .. " "), pane)
+      else
+        window:toast_notification("WezTerm", "クリップボードの転送に失敗: " .. (stderr or ""), nil, 4000)
+      end
+    end)
   end)
 end
 
@@ -722,10 +762,13 @@ config.keys = {
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
 
   {
-    -- シェルから nvim + agent の2ペイン構成で開く (tmux 内は nvimc に委譲)
+    -- LEADER+v: クリップボードに画像があれば devbox へ転送してパスを入力
+    -- (tmux 内の Claude Code に画像を渡す用)。画像が無ければテキストペースト。
+    -- (Ctrl+V は nvim の矩形選択、Alt+V は別のクリップボードツールと衝突するため LEADER 系)
+    -- 旧割当の nvim + agent 2ペイン起動は tmux 内で nvimc を手打ちする運用に変更
     key = "v",
     mods = "LEADER",
-    action = open_nvim_with_agent("claude -y"),
+    action = paste_image_or_clipboard(),
   },
 
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
