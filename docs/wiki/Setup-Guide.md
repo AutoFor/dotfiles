@@ -1,134 +1,111 @@
-# 新規セットアップガイド
+# 新規セットアップガイド (Windows クライアント)
 
-新しい PC や別の環境にこの dotfiles を導入するための手順です。
+新しい Windows PC を「接続クライアント」として Azure devbox に繋ぐまでの手順。
+開発環境の本体 (zsh / nvim / Claude Code / tmux) は devbox 側にあるので、
+Windows に入れるのは接続と表示に必要な最小限だけ。
 
-## 事前に手動でインストールするもの
+- devbox 自体を新規に構築する場合は `cloud/azure-devbox/README.md` を参照
+- リポジトリの運用ルール (2 クローン戦略・同期) はリポジトリ直下の `CLAUDE.md` を参照
+- 旧 WSL 前提の構成は #212 で廃止した。旧手順が必要なら Git 履歴を参照
 
-### WSL 側（必須）
+## 1. 基本ツール (winget)
 
-以下のツールを **先に** インストールしてください。
-
-| ツール | インストールコマンド | 用途 |
-|--------|-------------------|------|
-| **zsh** | `sudo apt install zsh && chsh -s $(which zsh)` | メインシェル |
-| **zoxide** | `curl -sSfL https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh \| sh` | スマート cd（`z` コマンド） |
-| **fzf** | `sudo apt install fzf` | ファジーファインダー（`cfd()` で使用） |
-| **gh (GitHub CLI)** | `sudo apt install gh && gh auth login` | GitHub 操作 |
-| **Git** | `sudo apt install git` | バージョン管理（通常はプリインストール済み） |
-| **rclone** | `sudo apt install rclone && rclone config` | WSL フルバックアップのクラウド転送 |
-
-### WSL 側（Claude Code を使う場合）
-
-| ツール | インストールコマンド | 用途 |
-|--------|-------------------|------|
-| **Node.js** | `sudo apt install nodejs npm` | Claude Code の実行環境 |
-| **Claude Code** | `npm install -g @anthropic-ai/claude-code` | AI アシスタント |
-
-### Windows 側（必須）
-
-| ツール | インストール方法 | 用途 |
-|--------|-----------------|------|
-| **WSL** | `wsl --install` (PowerShell 管理者) | Linux 環境 |
-| **WezTerm** | [公式サイト](https://wezfurlong.org/wezterm/)からダウンロード | ターミナルエミュレータ |
-| **Developer Mode** | 設定 → システム → 開発者向け → 開発者モード ON | シンボリックリンク作成に必要 |
-
-### Windows 側（任意）
-
-| ツール | インストール方法 | 用途 |
-|--------|-----------------|------|
-| **Git for Windows** | [公式サイト](https://git-scm.com/)からダウンロード | Windows 側の Git 操作・credential manager |
-
-## セットアップ手順
-
-### ステップ 1: リポジトリをクローン（WSL 内で実行）
-
-```bash
-git clone --recurse-submodules https://github.com/AutoFor/dotfiles.git ~/dotfiles
-```
-
-> `--recurse-submodules` を忘れると `claude/` ディレクトリが空になります。
-> 忘れた場合は `cd ~/dotfiles && git submodule update --init --recursive` で取得できます。
-
-### ステップ 2: WSL 設定をインストール
-
-```bash
-cd ~/dotfiles
-chmod +x install.sh
-./install.sh
-```
-
-**実行結果:**
-- 各設定ファイルのシンボリックリンクが作成される
-- 既存ファイルがある場合は `*.backup.YYYYMMDD` にバックアップされる
-- `~/.local/bin/backup-wsl-full` などの補助スクリプトがリンクされる
-- 何度実行しても安全（冪等）
-
-### ステップ 3: Windows 設定をインストール
-
-PowerShell を **管理者権限** で開いて実行:
+PowerShell で:
 
 ```powershell
-\\wsl$\Ubuntu\home\<ユーザー名>\dotfiles\install-windows.ps1
+winget install --id Git.Git -e
+winget install --id GitHub.cli -e
+winget install --id wez.wezterm -e
+winget install --id Microsoft.PowerShell -e     # pwsh (devbox.ps1 / 通知スクリプトが使う)
+winget install --id Microsoft.AzureCLI -e       # VM の起動/停止 (devbox.ps1)
+winget install --id x-motemen.ghq -e
+winget install --id tailscale.tailscale -e      # devbox への SSH 経路
 ```
 
-> `<ユーザー名>` は WSL のユーザー名に置き換えてください。
+## 2. フォント
 
-### ステップ 4: 確認
+WezTerm の設定が参照するフォントを入れる (ユーザーローカルインストールで可):
 
-```bash
-# 新しいターミナルを開く
+| フォント | 入手先 | 用途 |
+|---------|--------|------|
+| HackGen Console NF | https://github.com/yuru7/HackGen/releases | 本文 (日本語 + Nerd Fonts) |
+| Symbols Nerd Font Mono | https://www.nerdfonts.com/font-downloads | 新しめのアイコンのフォールバック |
 
-# シンボリックリンクの確認
-ls -la ~/.zshrc             # → ~/dotfiles/wsl/.zshrc
-ls -la ~/.claude/CLAUDE.md  # → ~/dotfiles/claude/CLAUDE.md
+## 3. ログイン類
 
-# zsh が正常動作するか確認
-zsh
+```powershell
+gh auth login        # GitHub
+az login             # Azure (devbox の起動権限があるアカウント)
+tailscale up         # devbox と同じ tailnet に参加
 ```
 
-## 環境に合わせて変更が必要な箇所
+参加後、`tailscale status` に devbox (100.126.96.27) が見えることを確認する。
 
-### .gitconfig のパス修正
+## 4. dotfiles の取得とリンク
 
-`wsl/.gitconfig` 内のパスにユーザー名がハードコードされています。別のユーザー名の場合は修正してください。
-
-```
-[credential "https://github.com"]
-    helper = !/home/<ユーザー名>/.local/bin/gh auth git-credential
-```
-
-### GitHub CLI の認証
-
-```bash
-gh auth login
+```powershell
+ghq get AutoFor/dotfiles
+Set-Location "$env:USERPROFILE\ghq\github.com\AutoFor\dotfiles"
+.\install-windows.ps1
 ```
 
-ブラウザが開くので、GitHub アカウントで認証してください。
+> シンボリックリンク作成のため、**管理者 PowerShell** で実行するか **開発者モード**を ON にしておく。
 
-### Claude Code の認証
+リンクされるもの: `~\.wezterm.lua` / `~\.gitconfig` / `~\.bashrc` / `~\.ssh\config` /
+`~\.local\bin\devbox.ps1` / `%LOCALAPPDATA%\nvim`。
 
-```bash
-claude
+クローン直後に、このリポジトリの同期・push 設定を入れる (詳細は `CLAUDE.md` の「同期」):
+
+```powershell
+git config core.hooksPath .githooks                                   # コミット即 push フック
+git config pull.rebase true
+git config rebase.autostash true
+git config credential.helper ""                                       # 空にリセット (下の 2 行を効かせる)
+git config credential.https://github.com.username <GitHubユーザー名>
+git config credential.https://github.com.helper '!gh auth git-credential'
 ```
 
-初回起動時に API キーまたは認証の設定を求められます。
+> `windows/.gitconfig` (グローバルにリンクされる) が `credential.username = AutoFor` を
+> 持っているため、この設定を入れないと `git push` がパスワード入力で止まる。
 
-### rclone の認証
+## 5. SSH 鍵
 
-```bash
-rclone config
+```powershell
+ssh-keygen -t ed25519
 ```
 
-Google Drive などの remote を作成してください。`backup-wsl-full` の既定値は `gdrive:WSL-FullBackups`。
+公開鍵 (`~\.ssh\id_ed25519.pub`) を devbox の `~/.ssh/authorized_keys` に追記する。
+既存クライアントがあるならそこから `ssh devbox` して追記するのが早い。
+
+確認: PowerShell から `ssh devbox` で入れること (`windows/.ssh/config` が Host devbox を定義済み)。
+
+## 6. 通知トースト (任意)
+
+Claude Code の完了通知を「クリックで該当ペインへジャンプできるトースト」で受けるなら:
+
+```powershell
+Install-Module BurntToast -Scope CurrentUser
+pwsh -File windows\bin\register-wezterm-jump.ps1    # wezterm-jump: URI スキーム登録 (HKCU、管理者不要)
+```
+
+## 7. 動作確認
+
+WezTerm を起動する。`devbox.ps1 ensure` が VM の起動を担保してから、
+ネイティブ SSH ドメイン `devbox-tmux` で devbox の tmux `main` セッションに attach する。
+
+- 右下ステータスに `devbox` (緑) と出れば OK
+- タブバーに tmux のウィンドウがタブ風に並ぶ
+- 切断・スリープ後も WezTerm を開き直せば同じ画面に戻る (セッションの実体は devbox の tmux)
+
+ショートカット一覧は `docs/qiita/terminal-shortcuts.md` を参照。
 
 ## トラブルシューティング
 
-| 症状 | 原因 | 対処法 |
-|------|------|--------|
-| `zsh: command not found: z` | zoxide 未インストール | zoxide をインストールする |
-| `cfd()` が動かない | fzf 未インストール | `sudo apt install fzf` |
-| `backup-wsl-full: command not found` | `install.sh` 未実行 or 新しいシェル未起動 | `./install.sh` 実行後にシェルを再起動 |
-| `didn't find section in config file` | `rclone` remote 未設定 | `rclone config` で `gdrive:` を作成 |
-| Windows でシンボリックリンクエラー | Developer Mode が無効 | 設定から Developer Mode を有効化 |
-| `claude/` が空 | サブモジュール未取得 | `git submodule update --init --recursive` |
-| WezTerm が WSL に接続しない | WSL 未インストール or 停止中 | `wsl --install` または `wsl --shutdown && wsl` |
+| 症状 | 原因/対処 |
+|------|----------|
+| 接続できない (タイムアウト) | `tailscale status` で devbox が見えるか確認。VM 停止中なら `devbox.ps1 up`。Tailscale 障害時は `ssh devbox-public` (先に NSG で現在 IP を許可) |
+| シンボリックリンク作成に失敗 | 管理者 PowerShell で `install-windows.ps1` を実行するか、開発者モードを ON |
+| 文字化け・アイコン欠け | HackGen Console NF / Symbols Nerd Font Mono が未インストール |
+| `git push` が AutoFor のパスワードを求めて止まる | 手順 4 の credential 設定が未投入 |
+| 通知トーストが出ない | BurntToast 未導入 or `register-wezterm-jump.ps1` 未実行。詳細は claude/ 側のドキュメント参照 |
+| WezTerm 起動時に VM が起きない | `az login` が未実施 or 期限切れ (`devbox.ps1 status` で確認) |
