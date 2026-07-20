@@ -36,6 +36,17 @@
   },
   "model": "haiku",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$HOME/.local/bin/tmux-claude-sessions\" track"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",

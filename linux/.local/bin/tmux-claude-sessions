@@ -1,0 +1,69 @@
+#!/bin/sh
+# claude ペインの会話 (セッション ID) を tmux-resurrect の復元で引き継ぐ。
+# 従来の `claude --continue` は「同じ cwd の最新の会話」を開くため、1 ウィンドウに
+# 同一プロジェクトのペインが複数あると復元後に全ペインが同じ会話になってしまう。
+# ペインごとにセッション ID を記録しておき、復元時は --resume で個別に再開する。
+#
+# track:  Claude Code の SessionStart hook (~/.claude/settings.json) から呼ばれる。
+#         stdin の hook JSON から session_id を取り、ペイン ID → セッション ID を記録
+# save:   resurrect の post-save-all フック (.tmux.conf) から呼ばれる。
+#         track の記録を生存ペインの位置 (セッション/ウィンドウ/ペイン番号) で TSV 化
+# resume: resurrect の復元コマンド (@resurrect-processes) として claude ペイン内で
+#         実行される。TSV に自ペインの記録があれば --resume、なければ --continue
+set -eu
+
+PANE_DIR="$HOME/.local/share/tmux/claude-panes"
+FILE="$HOME/.local/share/tmux/resurrect/claude-sessions.tsv"
+TAB=$(printf '\t')
+
+case "${1:-}" in
+track)
+  # tmux 外 (Windows や wezterm mux 直下) では何もしない
+  [ -n "${TMUX_PANE:-}" ] || exit 0
+  if command -v jq >/dev/null 2>&1; then
+    SID=$(jq -r '.session_id // empty' 2>/dev/null)
+  else
+    SID=$(sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
+  fi
+  [ -n "$SID" ] || exit 0
+  mkdir -p "$PANE_DIR"
+  printf '%s\n' "$SID" > "$PANE_DIR/${TMUX_PANE#%}"
+  ;;
+save)
+  mkdir -p "$(dirname "$FILE")" "$PANE_DIR"
+  PANES=$(tmux list-panes -a -F "#{session_name}${TAB}#{window_index}${TAB}#{pane_index}${TAB}#{pane_id}")
+  # 閉じたペインの記録を掃除 (ペイン ID はサーバー再起動で振り直されるため、
+  # 残しておくと無関係な新ペインの記録として誤読される)
+  for f in "$PANE_DIR"/*; do
+    [ -e "$f" ] || continue
+    printf '%s\n' "$PANES" | cut -f4 | grep -qx "%$(basename "$f")" || rm -f "$f"
+  done
+  printf '%s\n' "$PANES" | while IFS="$TAB" read -r s w p id; do
+    [ -r "$PANE_DIR/${id#%}" ] || continue
+    sid=$(head -n 1 "$PANE_DIR/${id#%}")
+    [ -n "$sid" ] || continue
+    printf '%s\t%s\t%s\t%s\n' "$s" "$w" "$p" "$sid"
+  done > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+  ;;
+resume)
+  SID=""
+  if [ -n "${TMUX_PANE:-}" ] && [ -r "$FILE" ]; then
+    POS=$(tmux display-message -p -t "$TMUX_PANE" "#{session_name}${TAB}#{window_index}${TAB}#{pane_index}")
+    s=${POS%%"$TAB"*}; rest=${POS#*"$TAB"}; w=${rest%%"$TAB"*}; p=${rest#*"$TAB"}
+    SID=$(awk -F '\t' -v s="$s" -v w="$w" -v p="$p" \
+      '$1==s && $2==w && $3==p {print $4; exit}' "$FILE")
+  fi
+  # 記録が古い等で会話の実体 (transcript) が無ければ従来どおり --continue に落とす
+  if [ -n "$SID" ] && ! ls "$HOME"/.claude/projects/*/"$SID".jsonl >/dev/null 2>&1; then
+    SID=""
+  fi
+  if [ -n "$SID" ]; then
+    exec claude --resume "$SID" --dangerously-skip-permissions
+  fi
+  exec claude --continue --dangerously-skip-permissions
+  ;;
+*)
+  echo "usage: tmux-claude-sessions track|save|resume" >&2
+  exit 1
+  ;;
+esac
