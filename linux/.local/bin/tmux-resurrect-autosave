@@ -1,0 +1,12 @@
+#!/bin/sh
+# cron から呼ばれる resurrect 自動保存のラッパー (crontab は bootstrap.sh が登録)。
+# サーバー起動直後の自動復元 (tmux-autorestore) が完了する前に保存が走ると、
+# まっさらな状態で last (レイアウト) や pane-names.tsv (ペイン名) を上書きし、
+# 直後に読まれるはずだった復元素材を潰してしまう (2026-07-21/22 に実際に発生)。
+# 復元完了マーク (TMUX_AUTORESTORE_FINISHED) が付くまで保存しない。
+# 手動保存 (prefix + Ctrl-s) はこのゲートを通らず、いつでも実行できる。
+set -eu
+
+tmux has-session 2>/dev/null || exit 0
+tmux show-environment -g TMUX_AUTORESTORE_FINISHED >/dev/null 2>&1 || exit 0
+exec "$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet

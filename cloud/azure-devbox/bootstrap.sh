@@ -146,13 +146,14 @@ if [ ! -d "$HOME/.tmux/plugins/tmux-resurrect" ]; then
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
   tmux kill-session -t _bootstrap 2>/dev/null || true
 fi
-# 保存は cron で resurrect の save.sh を直接叩く。
+# 保存は cron で tmux-resurrect-autosave (linux/.local/bin) を叩く。
+# 起動直後の自動復元が完了するまで保存を保留するラッパー (復元素材の上書き防止)。
 # 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存。
 # idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
 # linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
 ( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown; \
-  echo '*/15 * * * * ~/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet >/dev/null 2>&1'; \
-  echo '59 21 * * * ~/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet >/dev/null 2>&1'; \
+  echo '*/15 * * * * $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
+  echo '59 21 * * * $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
   echo '*/10 * * * * $HOME/.local/bin/idle-shutdown >/dev/null 2>&1' ) | crontab -
 echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 

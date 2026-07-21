@@ -19,8 +19,17 @@ tmux set-environment -g TMUX_AUTORESTORE_DONE 1
 # 念のための二重ガード: サーバー起動直後 (60 秒以内) 以外は復元しない
 START=$(tmux display-message -p '#{start_time}')
 NOW=$(date +%s)
-[ $((NOW - START)) -le 60 ] || exit 0
+if [ $((NOW - START)) -gt 60 ]; then
+  # 復元対象外 (稼働中サーバーで初めて実行された場合等)。自動保存だけ許可する
+  tmux set-environment -g TMUX_AUTORESTORE_FINISHED 1
+  exit 0
+fi
 
 # .tmux.conf の残り (resurrect のオプション類) の読み込み完了を待ってから復元
 sleep 2
-exec "$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh"
+"$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh" || true
+
+# 復元が完了してから cron の自動保存 (tmux-resurrect-autosave) を許可する。
+# 復元完了前に保存が走ると、まっさらな状態で last や pane-names.tsv を上書きし、
+# 復元素材を潰してしまう (2026-07-22 朝: ペイン名がこのレースで消えた)
+tmux set-environment -g TMUX_AUTORESTORE_FINISHED 1
