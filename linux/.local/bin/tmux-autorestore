@@ -1,0 +1,26 @@
+#!/bin/sh
+# tmux サーバー起動直後に resurrect の復元を一度だけ実行する (.tmux.conf 末尾から起動)。
+#
+# 以前は tmux-continuum の自動復元を使っていたが、continuum は「自分以外の tmux
+# プロセスが 2 つ以上いたら別サーバーが動いているとみなして復元をスキップ」する
+# 判定を持ち、本構成では client-attached フック (wezterm-tabs-sync) が起動直後に
+# 発行する tmux コマンドと競合して不発になることがある (2026-07-21 に実際に発生。
+# さらに直後の cron 保存がまっさらな状態で last を上書きしてしまう)。
+# continuum をやめ、このスクリプトで条件判定なしに確実に復元する。
+set -eu
+
+# 設定リロード (prefix+r / source-file) でも run-shell が再実行されるため、
+# サーバー環境変数へのマーキングで「このサーバーで一度きり」にする
+if tmux show-environment -g TMUX_AUTORESTORE_DONE >/dev/null 2>&1; then
+  exit 0
+fi
+tmux set-environment -g TMUX_AUTORESTORE_DONE 1
+
+# 念のための二重ガード: サーバー起動直後 (60 秒以内) 以外は復元しない
+START=$(tmux display-message -p '#{start_time}')
+NOW=$(date +%s)
+[ $((NOW - START)) -le 60 ] || exit 0
+
+# .tmux.conf の残り (resurrect のオプション類) の読み込み完了を待ってから復元
+sleep 2
+exec "$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh"

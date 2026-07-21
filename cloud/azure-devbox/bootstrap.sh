@@ -132,9 +132,10 @@ else
 fi
 bash "$HOME/dotfiles/install.sh"
 
-echo "########## 5.5) tmux プラグイン (TPM + resurrect/continuum) ##########"
+echo "########## 5.5) tmux プラグイン (TPM + resurrect) ##########"
 # VM 再起動で tmux セッションが消えるため、構成を定期保存して起動時に自動復元する。
 # 設定本体は dotfiles の linux/.tmux.conf 側 (セッション永続化セクション)。
+# 復元はサーバー起動時に tmux-autorestore (linux/.local/bin) が実行する。
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
   git clone --depth 1 https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
 fi
@@ -145,7 +146,7 @@ if [ ! -d "$HOME/.tmux/plugins/tmux-resurrect" ]; then
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
   tmux kill-session -t _bootstrap 2>/dev/null || true
 fi
-# continuum の定期自動保存は status off 構成では発火しないため、cron で直接保存する。
+# 保存は cron で resurrect の save.sh を直接叩く。
 # 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存。
 # idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
 # linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
