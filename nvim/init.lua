@@ -118,6 +118,10 @@ vim.keymap.set("t", "<A-h>", [[<C-\><C-n><C-w>h]], { silent = true, desc = "Left
 vim.keymap.set("t", "<A-l>", [[<C-\><C-n><C-w>l]], { silent = true, desc = "Right window (terminal)" })
 vim.keymap.set("t", "<A-j>", [[<C-\><C-n><C-w>j]], { silent = true, desc = "Down window (terminal)" })
 vim.keymap.set("t", "<A-k>", [[<C-\><C-n><C-w>k]], { silent = true, desc = "Up window (terminal)" })
+
+-- Alt+f で nvim-tree のフロート表示を切り替え（通常モード・ターミナルモード）
+vim.keymap.set("n", "<A-f>", ":NvimTreeToggleFloat<CR>", { silent = true, desc = "Toggle nvim-tree float" })
+vim.keymap.set("t", "<A-f>", [[<C-\><C-n>:NvimTreeToggleFloat<CR>]], { silent = true, desc = "Toggle nvim-tree float (terminal)" })
 vim.keymap.set("n", "<leader>h", "<C-w>h", { silent = true, desc = "Left window" })
 vim.keymap.set("n", "<leader>l", "<C-w>l", { silent = true, desc = "Right window" })
 vim.keymap.set("n", "<leader>j", "<C-w>j", { silent = true, desc = "Down window" })
@@ -133,6 +137,7 @@ vim.keymap.set("n", "<leader>N", function()
     vim.fn.writefile({}, path)
   end
   vim.cmd.edit(path)
+  vim.cmd("startinsert")
 end, { silent = true, desc = "New timestamped memo" })
 
 -- :Codex で CodexToggle を呼ぶエイリアス
@@ -192,6 +197,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
     if simple_note then
       vim.schedule(function()
         vim.cmd("wincmd l")
+        vim.cmd("startinsert")
       end)
     end
     vim.schedule(function()

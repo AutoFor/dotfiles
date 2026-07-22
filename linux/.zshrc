@@ -140,7 +140,7 @@ memo() {
   local file="${dir}/$(date '+%Y%m%d%H%M%S').md"
   mkdir -p "$dir" || return 1
   touch "$file" || return 1
-  command nvim --cmd "cd $dir" "$file"
+  NVIM_TMP_NOTE_FILE="$file" command nvim --cmd "cd $dir" "$file"
 }
 
 # WezTerm にカレントディレクトリを通知（OSC 7）
