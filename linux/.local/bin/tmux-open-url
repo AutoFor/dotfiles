@@ -10,6 +10,11 @@
 # 2) OSC 8 ハイパーリンク (Claude Code のリンク等)。表示テキストと URL が
 #    別物なのでプレーンテキストには現れない。capture-pane -e のエスケープ
 #    シーケンスから URI を回収する。
+# 3) URL の直後にスペースなしで日本語などの非 ASCII 文字が続く場合。1) の
+#    ASCII 限定候補に加えて、次の空白 (半角スペース/タブ) までを連結した
+#    候補も追加で出す (「URL 自体が日本語を含む」場合と「URL 直後に日本語の
+#    文が続く」場合は文字だけでは判別できないため、短い安全な候補を残したまま
+#    長い候補も選べるようにする)。
 # 開く指示は SetUserVar (OSC 1337) open_url としてクライアント tty へ直接書き、
 # .wezterm.lua の user-var-changed が wezterm.open_with で既定ブラウザを開く。
 # 呼び出し元: .tmux.conf の bind o (popup)
@@ -90,6 +95,11 @@ END {
       st = RSTART; ln = RLENGTH
       nc = 0
       cand[++nc] = substr(s, st, ln)
+      tail = substr(s, st + ln)
+      if (tail != "" && !match(tail, /^[ \t]/)) {
+        match(tail, /^[^ \t]+/)
+        cand[++nc] = cand[1] substr(tail, 1, RLENGTH)
+      }
       if (off + st + ln > length(lines[i]) && length(lines[i]) >= m) {
         joined = cand[1]
         for (j = i + 1; j <= i + 30 && j <= NR; j++) {
