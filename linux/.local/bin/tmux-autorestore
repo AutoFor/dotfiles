@@ -27,7 +27,42 @@ fi
 
 # .tmux.conf の残り (resurrect のオプション類) の読み込み完了を待ってから復元
 sleep 2
-"$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh" || true
+
+LOG="$HOME/.cache/tmux-autorestore.log"
+mkdir -p "$(dirname "$LOG")"
+log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*" >>"$LOG"; }
+
+# 再起動直後は PATH やネットワーク越しのマウント等の初期化が restore.sh の実行に
+# 間に合わないことがあり、ウィンドウ・ペインの復元が一部/全部失敗してペイン数 1
+# のまま終わることがある。restore.sh はエラーを internally 握りつぶすため、
+# その失敗に気づかず FINISHED を立てると直後の cron 保存が「復元し損ねた空の
+# 状態」を last として固定し、保存済みの復元素材を潰してしまう
+# (2026-07-27 朝: 9 ウィンドウ・13 ペインの保存があったのに 1 ペインに退化して
+# 上書きされた)。復元後のペイン数を保存ファイルのペイン数と突き合わせ、
+# 不足していれば少し待って再試行する。
+LAST_FILE="$HOME/.local/share/tmux/resurrect/last"
+expected_panes=0
+if [ -f "$LAST_FILE" ]; then
+  expected_panes=$(grep -c '^pane' "$LAST_FILE" 2>/dev/null || echo 0)
+fi
+
+attempt=1
+actual_panes=0
+while :; do
+  "$HOME/.tmux/plugins/tmux-resurrect/scripts/restore.sh" >>"$LOG" 2>&1 || true
+  actual_panes=$(tmux list-panes -a 2>/dev/null | wc -l | tr -d ' ')
+  log "restore attempt=$attempt expected_panes=$expected_panes actual_panes=$actual_panes"
+  if [ "$actual_panes" -ge "$expected_panes" ] || [ "$attempt" -ge 5 ]; then
+    break
+  fi
+  attempt=$((attempt + 1))
+  sleep 5
+done
+
+if [ "$actual_panes" -lt "$expected_panes" ]; then
+  log "復元が不完全な可能性あり (expected=$expected_panes actual=$actual_panes)。手動確認が必要"
+  tmux display-message "tmux復元が不完全かも (期待${expected_panes}ペイン/実際${actual_panes}ペイン) — ${LOG} を確認"
+fi
 
 # 復元が完了してから cron の自動保存 (tmux-resurrect-autosave) を許可する。
 # 復元完了前に保存が走ると、まっさらな状態で last や pane-names.tsv を上書きし、
