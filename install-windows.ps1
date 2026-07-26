@@ -92,6 +92,21 @@ if (-not (Test-Path $LocalBin)) {
     New-Item -ItemType Directory -Path $LocalBin -Force | Out-Null
 }
 Link-File -Source "$DotfilesWindows\bin\devbox.ps1" -Destination "$LocalBin\devbox.ps1"
+Link-File -Source "$DotfilesWindows\bin\rpa.ps1"    -Destination "$LocalBin\rpa.ps1"
+
+Write-Host ""
+Write-Host "=== Claude Code スキルのリンク (Windows) ==="
+
+# windows/claude-skills/<name>/ を ~/.claude/skills/<name>/ に個別リンクする。
+# ~/.claude/skills 全体をリンクすると他の(dotfiles管理外の)スキルを退避してしまうため、
+# フォルダ単位でリンクする。
+$ClaudeSkillsDir = Join-Path $WinHome ".claude\skills"
+if (-not (Test-Path $ClaudeSkillsDir)) {
+    New-Item -ItemType Directory -Path $ClaudeSkillsDir -Force | Out-Null
+}
+Get-ChildItem -Path "$DotfilesWindows\claude-skills" -Directory | ForEach-Object {
+    Link-Directory -Source $_.FullName -Destination (Join-Path $ClaudeSkillsDir $_.Name)
+}
 
 Write-Host ""
 Write-Host "=== Yamabuki R layout links ==="
