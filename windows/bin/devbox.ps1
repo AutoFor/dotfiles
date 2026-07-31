@@ -172,6 +172,14 @@ switch ($Action) {
             Write-Host "devbox は既に停止しています"
         }
         else {
+            # sync 前に deallocate すると tmux resurrect の保存データが
+            # ディスクに書き切れず失われ、次回起動時の復元に失敗することがある
+            # (idle-shutdown 側の自動停止で 2026-07-31 に実際発生した不具合と同種)。
+            # 到達できるなら先に ssh で保存 + sync してから停止する。
+            if (Test-Ssh) {
+                Write-Host "tmux 構成を保存中..."
+                ssh -o ConnectTimeout=10 "$User@$IP" '$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh quiet; sync' 2>$null
+            }
             Write-Host "devbox を停止(deallocate)中..."
             az vm deallocate -g $RG -n $VM -o none && Write-Host "停止完了（課金はディスク代のみ）"
         }
