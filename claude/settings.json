@@ -34,7 +34,7 @@
       "Bash(uip solution publish *)"
     ]
   },
-  "model": "haiku",
+  "model": "claude-fable-5",
   "hooks": {
     "SessionStart": [
       {
@@ -87,5 +87,6 @@
   },
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
+  "editorMode": "vim",
   "agentPushNotifEnabled": true
 }
