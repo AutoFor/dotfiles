@@ -52,6 +52,12 @@ fi
 
 log "アイドル ${idle_min} 分 / load15=${load15} → tmux 構成を保存して deallocate 実行"
 "$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet 2>>"$LOG" || true
+# save.sh の書き込みがディスクに反映される前に deallocate (実質即電源断) が
+# 走ると、resurrect の "last" シンボリックリンクだけ更新されて実体ファイルの
+# データが失われ、次回起動時の復元に失敗することがある (2026-07-31 に実際発生:
+# last が存在しないファイルを指すダングリングリンクになっていた)。
+# sync でページキャッシュを確実にフラッシュしてから deallocate する。
+sync
 if az vm deallocate -g "$RG" -n "$VM" --no-wait >>"$LOG" 2>&1; then
   log "deallocate 要求を送信"
 else
