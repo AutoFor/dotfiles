@@ -1,5 +1,5 @@
-model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model = "gpt-5.6-sol"
+model_reasoning_effort = "low"
 
 [notice]
 hide_rate_limit_model_nudge = true
@@ -31,6 +31,7 @@ enabled = true
 
 [tui.model_availability_nux]
 "gpt-5.5" = 4
+"gpt-5.6-sol" = 4
 
 [projects."/home/ubuntu/ghq/github.com/AutoFor/dotfiles"]
 trust_level = "trusted"
@@ -42,6 +43,15 @@ trust_level = "trusted"
 trust_level = "trusted"
 
 [projects."/home/ubuntu/ghq/github.com/AutoFor"]
+trust_level = "trusted"
+
+[projects."/home/azureuser/ghq/github.com/ourai-run/backlog-general"]
+trust_level = "trusted"
+
+[projects."/home/azureuser/ghq/github.com/AutoFor/autofor-hp"]
+trust_level = "trusted"
+
+[projects."/home/azureuser/ghq/github.com/AutoFor/life"]
 trust_level = "trusted"
 
 [mcp_servers.playwright]
