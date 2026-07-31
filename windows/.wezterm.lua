@@ -324,17 +324,72 @@ local function tmux_tab_segment(items, text, is_active)
   table.insert(items, { Text = " " })
 end
 
+-- 表示しきれなかったウィンドウ数を示す控えめなインジケータ
+local function tmux_overflow_segment(items, text)
+  table.insert(items, { Foreground = { Color = "#565f89" } })
+  table.insert(items, { Text = text .. " " })
+end
+
+-- 1 ウィンドウ分のセグメントが消費するセル幅の目安。
+-- 三角矢印(1) + 左右パディング(2) + 三角矢印(1) + 隙間(1) = 5 に、
+-- 名前部分の最大表示幅を足したもの（全角文字は truncate_right が 2 セル扱いする）
+local TMUX_TAB_TEXT_MAX_WIDTH = 12
+local TMUX_TAB_SLOT_WIDTH = TMUX_TAB_TEXT_MAX_WIDTH + 5
+local TMUX_TAB_INDICATOR_RESERVE = 6
+
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
   -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
   -- 通知）をタブ風セグメントで並べる。切り替えは Ctrl+Tab / Ctrl+数字（表示専用）
   local store = wezterm.GLOBAL.tmux_windows or {}
   local data = tab.active_pane and store[tostring(tab.active_pane.pane_id)] or nil
   if data and data ~= "" then
-    local items = {}
+    -- ウィンドウ数が多いとタブバー幅に収まらず後ろのウィンドウ（アクティブな
+    -- ウィンドウが番号の大きい方にあると特に）が見えなくなるため、アクティブな
+    -- ウィンドウを中心に収まる本数だけ選び、溢れた分は "+N" で示す
+    local windows = {}
+    local active_pos = 1
     for entry in data:gmatch("[^\t]+") do
       local is_active = entry:sub(-1) == "*"
       local text = is_active and entry:sub(1, -2) or entry
-      tmux_tab_segment(items, text, is_active)
+      table.insert(windows, { text = text, is_active = is_active })
+      if is_active then
+        active_pos = #windows
+      end
+    end
+
+    local budget = math.max(max_width - TMUX_TAB_INDICATOR_RESERVE, TMUX_TAB_SLOT_WIDTH)
+    local slots = math.max(1, math.floor(budget / TMUX_TAB_SLOT_WIDTH))
+
+    local first, last
+    if #windows <= slots then
+      first, last = 1, #windows
+    else
+      first = active_pos - math.floor((slots - 1) / 2)
+      last = first + slots - 1
+      if first < 1 then
+        last = last + (1 - first)
+        first = 1
+      end
+      if last > #windows then
+        first = first - (last - #windows)
+        last = #windows
+      end
+      first = math.max(first, 1)
+    end
+
+    local items = {}
+    local hidden_left = first - 1
+    local hidden_right = #windows - last
+    if hidden_left > 0 then
+      tmux_overflow_segment(items, "+" .. hidden_left)
+    end
+    for i = first, last do
+      local w = windows[i]
+      local display = wezterm.truncate_right(w.text, TMUX_TAB_TEXT_MAX_WIDTH)
+      tmux_tab_segment(items, display, w.is_active)
+    end
+    if hidden_right > 0 then
+      tmux_overflow_segment(items, "+" .. hidden_right)
     end
     return items
   end
