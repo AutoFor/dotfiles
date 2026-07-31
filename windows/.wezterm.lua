@@ -843,6 +843,9 @@ config.keys = {
   { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
   { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
   -- ペインサイズ調整は tmux 側 (prefix + H/J/K/L、またはマウスドラッグ)
+  -- Alt+f: nvim-tree のフロート表示切替。SendKey で明示送信しないと
+  -- OS の文字合成に食われて Alt 抜きの "f" しか下流に届かない (hjkl と同じ理由)
+  { key = "f", mods = "ALT", action = act.SendKey({ key = "f", mods = "ALT" }) },
 
   -- Session (tmux セッション。旧 workspace の代替。tm <名前> で作成)
   { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択

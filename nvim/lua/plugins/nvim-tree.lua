@@ -291,6 +291,21 @@ return {
         api.tree.close()
         api.tree.open()
       end, { silent = true, noremap = true, desc = "Tree: re-root & reopen" })
+
+      -- サイドバー/フロート表示切り替え
+      local function toggle_float()
+        local tree_config = require("nvim-tree.config")
+        if api.tree.is_visible() then
+          api.tree.close()
+        end
+        tree_config.g.view.float.enable = not tree_config.g.view.float.enable
+        tree_config.g.view.adaptive_size = tree_config.g.view.float.enable
+        api.tree.open()
+      end
+
+      vim.api.nvim_create_user_command("NvimTreeToggleFloat", toggle_float, {})
+
+      vim.keymap.set("n", "<leader>tF", toggle_float, { silent = true, desc = "Tree: toggle float" })
     end,
   },
 }
