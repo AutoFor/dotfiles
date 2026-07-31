@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# cron 用ラッパー: dotfiles を pull してから指定コマンドを実行する。
+# Windows 側でコミット・push した修正が devbox 側で pull されないまま、
+# cron が古いスクリプトを動かし続けるのを防ぐ
+# (2026-07-31 に修正済みのはずの idle-shutdown が古いまま動いて
+#  tmux 保存データを飛ばした再発事故の対策)。
+# 使い方: cron-with-pull <コマンドのフルパス> [引数...]
+set -u
+
+REPO="$HOME/dotfiles"
+STATE_DIR="$HOME/.local/state"
+LOG="$STATE_DIR/cron-with-pull.log"
+mkdir -p "$STATE_DIR"
+
+# pull は best-effort: オフラインや競合で失敗しても本体は必ず実行する。
+# flock -n で二重 pull を防ぎ、先客がいる場合はスキップして本体へ進む。
+# timeout は短め (21:59 の駆け込み保存が 22:00 シャットダウンに
+# 食い込まないよう、pull で長時間待たない)。
+(
+  flock -n 9 || exit 0
+  if timeout 20 git -C "$REPO" pull -q >>"$LOG" 2>&1; then
+    echo "$(date '+%F %T') pull ok ($*)" >>"$LOG"
+  else
+    echo "$(date '+%F %T') pull NG ($*)" >>"$LOG"
+  fi
+  tail -n 200 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+) 9>"$STATE_DIR/cron-with-pull.lock"
+
+exec "$@"

@@ -151,12 +151,14 @@ fi
 # 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存。
 # idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
 # linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
+# cron-with-pull は実行前に dotfiles を pull するラッパー。Windows 側で直した
+# 修正が pull されないまま古いスクリプトが動き続けるのを防ぐ。
 # 注意: 既存エントリが全部フィルタされると grep が exit 1 になり、set -e で
 # サブシェルが echo 前に中断して crontab が空で登録されてしまう。|| true で防ぐ
 ( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown || true; \
-  echo '*/15 * * * * $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
-  echo '59 21 * * * $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
-  echo '*/10 * * * * $HOME/.local/bin/idle-shutdown >/dev/null 2>&1' ) | crontab -
+  echo '*/15 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
+  echo '59 21 * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
+  echo '*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1' ) | crontab -
 echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 
 echo "########## 6) デフォルトシェルを zsh に ##########"
