@@ -4,9 +4,27 @@
 # まっさらな状態で last (レイアウト) や pane-names.tsv (ペイン名) を上書きし、
 # 直後に読まれるはずだった復元素材を潰してしまう (2026-07-21/22 に実際に発生)。
 # 復元完了マーク (TMUX_AUTORESTORE_FINISHED) が付くまで保存しない。
-# 手動保存 (prefix + Ctrl-s) はこのゲートを通らず、いつでも実行できる。
+# 手動保存 (prefix + Ctrl-s) は `force` 付きで呼ばれ、このゲートを飛ばして
+# いつでも実行できる (ロックと後述のダングリング検算は手動保存でも通す)。
+#
+# 保存は flock で直列化する。save.sh の保存ファイル名は「秒」精度のタイムスタンプ
+# なので、同じ秒に 2 本走ると同一ファイルを奪い合い、最後の 1 本が「last と同じ内容」
+# と判定して自分自身を削除し、last がダングリングになる (詳細は
+# tmux-resurrect-repair-last の冒頭コメント)。cron の */15 保存と idle-shutdown
+# (*/10) の保存が毎時 00/30 分に重なるため、実際に何度も踏んでいる。
+# 直列化しても同一秒に収まる可能性は残るので、保存後に repair-last で必ず検算する。
 set -eu
 
 tmux has-session 2>/dev/null || exit 0
-tmux show-environment -g TMUX_AUTORESTORE_FINISHED >/dev/null 2>&1 || exit 0
-exec "$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet
+if [ "${1:-}" != force ]; then
+  tmux show-environment -g TMUX_AUTORESTORE_FINISHED >/dev/null 2>&1 || exit 0
+fi
+
+# 自分自身をロック下で再実行する (多重起動の直列化)
+if [ "${TMUX_RESURRECT_SAVE_LOCKED:-}" != 1 ] && command -v flock >/dev/null 2>&1; then
+  export TMUX_RESURRECT_SAVE_LOCKED=1
+  exec flock -w 120 "$HOME/.cache/tmux-resurrect-save.lock" "$0" "$@"
+fi
+
+"$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet
+"$HOME/.local/bin/tmux-resurrect-repair-last"

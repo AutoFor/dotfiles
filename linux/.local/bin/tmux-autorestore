@@ -41,6 +41,12 @@ log() { printf '[%s] %s\n' "$(date '+%F %T')" "$*" >>"$LOG"; }
 # 上書きされた)。復元後のペイン数を保存ファイルのペイン数と突き合わせ、
 # 不足していれば少し待って再試行する。
 LAST_FILE="$HOME/.local/share/tmux/resurrect/last"
+# last が実体のないファイルを指している (保存側の競合で発生しうる) 場合は、
+# 現存する最新スナップショットに貼り替えてから復元する。これをやらないと
+# 復元素材ゼロとみなして 1 ペインのまま起動し、直後の cron 保存がその
+# まっさらな状態を last として固定してしまう
+"$HOME/.local/bin/tmux-resurrect-repair-last" || true
+
 expected_panes=0
 if [ -f "$LAST_FILE" ]; then
   # grep -c は一致 0 件でも "0" を出力した上で終了コード 1 を返すため、
@@ -65,8 +71,15 @@ while :; do
 done
 
 if [ "$actual_panes" -lt "$expected_panes" ]; then
-  log "復元が不完全な可能性あり (expected=$expected_panes actual=$actual_panes)。手動確認が必要"
-  tmux display-message "tmux復元が不完全かも (期待${expected_panes}ペイン/実際${actual_panes}ペイン) — ${LOG} を確認"
+  # 自動保存を止めたまま抜ける。ここで FINISHED を立てると 15 分以内に走る
+  # cron 保存が「復元し損ねた 1 ペインの状態」で last / pane-names.tsv /
+  # claude-sessions.tsv を上書きし、残っていた復元素材まで消えてしまう
+  # (2026-08-01 16:00 に実際に発生し、ペイン名と claude セッション ID を失った)。
+  # 復旧後は手動保存 (prefix + Ctrl-s) か、下記コマンドで保存を再開する:
+  #   tmux set-environment -g TMUX_AUTORESTORE_FINISHED 1
+  log "復元が不完全 (expected=$expected_panes actual=$actual_panes)。自動保存を停止したまま手動確認を待つ"
+  tmux display-message "tmux復元が不完全 (期待${expected_panes}ペイン/実際${actual_panes}ペイン)。自動保存は停止中 — ${LOG} を確認"
+  exit 0
 fi
 
 # 復元が完了してから cron の自動保存 (tmux-resurrect-autosave) を許可する。

@@ -1,0 +1,37 @@
+#!/bin/sh
+# resurrect の "last" シンボリックリンクが実体のないファイルを指していたら、
+# 現存する最新のスナップショットに貼り替える (ダングリングの自動修復)。
+#
+# なぜ必要か:
+#   tmux-resurrect の save.sh は「秒」精度のタイムスタンプで保存ファイル名を決め、
+#   保存後に last と内容を比較して「同じなら今書いたファイルを rm する」。
+#   保存が同じ秒に 2 本走ると両者が同じファイル名を使うため、
+#     P1: ファイル作成 → last と差分あり → last を自分に貼り替え
+#     P2: 同じファイルへ上書き → last (= 自分自身) と一致 → 自分を rm
+#   となり last が存在しないファイルを指したまま残る。次回起動時の復元は
+#   復元素材ゼロとみなして失敗する (2026-07-30 / 07-31 / 08-01 に発生)。
+#   衝突するのは cron の */15 保存と idle-shutdown (*/10) の保存が重なる
+#   毎時 00 分・30 分ちょうどのシャットダウン時。
+#
+# 呼び出し元: tmux-resurrect-autosave (保存直後) / tmux-autorestore (復元直前)
+set -eu
+
+DIR="${XDG_DATA_HOME:-$HOME/.local/share}/tmux/resurrect"
+LAST="$DIR/last"
+LOG="$HOME/.cache/tmux-autorestore.log"
+
+# last が無い (初回) / 実体がある (正常) なら何もしない
+if [ ! -L "$LAST" ] || [ -e "$LAST" ]; then
+  exit 0
+fi
+
+# 現存する最新のスナップショットを探す。1 件も無ければ修復のしようがない
+newest=$(ls -t "$DIR"/tmux_resurrect_*.txt 2>/dev/null | head -n 1) || newest=""
+if [ -z "$newest" ]; then
+  exit 0
+fi
+
+ln -fs "$(basename "$newest")" "$LAST"
+mkdir -p "$(dirname "$LOG")"
+printf '[%s] last がダングリングだったため %s に貼り替えた\n' \
+  "$(date '+%F %T')" "$(basename "$newest")" >>"$LOG"

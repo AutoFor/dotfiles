@@ -51,11 +51,15 @@ if [ "$idle_min" -lt "$IDLE_MIN" ] || [ "$busy" -eq 1 ]; then
 fi
 
 log "アイドル ${idle_min} 分 / load15=${load15} → tmux 構成を保存して deallocate 実行"
-"$HOME/.tmux/plugins/tmux-resurrect/scripts/save.sh" quiet 2>>"$LOG" || true
-# save.sh の書き込みがディスクに反映される前に deallocate (実質即電源断) が
-# 走ると、resurrect の "last" シンボリックリンクだけ更新されて実体ファイルの
-# データが失われ、次回起動時の復元に失敗することがある (2026-07-31 に実際発生:
-# last が存在しないファイルを指すダングリングリンクになっていた)。
+# save.sh を直接呼ばず autosave ラッパー経由で保存する。
+# このシャットダウンは */10 分に走るため、cron の */15 保存と毎時 00/30 分に
+# 必ず衝突する。save.sh は保存ファイル名が「秒」精度なので、同じ秒に 2 本走ると
+# 後発が「last と同じ内容」と誤判定して自分自身を削除し、last が存在しない
+# ファイルを指すダングリングリンクになって次回起動時の復元が全滅する
+# (2026-07-30 / 07-31 / 08-01 に発生。当初 sync 不足と誤診断していた)。
+# ラッパーが flock で直列化し、保存後にダングリングを自動修復する。
+"$HOME/.local/bin/tmux-resurrect-autosave" 2>>"$LOG" || true
+# 書き込みがディスクに反映される前に deallocate (実質即電源断) が走らないよう、
 # sync でページキャッシュを確実にフラッシュしてから deallocate する。
 sync
 if az vm deallocate -g "$RG" -n "$VM" --no-wait >>"$LOG" 2>&1; then
