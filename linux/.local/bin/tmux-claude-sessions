@@ -14,6 +14,12 @@ set -eu
 
 PANE_DIR="$HOME/.local/share/tmux/claude-panes"
 FILE="$HOME/.local/share/tmux/resurrect/claude-sessions.tsv"
+# 復元時に「1 つの会話 = 1 ペイン」を保証するための予約置き場。
+# ディレクトリを mkdir で作れたペインだけがその会話を開く (mkdir は同一 FS 上で
+# アトミックなので、復元で全ペインの shell が同時に走っても二重取得にならない)。
+# 中の owner ファイルには占有者のペイン位置を書き、tmux-autorestore が復元前に
+# 記録済み会話を先に予約しておけるようにする。
+CLAIM_DIR="$HOME/.local/share/tmux/claude-claims"
 TAB=$(printf '\t')
 
 case "${1:-}" in
@@ -38,12 +44,17 @@ save)
     [ -e "$f" ] || continue
     printf '%s\n' "$PANES" | cut -f4 | grep -qx "%$(basename "$f")" || rm -f "$f"
   done
+  # 同じ会話 ID が複数ペインに紐づいていたら最初の 1 ペインだけ残す。
+  # 一度でも複数ペインが同じ会話を開いてしまうと (下の resume のフォールバック参照)
+  # 各ペインの SessionStart hook が同じ ID を記録し、以後の復元が --resume で
+  # その重複を忠実に再現し続ける。ここで落とさないと汚染が永久に再生産される
+  # (2026-08-01 の復元失敗を起点に、2026-08-02 まで 3 会話 7 プロセスが継続した)
   printf '%s\n' "$PANES" | while IFS="$TAB" read -r s w p id; do
     [ -r "$PANE_DIR/${id#%}" ] || continue
     sid=$(head -n 1 "$PANE_DIR/${id#%}")
     [ -n "$sid" ] || continue
     printf '%s\t%s\t%s\t%s\n' "$s" "$w" "$p" "$sid"
-  done > "$FILE.tmp"
+  done | awk -F '\t' '!seen[$4]++' > "$FILE.tmp"
   # 上書き前に旧版を 3 世代残す (claude-sessions.tsv.1 〜 .3)。
   # 一点物のまま復元失敗直後の保存に空で潰されると、どのペインがどの会話だったか
   # 永久に分からなくなる (2026-08-01 に実際に発生)
@@ -56,21 +67,53 @@ save)
   mv "$FILE.tmp" "$FILE"
   ;;
 resume)
+  ME="?"
   SID=""
-  if [ -n "${TMUX_PANE:-}" ] && [ -r "$FILE" ]; then
+  if [ -n "${TMUX_PANE:-}" ]; then
     POS=$(tmux display-message -p -t "$TMUX_PANE" "#{session_name}${TAB}#{window_index}${TAB}#{pane_index}")
     s=${POS%%"$TAB"*}; rest=${POS#*"$TAB"}; w=${rest%%"$TAB"*}; p=${rest#*"$TAB"}
-    SID=$(awk -F '\t' -v s="$s" -v w="$w" -v p="$p" \
-      '$1==s && $2==w && $3==p {print $4; exit}' "$FILE")
+    ME="$s:$w.$p"
+    if [ -r "$FILE" ]; then
+      SID=$(awk -F '\t' -v s="$s" -v w="$w" -v p="$p" \
+        '$1==s && $2==w && $3==p {print $4; exit}' "$FILE")
+    fi
   fi
-  # 記録が古い等で会話の実体 (transcript) が無ければ従来どおり --continue に落とす
+
+  # 会話 ID を 1 ペインだけに割り当てる。既に他ペインのものなら失敗を返す。
+  # tmux-autorestore が先に置いた予約は owner が自分と一致すれば引き取れる
+  claim() {
+    d="$CLAIM_DIR/$1"
+    mkdir -p "$CLAIM_DIR"
+    # 10 分以上前の予約は前回の復元の残骸 (手動 prefix+Ctrl-r 等) とみなして捨てる
+    if [ -d "$d" ] && [ -z "$(find "$d" -maxdepth 0 -mmin -10 2>/dev/null)" ]; then
+      rm -rf "$d"
+    fi
+    if mkdir "$d" 2>/dev/null; then
+      printf '%s\n' "$ME" > "$d/owner"
+      return 0
+    fi
+    [ "$(cat "$d/owner" 2>/dev/null)" = "$ME" ]
+  }
+
+  # 記録が古い等で会話の実体 (transcript) が無ければ記録は無かったことにする
   if [ -n "$SID" ] && ! ls "$HOME"/.claude/projects/*/"$SID".jsonl >/dev/null 2>&1; then
     SID=""
   fi
-  if [ -n "$SID" ]; then
+  if [ -n "$SID" ] && claim "$SID"; then
     exec claude --resume "$SID" --dangerously-skip-permissions
   fi
-  exec claude --continue --dangerously-skip-permissions
+
+  # --- 記録が無い / 会話を他ペインに取られたペインのフォールバック ---
+  # 以前は `claude --continue` にしていたが、これは「その cwd の最新の会話」を開くため
+  # 同じ cwd のペインが複数あると全員が同じ会話を掴み、1 つの transcript を複数
+  # プロセスが奪い合う (2026-08-01 の復元失敗でこの経路に落ち、life ウィンドウの
+  # 3 ペインが同一会話になった)。
+  # 「最新のうちまだ予約されていない会話」を選ぶ案も試したが、tmux 外で動いている
+  # Claude Code (Claude Code Desktop 等) の進行中の会話が最新に来ることがあり、
+  # そちらを横取りしてしまう。transcript は開きっぱなしにならないので fuser でも
+  # 使用中か判定できない。当てずっぽうで拾うより、会話を引き継がず新規で開く。
+  # 元の会話に戻したいときはそのペインで /resume から選び直す
+  exec claude --dangerously-skip-permissions
   ;;
 *)
   echo "usage: tmux-claude-sessions track|save|resume" >&2

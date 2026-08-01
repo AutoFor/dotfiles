@@ -47,6 +47,22 @@ LAST_FILE="$HOME/.local/share/tmux/resurrect/last"
 # まっさらな状態を last として固定してしまう
 "$HOME/.local/bin/tmux-resurrect-repair-last" || true
 
+# 会話 ID の予約置き場を初期化し、claude-sessions.tsv に記録のある会話は
+# 「そのペインのもの」として先に押さえておく (tmux-claude-sessions resume 参照)。
+# 復元されたペインの shell は非同期に走り出すため、先に押さえないと記録の無い
+# ペインのフォールバックが記録済みの会話を横取りしうる。
+CLAIM_DIR="$HOME/.local/share/tmux/claude-claims"
+SESSIONS_TSV="$HOME/.local/share/tmux/resurrect/claude-sessions.tsv"
+rm -rf "$CLAIM_DIR"
+mkdir -p "$CLAIM_DIR"
+if [ -r "$SESSIONS_TSV" ]; then
+  while IFS="$(printf '\t')" read -r s w p sid; do
+    [ -n "${sid:-}" ] || continue
+    mkdir -p "$CLAIM_DIR/$sid"
+    printf '%s:%s.%s\n' "$s" "$w" "$p" > "$CLAIM_DIR/$sid/owner"
+  done < "$SESSIONS_TSV"
+fi
+
 expected_panes=0
 if [ -f "$LAST_FILE" ]; then
   # grep -c は一致 0 件でも "0" を出力した上で終了コード 1 を返すため、
