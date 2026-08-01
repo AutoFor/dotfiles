@@ -8,11 +8,27 @@ set -eu
 FILE="$HOME/.local/share/tmux/resurrect/pane-names.tsv"
 TAB=$(printf '\t')
 
+# 上書き前に旧版を 3 世代残す (pane-names.tsv.1 〜 .3)。
+# このファイルは 15 分ごとに丸ごと書き換わる一点物だったため、復元に失敗した
+# 直後の保存が空の状態で上書きすると名前が完全に消えていた (2026-08-01 に全損し、
+# ディスクの生ブロックを grep して拾う羽目になった)。
+# 手で戻すときは: cp pane-names.tsv.1 pane-names.tsv && tmux-pane-names restore
+rotate_backups() {
+  [ -s "$FILE" ] || return 0
+  if cmp -s "$FILE.tmp" "$FILE"; then return 0; fi
+  rm -f "$FILE.3"
+  if [ -f "$FILE.2" ]; then mv "$FILE.2" "$FILE.3"; fi
+  if [ -f "$FILE.1" ]; then mv "$FILE.1" "$FILE.2"; fi
+  cp -p "$FILE" "$FILE.1"
+}
+
 case "${1:-}" in
 save)
   mkdir -p "$(dirname "$FILE")"
   tmux list-panes -a -F "#{session_name}${TAB}#{window_index}${TAB}#{pane_index}${TAB}#{@name}" |
-    awk -F "$TAB" '$4 != ""' > "$FILE.tmp" && mv "$FILE.tmp" "$FILE"
+    awk -F "$TAB" '$4 != ""' > "$FILE.tmp"
+  rotate_backups
+  mv "$FILE.tmp" "$FILE"
   ;;
 restore)
   [ -r "$FILE" ] || exit 0
