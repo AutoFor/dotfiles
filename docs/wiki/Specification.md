@@ -59,26 +59,52 @@
 | 失敗時 | upload 失敗時はローカル `.tar` を保持 |
 | 制約 | 実行中の現在ディストリ自身は WSL 内から terminate せず、そのまま export |
 
+### devbox（Linux）設定ファイル
+
+#### .tmux.conf
+
+セッション層の本体。WezTerm から見た Window / Tab / Pane は実体としてここで管理される（#214）。
+
+| 機能 | 説明 |
+|------|------|
+| prefix | `Ctrl+q`（`Ctrl+b` も `prefix2` として有効） |
+| prefix を2つ持つ理由 | `.wezterm.lua` の `tmux_bridge` が `\x02`（= `Ctrl+b`）を送るため、`Ctrl+b` を外すと WezTerm 側のショートカットが全滅する。`Ctrl+q` は WezTerm が Leader として食うので、直接効くのは iPad / Termius / 素の `ssh` から入ったとき |
+| セッション永続化 | tmux-resurrect。cron が 15 分ごとに保存し、サーバー起動時に `tmux-autorestore` が一度だけ復元する |
+| ペイン名 | `@name` をペイン上辺のボーダーに常時表示。`tmux-pane-names` が resurrect フックで別ファイルに保存・復元する |
+| Claude Code の会話復元 | `tmux-claude-sessions` がペインごとにセッション ID を記録し、復元時に `claude --resume` で個別に再開する |
+| WezTerm タブバー連携 | ウィンドウ構成が変わるたび `wezterm-tabs-sync` が SetUserVar で一覧を通知する |
+
 ### Windows 設定ファイル
 
 #### .wezterm.lua
 
+> #214 以降、Window / Tab / Pane の管理は devbox 上の tmux に一本化した。
+> WezTerm は表示器 + SSH クライアントで、下表の分割・ペイン系キーは
+> `tmux_bridge` が tmux の prefix シーケンス（`Ctrl+b` + キー）に変換して送っている。
+> WezTerm 独自の Workspace 機能は使っていない（tmux セッションが代替）。
+
 | 機能 | キー / 説明 |
 |------|------------|
-| デフォルトドメイン | WSL:Ubuntu |
-| Leader キー | `Ctrl+q`（2秒タイムアウト） |
-| タブバー | 矢印型タブ・透過・境界線なし |
-| 透過 | `window_background_opacity = 1.0` |
-| 左右分割 | `Ctrl+q` → `r` |
-| 上下分割 | `Ctrl+q` → `d` |
-| ペイン移動 | `Alt+h/l/k/j` |
-| ペイン閉じ | `Ctrl+q` → `x` |
+| デフォルトドメイン | `devbox-tmux`（ネイティブ SSH + tmux。起動時のウィンドウはここに生成される） |
+| Leader キー | `Ctrl+q`（2秒タイムアウト）。待ち受け中は右ステータスに `LEADER` と表示 |
+| タブバー | 常時表示（タブ1つでも隠さない）。tmux のウィンドウ一覧を1つのタブ枠に並べて描画する |
+| タイトルバー | 非表示（`window_decorations = "RESIZE"`） |
+| 透過 | `window_background_opacity = 1.0`（背景は不透過。タブバーのみ透過） |
+| 左右分割 | `Ctrl+q` → `r`（tmux の `prefix + \|`） |
+| 上下分割 | `Ctrl+q` → `d`（tmux の `prefix + -`） |
+| ペイン移動 | `Alt+h/l/k/j`（端まで来たらペイン内アプリへ透過） |
+| ペイン閉じ | `Ctrl+q` → `x`（確認なし） |
 | コピーモード | `Ctrl+q` → `[`（vi ライク） |
-| Workspace 切替 | `leader → w` |
-| Workspace 名変更 | `Ctrl+q` → `t` |
-| ステータスバー | 現在の Workspace 名を右端に表示 |
-| ウィンドウタイトル | カレントディレクトリ名を表示 |
+| タブ（tmux ウィンドウ）一覧から選択 | `Ctrl+q` → `w` |
+| タブ（tmux ウィンドウ）名変更 | `Ctrl+q` → `t` |
+| セッション一覧から選択 | `Ctrl+q` → `s` |
+| セッション新規作成 | `Ctrl+q` → `n`（名前を聞かれ、そのまま移動） |
+| ペインを別ウィンドウ/セッションへ移動 | `Ctrl+q` → `m`（一覧から移動先を選択） |
+| ステータスバー | 右端に接続先ラベル・`LEADER` 待機表示・日時を表示 |
+| ウィンドウタイトル | カレントディレクトリ名を表示（`<dir> - WezTerm`） |
 | キーバインド定義 | `windows/.wezterm.lua`（インライン管理） |
+
+ショートカットの全量は `docs/qiita/terminal-shortcuts.md` を参照。
 
 ### Claude Code 設定（サブモジュール）
 
