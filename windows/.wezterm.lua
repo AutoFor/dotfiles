@@ -847,8 +847,13 @@ config.keys = {
   -- OS の文字合成に食われて Alt 抜きの "f" しか下流に届かない (hjkl と同じ理由)
   { key = "f", mods = "ALT", action = act.SendKey({ key = "f", mods = "ALT" }) },
 
-  -- Session (tmux セッション。旧 workspace の代替。tm <名前> で作成)
+  -- Session (tmux セッション。旧 workspace の代替。tm <名前> でも作成できる)
   { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択
+  { key = "n", mods = "LEADER", action = tmux_bridge("N", act.Nop) }, -- 新規セッション (名前を聞かれる)
+  -- 現在のペインを一覧から選んだウィンドウ (別セッションも可) へ移動。
+  -- 移動でペインの位置が変わるとペイン名・claude セッションの対応がズレるため、
+  -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+M)
+  { key = "m", mods = "LEADER", action = tmux_bridge("M", act.Nop) },
 
   -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
   { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },
