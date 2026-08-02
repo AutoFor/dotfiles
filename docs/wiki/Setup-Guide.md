@@ -88,6 +88,15 @@ Install-Module BurntToast -Scope CurrentUser
 pwsh -File windows\bin\register-wezterm-jump.ps1    # wezterm-jump: URI スキーム登録 (HKCU、管理者不要)
 ```
 
+WezTerm を開いていないとき・Claude Code アプリから直接 SSH したときの通知も
+Windows で受けるなら、ntfy 購読を常駐させる (devbox 側の `~/.config/ntfy-topic` が前提):
+
+```powershell
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.config" | Out-Null
+Set-Content -Path "$env:USERPROFILE\.config\ntfy-topic" -Value "<devbox と同じトピック名>" -NoNewline
+pwsh -File windows\bin\register-ntfy-listen.ps1     # ログオン時常駐に登録して即起動 (管理者不要)
+```
+
 ## 7. 動作確認
 
 WezTerm を起動する。`devbox.ps1 ensure` が VM の起動を担保してから、
@@ -108,4 +117,5 @@ WezTerm を起動する。`devbox.ps1 ensure` が VM の起動を担保してか
 | 文字化け・アイコン欠け | HackGen Console NF / Symbols Nerd Font Mono が未インストール |
 | `git push` が AutoFor のパスワードを求めて止まる | 手順 4 の credential 設定が未投入 |
 | 通知トーストが出ない | BurntToast 未導入 or `register-wezterm-jump.ps1` 未実行。詳細は claude/ 側のドキュメント参照 |
+| WezTerm 外のセッションの通知が来ない | ntfy 購読が未常駐。`Get-ScheduledTask ntfy-listen` で状態確認、`%USERPROFILE%\.config\ntfy-topic` が devbox と同じ値か確認 |
 | WezTerm 起動時に VM が起きない | `az login` が未実施 or 期限切れ (`devbox.ps1 status` で確認) |
