@@ -235,7 +235,7 @@ nvim などマウスを自前で使うアプリのペインでは、クリック
 
 ### Claude Code 通知連携
 
-Claude Code の Stop / Notification hook は `~/.claude/notify.sh` を呼び、OSC 1337 SetUserVar（`claude_notify`）を発行して手元の WezTerm に届ける。タイトルに `[ホスト名:ディレクトリ名]` が付くので、複数タブで Claude Code を並行実行していてもどのセッションの通知か区別できる。
+Claude Code の Stop / Notification hook は `~/.claude/notify.sh` を呼び、OSC 1337 SetUserVar（`claude_notify`）を発行して手元の WezTerm に届ける。タイトルに `[ディレクトリ名/ウィンドウ番号 ウィンドウ名]`（例: `[dotfiles/3 editor]`、tmux 外なら `[dotfiles]`）が付くので、複数タブ・複数ウィンドウで Claude Code を並行実行していてもどのセッションの通知か区別できる。
 
 WezTerm 側では以下が動く:
 

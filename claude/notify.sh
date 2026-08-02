@@ -29,17 +29,25 @@ fi
 # SSH リモート: 手元の WezTerm に OSC で届けるか、届かないなら ntfy に流す。
 # payload: ディレクトリ名 \t タイトル \t メッセージ \t tmuxペイン番号（%なし。tmux 外は空）
 # 4番目のフィールドは LEADER+j / トーストクリックでの通知元ペインへのジャンプに使う。
-HOST=$(hostname -s 2>/dev/null || echo remote)
-FULL_TITLE="[$HOST:$DIR] $TITLE"
+IN_TMUX=0
+if [ -n "$TMUX" ] && [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
+  IN_TMUX=1
+fi
+
+# 複数ウィンドウで Claude Code を並行実行していてもどのウィンドウの通知か区別できるよう、
+# タイトルを [ディレクトリ名/ウィンドウ番号 ウィンドウ名] にする（tmux 外は [ディレクトリ名] だけ）
+WIN_LABEL=""
+if [ "$IN_TMUX" = 1 ]; then
+  WIN_LABEL=$(tmux display-message -t "$TMUX_PANE" -p '/#{window_index} #{window_name}' 2>/dev/null)
+fi
+FULL_TITLE="[${DIR}${WIN_LABEL}] $TITLE"
 
 PAYLOAD=$(printf '%s\t%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" "${TMUX_PANE#%}" | base64 | tr -d '\n')
 
 # ---- 1. OSC の書き込み先 tty を決める ----
-IN_TMUX=0
 TTY=""
-if [ -n "$TMUX" ] && [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
+if [ "$IN_TMUX" = 1 ]; then
   # tmux 内: 自ペインの pty。
-  IN_TMUX=1
   TTY=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null)
 else
   # tmux 外（wezterm mux 等）: Claude Code の hook プロセスには制御端末が無く
