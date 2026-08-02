@@ -83,9 +83,20 @@ ssh-keygen -t ed25519
 
 Claude Code の完了通知を「クリックで該当ペインへジャンプできるトースト」で受けるなら:
 
+**必ず pwsh 7 のセッションで**入れる。Windows PowerShell 5.1 から入れると 5.1 用の領域
+(`Documents\WindowsPowerShell\Modules`) に入り、pwsh 7 からも常駐タスクからも見えない。
+
 ```powershell
-Install-Module BurntToast -Scope CurrentUser
+Install-PSResource BurntToast -Scope CurrentUser -TrustRepository    # 5.1 以前なら Install-Module
 pwsh -File windows\bin\register-wezterm-jump.ps1    # wezterm-jump: URI スキーム登録 (HKCU、管理者不要)
+```
+
+`Get-Module -ListAvailable BurntToast` の `ModuleBase` が `...\PowerShell\Modules\...`
+(`WindowsPowerShell` では**ない**方) になっていること。`Documents` が OneDrive にリダイレクト
+されている場合はファイル オンデマンドでモジュールが壊れることがあるので、ローカル固定しておく:
+
+```powershell
+attrib +p -u /s /d "$env:USERPROFILE\OneDrive\ドキュメント\PowerShell\Modules\BurntToast\*"
 ```
 
 WezTerm を開いていないとき・Claude Code アプリから直接 SSH したときの通知も
@@ -117,5 +128,5 @@ WezTerm を起動する。`devbox.ps1 ensure` が VM の起動を担保してか
 | 文字化け・アイコン欠け | HackGen Console NF / Symbols Nerd Font Mono が未インストール |
 | `git push` が AutoFor のパスワードを求めて止まる | 手順 4 の credential 設定が未投入 |
 | 通知トーストが出ない | BurntToast 未導入 or `register-wezterm-jump.ps1` 未実行。詳細は claude/ 側のドキュメント参照 |
-| WezTerm 外のセッションの通知が来ない | ntfy 購読が未常駐。`Get-ScheduledTask ntfy-listen` で状態確認、`%USERPROFILE%\.config\ntfy-topic` が devbox と同じ値か確認 |
+| WezTerm 外のセッションの通知が来ない | ntfy 購読が未常駐。`Get-ScheduledTaskInfo ntfy-listen` の `LastTaskResult` が `267009` なら実行中、`1` なら BurntToast の import 失敗。手順 6 の通り pwsh 7 用に入れ直す。`%USERPROFILE%\.config\ntfy-topic` が devbox と同じ値かも確認 |
 | WezTerm 起動時に VM が起きない | `az login` が未実施 or 期限切れ (`devbox.ps1 status` で確認) |
