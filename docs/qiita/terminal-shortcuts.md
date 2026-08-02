@@ -264,6 +264,10 @@ WezTerm で見ている最中は上記の OSC トーストだけになり、二�
 後者が無いと、Claude Code アプリから devbox に入ったセッションは OSC の宛先が無いまま
 `exit 0` して通知が消えるので、**どこにも通知が来ない**（tmux 判定だけだった頃の穴）。
 
+前者は tmux の `allow-passthrough` が **`all`** であることが前提。`on` だと通知元ペインが
+表示中のときしか OSC を通さないので、背景ウィンドウの Claude Code は「attach 済み＝手元に出せる」
+と判定されて ntfy にも落ちず、通知が消える（`linux/.tmux.conf` で `all` に設定済み）。
+
 - 本文に `(セッション名:ウィンドウ番号 ウィンドウ名 %ペインID)` が入るので、どのセッションが
   返事待ちかが外出先でも分かる（iPad の Termius で入って該当ウィンドウへ移動する）
 - **Windows**: `windows/bin/ntfy-listen.ps1` が購読して BurntToast でトーストにする。
