@@ -26,25 +26,69 @@ if command -v wslpath >/dev/null 2>&1 && [ -x "$PWSH" ]; then
     -Title "[$DIR] $TITLE" -Message "$MESSAGE" -Sound "$SOUND" </dev/null
 fi
 
-# SSH リモート: OSC 1337 SetUserVar を書き込み、手元の WezTerm の
-# user-var-changed ハンドラ（.wezterm.lua）がタブの 🔔 マーク付けとトースト表示を行う。
+# SSH リモート: 手元の WezTerm に OSC で届けるか、届かないなら ntfy に流す。
 # payload: ディレクトリ名 \t タイトル \t メッセージ \t tmuxペイン番号（%なし。tmux 外は空）
 # 4番目のフィールドは LEADER+j / トーストクリックでの通知元ペインへのジャンプに使う。
 HOST=$(hostname -s 2>/dev/null || echo remote)
 FULL_TITLE="[$HOST:$DIR] $TITLE"
 
-# ntfy プッシュ通知（iPhone / Apple Watch 用。issue #221）:
-# ~/.config/ntfy-topic にトピック名があり、かつ tmux にクライアントが 1 つも
-# attach していない（= 誰も画面を見ていない）ときだけ送る。
-# 席にいるときは WezTerm トースト（下の OSC）だけになり、二重通知しない。
+PAYLOAD=$(printf '%s\t%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" "${TMUX_PANE#%}" | base64 | tr -d '\n')
+
+# ---- 1. OSC の書き込み先 tty を決める ----
+IN_TMUX=0
+TTY=""
+if [ -n "$TMUX" ] && [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
+  # tmux 内: 自ペインの pty。
+  IN_TMUX=1
+  TTY=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null)
+else
+  # tmux 外（wezterm mux 等）: Claude Code の hook プロセスには制御端末が無く
+  # /dev/tty を開けないことがあるため、その場合は $WEZTERM_PANE から
+  # wezterm cli でペインの pty を引く。
+  # サブシェルで開けるか試す（特殊ビルトインのリダイレクト失敗はシェルごと終了するため）
+  if (exec >/dev/tty) 2>/dev/null; then
+    TTY=/dev/tty
+  elif [ -n "$WEZTERM_PANE" ] && command -v wezterm >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+    TTY=$(wezterm cli list --format json 2>/dev/null |
+      jq -r --arg p "$WEZTERM_PANE" '.[] | select((.pane_id | tostring) == $p) | .tty_name // empty')
+  fi
+fi
+[ -n "$TTY" ] && [ -w "$TTY" ] || TTY=""
+
+# ---- 2. 手元の WezTerm がトーストを出せるか判定する ----
+# 出せるなら OSC だけ、出せないなら ntfy に流す（二重通知しない）。
+# - tmux 内: 自セッション（グループセッションなら同一グループ）にクライアントが
+#   attach していれば、OSC はそのクライアントの WezTerm まで届く
+# - tmux 外: 書き込める tty があれば、それがそのまま WezTerm のペイン
+LOCAL_TOAST=0
+if [ "$IN_TMUX" = 1 ]; then
+  # -F はクライアントが attach しているセッションの属性を展開する。
+  # session_group は非グループセッションでは空になるので session_name にフォールバック。
+  SELF_GROUP=$(tmux display-message -t "$TMUX_PANE" -p '#{session_group}' 2>/dev/null)
+  if [ -n "$SELF_GROUP" ]; then
+    tmux list-clients -F '#{session_group}' 2>/dev/null | grep -qxF "$SELF_GROUP" && LOCAL_TOAST=1
+  else
+    SELF_SESSION=$(tmux display-message -t "$TMUX_PANE" -p '#{session_name}' 2>/dev/null)
+    [ -n "$SELF_SESSION" ] &&
+      tmux list-clients -F '#{session_name}' 2>/dev/null | grep -qxF "$SELF_SESSION" && LOCAL_TOAST=1
+  fi
+elif [ -n "$TTY" ]; then
+  LOCAL_TOAST=1
+fi
+
+# ---- 3. ntfy プッシュ通知（Windows / iPhone / Apple Watch。issue #221）----
+# ~/.config/ntfy-topic にトピック名があり、かつ手元の WezTerm でトーストが
+# 出せないときだけ送る。席を外しているとき（tmux 未 attach）と、
+# tmux/WezTerm を経由しないセッション（Claude Code アプリからの SSH 等）が対象。
 # サーバは NTFY_SERVER で上書き可（既定 https://ntfy.sh）。
 NTFY_TOPIC_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/ntfy-topic"
-if [ -r "$NTFY_TOPIC_FILE" ] && command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
+if [ "$LOCAL_TOAST" = 0 ] && [ -r "$NTFY_TOPIC_FILE" ] &&
+  command -v curl >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   NTFY_TOPIC=$(head -n1 "$NTFY_TOPIC_FILE" | tr -d '[:space:]')
-  if [ -n "$NTFY_TOPIC" ] && ! tmux list-clients 2>/dev/null | grep -q .; then
+  if [ -n "$NTFY_TOPIC" ]; then
     # どのセッションからの通知か分かるよう、tmux のウィンドウ/ペイン情報を本文に足す
     PANE_INFO=""
-    if [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
+    if [ "$IN_TMUX" = 1 ]; then
       PANE_INFO=$(tmux display-message -t "$TMUX_PANE" -p ' (#{session_name}:#{window_index} #{window_name} #{pane_id})' 2>/dev/null)
     fi
     jq -cn --arg topic "$NTFY_TOPIC" --arg title "$FULL_TITLE" --arg msg "${MESSAGE}${PANE_INFO}" \
@@ -54,30 +98,16 @@ if [ -r "$NTFY_TOPIC_FILE" ] && command -v curl >/dev/null 2>&1 && command -v jq
   fi
 fi
 
-PAYLOAD=$(printf '%s\t%s\t%s\t%s' "$DIR" "$FULL_TITLE" "$MESSAGE" "${TMUX_PANE#%}" | base64 | tr -d '\n')
-
-# tmux 内: 自ペインの pty に passthrough（ESC 二重化 + ESC Ptmux; ラップ）で書く。
-# allow-passthrough on（.tmux.conf）とセットで tmux を透過して WezTerm に届く。
-if [ -n "$TMUX" ] && [ -n "$TMUX_PANE" ] && command -v tmux >/dev/null 2>&1; then
-  TTY=$(tmux display-message -t "$TMUX_PANE" -p '#{pane_tty}' 2>/dev/null)
-  if [ -n "$TTY" ] && [ -w "$TTY" ]; then
+# ---- 4. OSC 1337 SetUserVar を書き込む ----
+# 手元の WezTerm の user-var-changed ハンドラ（.wezterm.lua）が
+# タブの 🔔 マーク付けとトースト表示を行う。
+if [ -n "$TTY" ]; then
+  if [ "$IN_TMUX" = 1 ]; then
+    # tmux 内は passthrough（ESC 二重化 + ESC Ptmux; ラップ）で書く。
+    # allow-passthrough on（.tmux.conf）とセットで tmux を透過して WezTerm に届く。
     printf '\033Ptmux;\033\033]1337;SetUserVar=claude_notify=%s\007\033\\' "$PAYLOAD" > "$TTY" 2>/dev/null
+  else
+    printf '\033]1337;SetUserVar=claude_notify=%s\033\\' "$PAYLOAD" > "$TTY" 2>/dev/null
   fi
-  exit 0
-fi
-
-# tmux 外（wezterm mux 等）: 書き込み先 tty を特定する。
-# Claude Code の hook プロセスには制御端末が無く /dev/tty を開けないことがあるため、
-# その場合は $WEZTERM_PANE から wezterm cli でペインの pty を引く。
-TTY=""
-# サブシェルで開けるか試す（特殊ビルトインのリダイレクト失敗はシェルごと終了するため）
-if (exec >/dev/tty) 2>/dev/null; then
-  TTY=/dev/tty
-elif [ -n "$WEZTERM_PANE" ] && command -v wezterm >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
-  TTY=$(wezterm cli list --format json 2>/dev/null |
-    jq -r --arg p "$WEZTERM_PANE" '.[] | select((.pane_id | tostring) == $p) | .tty_name // empty')
-fi
-if [ -n "$TTY" ] && [ -w "$TTY" ]; then
-  printf '\033]1337;SetUserVar=claude_notify=%s\033\\' "$PAYLOAD" > "$TTY" 2>/dev/null
 fi
 exit 0
