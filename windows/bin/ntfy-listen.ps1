@@ -56,6 +56,8 @@ while ($true) {
         while (-not $reader.EndOfStream) {
             $line = $reader.ReadLine()
             if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            # 受信したかどうかを切り分けられるよう、生の行をそのまま出す
+            Write-Verbose "recv: $line"
             try { $ev = $line | ConvertFrom-Json } catch { continue }
             # open / keepalive は無視し、message だけトーストにする
             if ($ev.event -ne "message") { continue }
@@ -63,7 +65,15 @@ while ($true) {
 
             $title = if ($ev.title) { $ev.title } else { "Claude Code" }
             $text = if ($ev.message) { @($title, $ev.message) } else { @($title) }
-            New-BurntToastNotification -Text $text -Sound $Sound
+            Write-Verbose "toast: $title / $($ev.message)"
+            # トースト生成の失敗を握り潰すと「受信はしているが出ない」が切り分けられない。
+            # ただし購読は続けたいので、ここで捕まえて警告にとどめる
+            try {
+                New-BurntToastNotification -Text $text -Sound $Sound -ErrorAction Stop
+            }
+            catch {
+                Write-Warning "トースト表示に失敗: $_"
+            }
         }
     }
     catch {
