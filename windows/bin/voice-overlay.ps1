@@ -35,11 +35,22 @@ public class NoActivateForm : Form {
 '@
 $form = $null
 try {
-  Add-Type -TypeDefinition $src -ReferencedAssemblies @(
-    [System.Windows.Forms.Form].Assembly.Location,
-    [System.ComponentModel.Component].Assembly.Location,
-    [System.Drawing.Point].Assembly.Location
-  )
+  # Roslyn コンパイル (毎回 1 秒前後) を避けるため、コンパイル済み DLL をキャッシュする
+  # (voice-input.ps1 の recorder DLL と同じ方式)
+  $overlayDll = Join-Path $env:TEMP 'wezterm-voice-overlay.dll'
+  $overlayHashFile = "$overlayDll.hash"
+  $srcHash = (Get-FileHash -Algorithm SHA256 -InputStream (
+      [System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($src)))).Hash
+  if (-not (Test-Path -LiteralPath $overlayDll) -or
+      (Get-Content -LiteralPath $overlayHashFile -ErrorAction SilentlyContinue) -ne $srcHash) {
+    Add-Type -TypeDefinition $src -OutputAssembly $overlayDll -ReferencedAssemblies @(
+      [System.Windows.Forms.Form].Assembly.Location,
+      [System.ComponentModel.Component].Assembly.Location,
+      [System.Drawing.Point].Assembly.Location
+    )
+    Set-Content -LiteralPath $overlayHashFile -Value $srcHash
+  }
+  if (-not ('NoActivateForm' -as [type])) { Add-Type -Path $overlayDll }
   $form = [NoActivateForm]::new()
 } catch {
   # コンパイルに失敗しても機能自体は生かす (表示時に一瞬フォーカスを奪う欠点だけ残る)

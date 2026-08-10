@@ -77,7 +77,7 @@ if (-not $env:GROQ_API_KEY) {
 # winmm の waveIn 直叩き録音 (依存ゼロ)。MCI と違い録音を止めずにフレーム単位で
 # データを取り出せるため、無音検出でのチャンク分割 (疑似ストリーム) ができる。
 # バッファは FIFO で完了するので Poll は次に完了すべき番号だけ見ればよい。
-Add-Type -TypeDefinition @'
+$recorderSrc = @'
 using System;
 using System.Runtime.InteropServices;
 
@@ -183,6 +183,27 @@ namespace Voice {
   }
 }
 '@
+
+# Add-Type の C# コンパイル (Roslyn) は毎回 1〜2 秒かかり、キーを押した直後の発話が
+# 録音開始前に切れる主因になる。コンパイル済み DLL を %TEMP% にキャッシュし、
+# 2 回目以降はロードだけ (数十 ms) で済ませる。ソースを変えたらハッシュ違いで再生成
+$recorderDll = Join-Path $env:TEMP 'wezterm-voice-recorder.dll'
+$recorderHashFile = "$recorderDll.hash"
+$srcHash = (Get-FileHash -Algorithm SHA256 -InputStream (
+    [System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($recorderSrc)))).Hash
+if (-not (Test-Path -LiteralPath $recorderDll) -or
+    (Get-Content -LiteralPath $recorderHashFile -ErrorAction SilentlyContinue) -ne $srcHash) {
+  Add-Type -TypeDefinition $recorderSrc -OutputAssembly $recorderDll
+  Set-Content -LiteralPath $recorderHashFile -Value $srcHash
+}
+if (-not ('Voice.Recorder' -as [type])) {
+  try {
+    Add-Type -Path $recorderDll
+  } catch {
+    Write-Log "recorder DLL のロード失敗 ($_)。直接コンパイルにフォールバック"
+    Add-Type -TypeDefinition $recorderSrc
+  }
+}
 
 # 16kHz/16bit/mono の PCM に RIFF ヘッダを付けて WAV として書き出す
 function Write-Wav([string]$path, [byte[]]$pcm) {
