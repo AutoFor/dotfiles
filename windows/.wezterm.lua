@@ -484,18 +484,16 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#e0af68" } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…" })
   end
-  -- LEADER+Space の音声入力の可視化。pwsh 起動待ちと録音中を区別して表示する
+  -- LEADER+Space の音声入力の可視化。アイコンのみ (灰色=マイク起動待ち、赤=録音中)
   if wezterm.GLOBAL.voice_recording then
     local rec = io.open(VOICE_RECORDING_FLAG, "r")
-    local label
+    local color = "#565f89"
     if rec then
       rec:close()
-      label = "録音中 (Ctrl+q Space で停止)"
-    else
-      label = "マイク起動中…"
+      color = "#f7768e"
     end
-    table.insert(items, { Foreground = { Color = "#f7768e" } })
-    table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_microphone .. " " .. label })
+    table.insert(items, { Foreground = { Color = color } })
+    table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_microphone })
   end
   table.insert(items, { Foreground = { Color = "#a9b1d6" } })
   table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })

@@ -45,7 +45,7 @@ param(
   [string]$DictionaryFile = (Join-Path $PSScriptRoot '..\voice-dictionary.txt'),
   # セッション終了時に誤変換らしき用語を LLM に探させて辞書へ自動提案する。空文字で無効化
   [string]$SuggestModel = 'llama-3.3-70b-versatile',
-  [switch]$NoOverlay                         # 画面中央の波形フローティング表示 (voice-overlay.ps1) を出さない
+  [switch]$Overlay                           # 画面中央の波形フローティング表示 (voice-overlay.ps1) を出す (既定オフ)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -391,8 +391,9 @@ try {
   New-Item -ItemType File -Force -Path $RecordingFlag | Out-Null
   Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
 
-  # 画面中央の波形フローティング表示。録音フラグが消えると自動で閉じる
-  if (-not $NoOverlay) {
+  # 画面中央の波形フローティング表示 (既定オフ。表示が煩わしいとの評でアイコンのみ運用に)。
+  # 録音フラグが消えると自動で閉じる
+  if ($Overlay) {
     try {
       Start-Process -FilePath 'pwsh.exe' -WindowStyle Hidden -ArgumentList @(
         '-NoProfile', '-NonInteractive', '-File', (Join-Path $PSScriptRoot 'voice-overlay.ps1')
@@ -419,7 +420,9 @@ try {
       $frame = $recorder.Poll()
       if ($null -eq $frame -or $frame.Length -eq 0) { break }
       $rms = [Voice.Recorder]::Rms($frame)
-      try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
+      if ($Overlay) {
+        try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
+      }
       $voiced = $rms -ge $SilenceThreshold
       if ($chunk.Count -eq 0) {
         if ($voiced) {
