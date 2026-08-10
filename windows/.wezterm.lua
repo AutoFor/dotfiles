@@ -42,6 +42,13 @@ local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
 -- クリップボードの内容 (画像/ファイル/フォルダ/パス文字列) を devbox へ scp する
 -- スクリプト（LEADER+v のクリップボード転送ペースト用）
 local CLIP_PASTE_PS1 = DOTFILES_DIR .. "\\windows\\bin\\send-clipboard.ps1"
+-- マイク録音 → Groq Whisper 文字起こし → ペインへ入力するスクリプト（LEADER+Space）
+local VOICE_PS1 = DOTFILES_DIR .. "\\windows\\bin\\voice-input.ps1"
+-- 録音の開始/停止は voice-input.ps1 とフラグファイルで連携する
+-- (stop: 2 度目の LEADER+Space で作成し録音停止を指示 / recording: 録音が実際に始まると script が作成)
+local VOICE_TEMP_DIR = os.getenv("TEMP") or (wezterm.home_dir .. "\\AppData\\Local\\Temp")
+local VOICE_STOP_FLAG = VOICE_TEMP_DIR .. "\\wezterm-voice-stop.flag"
+local VOICE_RECORDING_FLAG = VOICE_TEMP_DIR .. "\\wezterm-voice-recording.flag"
 
 local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
@@ -477,6 +484,19 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#e0af68" } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…" })
   end
+  -- LEADER+Space の音声入力の可視化。pwsh 起動待ちと録音中を区別して表示する
+  if wezterm.GLOBAL.voice_recording then
+    local rec = io.open(VOICE_RECORDING_FLAG, "r")
+    local label
+    if rec then
+      rec:close()
+      label = "録音中 (Ctrl+q Space で停止)"
+    else
+      label = "マイク起動中…"
+    end
+    table.insert(items, { Foreground = { Color = "#f7768e" } })
+    table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_microphone .. " " .. label })
+  end
   table.insert(items, { Foreground = { Color = "#a9b1d6" } })
   table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })
   table.insert(items, { Text = "  " })
@@ -631,6 +651,40 @@ local function paste_image_or_clipboard()
         window:toast_notification("WezTerm", "クリップボードの転送に失敗: " .. (stderr or ""), nil, 4000)
       end
     end)
+  end)
+end
+
+-- 音声入力トグル (LEADER+Space)。1 回目で録音開始、2 回目で停止。
+-- 録音〜文字起こし〜入力は voice-input.ps1 が背景で行い、結果は
+-- `wezterm cli send-text` で押下時のペイン (tmux 内の Claude Code プロンプト等) に入る。
+-- pwsh の起動に 1 秒弱かかるため、実際に録音が始まったかは右ステータスの
+-- 「マイク起動中…」→「録音中」で確認する (recording フラグの有無で切り替え)。
+local function toggle_voice_input()
+  return wezterm.action_callback(function(window, pane)
+    if wezterm.GLOBAL.voice_recording then
+      -- 2 回目: 停止フラグを置く → スクリプトが検知して文字起こしへ進む
+      wezterm.GLOBAL.voice_recording = false
+      local f = io.open(VOICE_STOP_FLAG, "w")
+      if f then
+        f:write("stop")
+        f:close()
+      end
+    else
+      -- 前回の残骸フラグを消してから起動する (script 側で消すと、起動前に
+      -- 2 度目が押されたときの正当な stop フラグまで消してしまうため Lua 側で消す)
+      os.remove(VOICE_STOP_FLAG)
+      os.remove(VOICE_RECORDING_FLAG)
+      wezterm.GLOBAL.voice_recording = true
+      local ok = pcall(wezterm.background_child_process, {
+        "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", VOICE_PS1,
+        "-PaneId", tostring(pane:pane_id()),
+        "-WezTermExe", wezterm.executable_dir .. "\\wezterm.exe",
+      })
+      if not ok then
+        wezterm.GLOBAL.voice_recording = false
+        window:toast_notification("WezTerm", "音声入力の起動に失敗", nil, 4000)
+      end
+    end
   end)
 end
 
@@ -869,6 +923,16 @@ config.keys = {
     key = "v",
     mods = "LEADER",
     action = paste_image_or_clipboard(),
+  },
+
+  {
+    -- LEADER+Space: 音声入力トグル。1 回目で Windows のマイク録音開始、
+    -- 2 回目で停止 → Groq Whisper (whisper-large-v3-turbo) で文字起こしし、
+    -- このペイン (tmux 内の Claude Code プロンプト等) に入力される。
+    -- 録音状態は右ステータスの 🎤 表示で確認できる。
+    key = "Space",
+    mods = "LEADER",
+    action = toggle_voice_input(),
   },
 
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常

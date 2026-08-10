@@ -233,6 +233,28 @@ nvim などマウスを自前で使うアプリのペインでは、クリック
 | `Ctrl+Shift+l` | デバッグオーバーレイ（問題調査用） | **l**og |
 | `Alt+Enter` | 通常 ⇔ 最大化（タスクバーを残す）を切り替え | Enter = 確定・最大化 |
 
+### 音声入力（Groq Whisper）
+
+`<leader> →Space` の 2 度押しで、話した内容が **フォーカス中のペイン（tmux 内の Claude Code プロンプト等）にテキスト入力される**。
+
+| ショートカット | 動作 | 由来 |
+|--------------|------|------|
+| `<leader> →Space` (1 回目) | Windows のマイクで録音開始（右ステータスに 🎤 が出る。「マイク起動中…」→「録音中」で実際の録音開始が分かる） | Space = 話す間 |
+| `<leader> →Space` (2 回目) | 録音停止 → Groq Whisper (`whisper-large-v3-turbo`) で文字起こし → 押下時のペインへ入力（末尾にスペース 1 つ付き） | 同上 |
+
+仕組み: `windows/bin/voice-input.ps1` が winmm (MCI) でマイク録音（追加ソフト不要）→ Groq API に POST → `wezterm cli send-text` でペインに流し込む。停止指示は WezTerm がフラグファイル（`%TEMP%\wezterm-voice-stop.flag`）を置いて伝える。
+
+- 停止し忘れは 180 秒で自動停止して文字起こしされる。0.5 秒未満の録音（誤爆）は破棄
+- ペインへの入力に失敗したときはクリップボードに退避してトーストで知らせる（`Ctrl+Shift+V` で貼り付け）
+- 言語は既定で日本語ヒント付き（`voice-input.ps1` の `-Language` を空にすると自動判定）
+- エラー時のログは `%TEMP%\wezterm-voice.log`
+
+初回セットアップ（Windows 側）:
+
+1. [Groq Console](https://console.groq.com/keys) で API キーを取得（無料枠あり）
+2. `pwsh` で `setx GROQ_API_KEY "gsk_..."` を実行し、**WezTerm を再起動**（環境変数は GUI 起動時に固定されるため）
+3. Windows 設定 > プライバシーとセキュリティ > マイク で「デスクトップ アプリがマイクにアクセスできるようにする」を ON
+
 ### Claude Code 通知連携
 
 Claude Code の Stop / Notification hook は `~/.claude/notify.sh` を呼び、OSC 1337 SetUserVar（`claude_notify`）を発行して手元の WezTerm に届ける。タイトルに `[ディレクトリ名/ウィンドウ番号 ウィンドウ名]`（例: `[dotfiles/3 editor]`、tmux 外なら `[dotfiles]`）が付くので、複数タブ・複数ウィンドウで Claude Code を並行実行していてもどのセッションの通知か区別できる。
