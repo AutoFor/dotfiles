@@ -19,6 +19,9 @@
 #   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を
 #   正しい表記へ寄せ、それでも外した分は「誤=正」ルールでローカル置換する。
 #   辞書はリポジトリ管理なので devbox から編集して push → pull でも反映できる。
+#   さらにセッション終了時、誤変換らしき用語を LLM が探してコメント状態で辞書へ
+#   自動提案・コミットする (Invoke-DictionarySuggestion)。文字起こし全文は devbox の
+#   ~/.cache/voice-transcripts.log にもミラーされ、devbox の Claude からも分析できる。
 #
 # 事前準備 (Windows 側):
 #   - Groq の API キー (正本は Azure Key Vault autofor-kv/groq-api-key) を環境変数に設定:
@@ -39,11 +42,16 @@ param(
   [int]$SilenceMs = 700,                     # この長さの無音でフレーズを区切って変換に回す
   [int]$MaxChunkSeconds = 15,                # 無音が来なくても強制的に区切る上限
   # 辞書: 「誤=正」の置換ルールと Whisper への用語ヒント (書式はファイル先頭のコメント参照)
-  [string]$DictionaryFile = (Join-Path $PSScriptRoot '..\voice-dictionary.txt')
+  [string]$DictionaryFile = (Join-Path $PSScriptRoot '..\voice-dictionary.txt'),
+  # セッション終了時に誤変換らしき用語を LLM に探させて辞書へ自動提案する。空文字で無効化
+  [string]$SuggestModel = 'llama-3.3-70b-versatile'
 )
 
 $ErrorActionPreference = 'Stop'
-try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
+try {
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+  $OutputEncoding = [System.Text.Encoding]::UTF8   # ssh へのパイプ (文字起こしミラー) 用
+} catch {}
 
 $logFile = Join-Path $env:TEMP 'wezterm-voice.log'
 function Write-Log([string]$msg) {
@@ -281,6 +289,75 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
   }
 }
 
+# セッション終了後、今回の文字起こし全文と現在の辞書を Groq の LLM に見せて
+# 「誤変換らしき表記 → 正しい表記」の辞書候補を自動提案させる。
+# 提案はコメント状態 (# 誤=正) で voice-dictionary.txt に追記してコミットするので、
+# 行頭の「# 」を外して採用するまでは置換に使われない (誤提案が入力を壊さない)。
+function Invoke-DictionarySuggestion {
+  if (-not $SuggestModel) { return }
+  if ($script:allText.Length -lt 40) { return }   # 材料が少なすぎるセッションはスキップ
+  $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+  # 最新の辞書に対して提案するため先に pull (rebase.autostash 設定済み。失敗しても続行)
+  git -C $repo pull --quiet 2>&1 | Out-Null
+  $dict = Get-Content -LiteralPath $DictionaryFile -Encoding utf8 -Raw
+  $transcript = $script:allText
+  if ($transcript.Length -gt 4000) { $transcript = $transcript.Substring($transcript.Length - 4000) }
+
+  $sys = @'
+あなたは音声入力システムの辞書メンテナ。文字起こしテキストから、技術用語・固有名詞・サービス名の誤変換と思われる箇所を見つけ、置換ルールを提案する。
+出力は JSON のみ: {"suggestions":[{"wrong":"誤変換の表記","right":"正しい表記"}]}
+- 確信が高いものだけ、最大 5 件
+- 既に辞書に載っている組や、一般的な日本語の言い回しは提案しない
+- wrong は文字起こしに実際に出てきた表記そのままにする
+- 該当が無ければ {"suggestions":[]}
+'@
+  $body = @{
+    model           = $SuggestModel
+    temperature     = 0
+    response_format = @{ type = 'json_object' }
+    messages        = @(
+      @{ role = 'system'; content = $sys }
+      @{ role = 'user'; content = "## 現在の辞書`n$dict`n## 今回の文字起こし`n$transcript" }
+    )
+  } | ConvertTo-Json -Depth 5
+  $resp = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/chat/completions' -Method Post `
+    -Headers @{ Authorization = "Bearer $env:GROQ_API_KEY" } `
+    -ContentType 'application/json; charset=utf-8' `
+    -Body ([System.Text.Encoding]::UTF8.GetBytes($body))
+
+  $parsed = $resp.choices[0].message.content | ConvertFrom-Json
+  $news = @()
+  foreach ($s in @($parsed.suggestions)) {
+    $wrong = ([string]$s.wrong).Trim()
+    $right = ([string]$s.right).Trim()
+    if (-not $wrong -or -not $right -or $wrong -eq $right) { continue }
+    # 採用済み・提案済み (コメント行含む) の組は再提案しない
+    if ($dict.Contains("$wrong=") -or $dict.Contains("$wrong＝")) { continue }
+    $news += "# $wrong=$right"
+  }
+  if (-not $news) {
+    Write-Log 'dictionary suggestion: 候補なし'
+    return
+  }
+  $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm'
+  Add-Content -LiteralPath $DictionaryFile -Encoding utf8 -Value (
+    @('', "# --- 自動提案 $stamp (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---") + $news
+  )
+  # 両クローンで辞書がズレないよう、この 1 ファイルだけコミット (post-commit フックが push)
+  git -C $repo commit -m "add: 音声入力辞書の自動提案 $($news.Count) 件 (コメント状態)" -- windows/voice-dictionary.txt 2>&1 | Out-Null
+  if ($LASTEXITCODE -ne 0) { Write-Log 'dictionary suggestion: git commit 失敗 (ローカルには追記済み)' }
+  Write-Log ('dictionary suggestion: ' + ($news -join ' / '))
+  Show-Toast ("辞書候補 {0} 件を voice-dictionary.txt に追記した (コメント状態。採用は # を外す)" -f $news.Count)
+}
+
+# devbox 側の Claude Code からも誤変換の傾向を分析・辞書化できるよう、
+# 文字起こし全文を devbox の ~/.cache/voice-transcripts.log にミラーする
+function Send-TranscriptMirror {
+  $sshExe = Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe'
+  "[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm'), $script:allText |
+    & $sshExe -o BatchMode=yes -o ConnectTimeout=5 devbox 'mkdir -p ~/.cache && cat >> ~/.cache/voice-transcripts.log'
+}
+
 $recorder = $null
 try {
   $recorder = [Voice.Recorder]::new()
@@ -348,6 +425,12 @@ try {
     Show-Toast "音声を検出しなかった。マイクが小さすぎるなら voice-input.ps1 の -SilenceThreshold ($SilenceThreshold) を下げる"
   }
   Write-Log "recording finished (chunks=$chunkNo)"
+
+  if ($chunkNo -gt 0) {
+    # 後処理はどちらも失敗しても本体機能 (入力) に影響させない
+    try { Send-TranscriptMirror } catch { Write-Log "transcript mirror failed: $_" }
+    try { Invoke-DictionarySuggestion } catch { Write-Log "dictionary suggestion failed: $_" }
+  }
 }
 catch {
   Write-Log "error: $_"
