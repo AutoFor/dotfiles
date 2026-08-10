@@ -44,7 +44,8 @@ param(
   # 辞書: 「誤=正」の置換ルールと Whisper への用語ヒント (書式はファイル先頭のコメント参照)
   [string]$DictionaryFile = (Join-Path $PSScriptRoot '..\voice-dictionary.txt'),
   # セッション終了時に誤変換らしき用語を LLM に探させて辞書へ自動提案する。空文字で無効化
-  [string]$SuggestModel = 'llama-3.3-70b-versatile'
+  [string]$SuggestModel = 'llama-3.3-70b-versatile',
+  [switch]$NoOverlay                         # 画面中央の波形フローティング表示 (voice-overlay.ps1) を出さない
 )
 
 $ErrorActionPreference = 'Stop'
@@ -207,6 +208,7 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 
 $FrameMs = 100
 $MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみなして捨てる (Whisper の無音幻聴対策も兼ねる)
+$LevelFile = Join-Path $env:TEMP 'wezterm-voice-level.txt'   # 実測 RMS。オーバーレイの波形が読む
 
 # 辞書の読み込み。置換ルール (順序保持) と用語ヒントに分ける。
 # Groq/Whisper にはクラウド側の辞書機能が無いため、
@@ -368,6 +370,17 @@ try {
   New-Item -ItemType File -Force -Path $RecordingFlag | Out-Null
   Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
 
+  # 画面中央の波形フローティング表示。録音フラグが消えると自動で閉じる
+  if (-not $NoOverlay) {
+    try {
+      Start-Process -FilePath 'pwsh.exe' -WindowStyle Hidden -ArgumentList @(
+        '-NoProfile', '-NonInteractive', '-File', (Join-Path $PSScriptRoot 'voice-overlay.ps1')
+      )
+    } catch {
+      Write-Log "overlay 起動失敗: $_"
+    }
+  }
+
   # VAD 状態機械: 無音の間は preRoll (直近 300ms) だけ保持し、声が出たら preRoll ごと
   # チャンクに積み始める。$SilenceMs の無音が続いたらチャンクを閉じて変換に回す
   $chunk = [System.Collections.Generic.List[byte[]]]::new()
@@ -384,7 +397,9 @@ try {
     while ($true) {
       $frame = $recorder.Poll()
       if ($null -eq $frame -or $frame.Length -eq 0) { break }
-      $voiced = [Voice.Recorder]::Rms($frame) -ge $SilenceThreshold
+      $rms = [Voice.Recorder]::Rms($frame)
+      try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
+      $voiced = $rms -ge $SilenceThreshold
       if ($chunk.Count -eq 0) {
         if ($voiced) {
           $sawVoice = $true
@@ -421,6 +436,12 @@ try {
     Send-Chunk (Join-Frames $chunk) $chunkNo
   }
 
+  # 録音はここで終わり。オーバーレイ・右ステータスの「録音中」を先に消してから
+  # 後処理 (ミラー・辞書提案) に進む。フラグ削除でオーバーレイは自動で閉じる
+  $recorder.Dispose()
+  $recorder = $null
+  Remove-Item -LiteralPath $StopFlag, $RecordingFlag, $LevelFile -Force -ErrorAction SilentlyContinue
+
   if (-not $sawVoice) {
     Show-Toast "音声を検出しなかった。マイクが小さすぎるなら voice-input.ps1 の -SilenceThreshold ($SilenceThreshold) を下げる"
   }
@@ -439,5 +460,6 @@ catch {
 }
 finally {
   if ($recorder) { $recorder.Dispose() }
-  Remove-Item -LiteralPath $StopFlag, $RecordingFlag -Force -ErrorAction SilentlyContinue
+  # RecordingFlag を消すとオーバーレイも自動で閉じる
+  Remove-Item -LiteralPath $StopFlag, $RecordingFlag, $LevelFile -Force -ErrorAction SilentlyContinue
 }

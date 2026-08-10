@@ -29,4 +29,5 @@ dotfiles
 クロードコード=Claude Code
 クロード コード=Claude Code
 ティーマックス=tmux
+Tmax=tmux
 ウィスパー=Whisper
