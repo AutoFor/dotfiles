@@ -654,9 +654,10 @@ local function paste_image_or_clipboard()
   end)
 end
 
--- 音声入力トグル (LEADER+Space)。1 回目で録音開始、2 回目で停止。
--- 録音〜文字起こし〜入力は voice-input.ps1 が背景で行い、結果は
--- `wezterm cli send-text` で押下時のペイン (tmux 内の Claude Code プロンプト等) に入る。
+-- 音声入力トグル (LEADER+Space)。1 回目で録音開始、2 回目で終了。
+-- 録音〜文字起こし〜入力は voice-input.ps1 が背景で行い、話の切れ目 (無音) ごとに
+-- Groq Whisper の結果が `wezterm cli send-text` で押下時のペイン
+-- (tmux 内の Claude Code プロンプト等) へ逐次入力される (疑似ストリーム)。
 -- pwsh の起動に 1 秒弱かかるため、実際に録音が始まったかは右ステータスの
 -- 「マイク起動中…」→「録音中」で確認する (recording フラグの有無で切り替え)。
 local function toggle_voice_input()
@@ -927,8 +928,8 @@ config.keys = {
 
   {
     -- LEADER+Space: 音声入力トグル。1 回目で Windows のマイク録音開始、
-    -- 2 回目で停止 → Groq Whisper (whisper-large-v3-turbo) で文字起こしし、
-    -- このペイン (tmux 内の Claude Code プロンプト等) に入力される。
+    -- 以降は話の切れ目ごとに Groq Whisper (whisper-large-v3-turbo) の文字起こしが
+    -- このペイン (tmux 内の Claude Code プロンプト等) へ逐次入力される。2 回目で終了。
     -- 録音状態は右ステータスの 🎤 表示で確認できる。
     key = "Space",
     mods = "LEADER",

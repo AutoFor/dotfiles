@@ -233,27 +233,31 @@ nvim などマウスを自前で使うアプリのペインでは、クリック
 | `Ctrl+Shift+l` | デバッグオーバーレイ（問題調査用） | **l**og |
 | `Alt+Enter` | 通常 ⇔ 最大化（タスクバーを残す）を切り替え | Enter = 確定・最大化 |
 
-### 音声入力（Groq Whisper）
+### 音声入力（Groq Whisper・疑似ストリーム）
 
-`<leader> →Space` の 2 度押しで、話した内容が **フォーカス中のペイン（tmux 内の Claude Code プロンプト等）にテキスト入力される**。
+`<leader> →Space` で録音を開始すると、**話の切れ目（約 0.7 秒の無音）ごとにフレーズ単位で文字起こしされ、フォーカス中のペイン（tmux 内の Claude Code プロンプト等）へ逐次入力される**。もう一度 `<leader> →Space` で終了。
 
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
-| `<leader> →Space` (1 回目) | Windows のマイクで録音開始（右ステータスに 🎤 が出る。「マイク起動中…」→「録音中」で実際の録音開始が分かる） | Space = 話す間 |
-| `<leader> →Space` (2 回目) | 録音停止 → Groq Whisper (`whisper-large-v3-turbo`) で文字起こし → 押下時のペインへ入力（末尾にスペース 1 つ付き） | 同上 |
+| `<leader> →Space` (1 回目) | 録音開始（右ステータスに 🎤。「マイク起動中…」→「録音中」で実際の開始が分かる）。以降、話すたびにフレーズ単位で文字が流れ込む | Space = 話す間 |
+| `<leader> →Space` (2 回目) | 終了（言いかけのフレーズも変換してから止まる） | 同上 |
 
-仕組み: `windows/bin/voice-input.ps1` が winmm (MCI) でマイク録音（追加ソフト不要）→ Groq API に POST → `wezterm cli send-text` でペインに流し込む。停止指示は WezTerm がフラグファイル（`%TEMP%\wezterm-voice-stop.flag`）を置いて伝える。
+仕組み: `windows/bin/voice-input.ps1` が winmm (`waveIn`) でマイクを録りっぱなしにし、音量 (RMS) ベースの無音検出でフレーズを切り出して Groq (`whisper-large-v3-turbo`) に POST → `wezterm cli send-text` でペインに流し込む（追加ソフト不要）。Groq の Whisper API はストリーミング非対応のため、フレーズ単位の逐次変換で体感を近づけている（真のリアルタイムが欲しいときは Windows 標準の `Win+H` を使う。精度より速度の Win+H、速度より精度の `<leader> →Space` という使い分け）。直前までの文字起こしを文脈ヒント (`prompt`) として渡すので、フレーズをまたぐ用語も繋がりやすい。
 
-- 停止し忘れは 180 秒で自動停止して文字起こしされる。0.5 秒未満の録音（誤爆）は破棄
-- ペインへの入力に失敗したときはクリップボードに退避してトーストで知らせる（`Ctrl+Shift+V` で貼り付け）
+- 話し続けている間は区切りが入らないが、15 秒で強制的に区切って変換する
+- 停止し忘れは 300 秒で自動終了。発話 0.25 秒未満のチャンク（ノイズ・誤爆）は破棄
+- ペインへの入力に失敗したときは、そこまでの全文をクリップボードに退避してトーストで知らせる（`Ctrl+Shift+V` で貼り付け）
 - 言語は既定で日本語ヒント付き（`voice-input.ps1` の `-Language` を空にすると自動判定）
-- エラー時のログは `%TEMP%\wezterm-voice.log`
+- 無音判定がおかしいとき（環境ノイズで区切られない / 声を拾わない）は `-SilenceThreshold`（既定 300）を調整
+- エラー時のログは `%TEMP%\wezterm-voice.log`（チャンクごとの文字起こし結果も残る）
 
 初回セットアップ（Windows 側）:
 
-1. [Groq Console](https://console.groq.com/keys) で API キーを取得（無料枠あり）
-2. `pwsh` で `setx GROQ_API_KEY "gsk_..."` を実行し、**WezTerm を再起動**（環境変数は GUI 起動時に固定されるため）
-3. Windows 設定 > プライバシーとセキュリティ > マイク で「デスクトップ アプリがマイクにアクセスできるようにする」を ON
+1. Groq の API キー（正本は Azure Key Vault `autofor-kv/groq-api-key`）を環境変数に設定して **WezTerm を再起動**（環境変数は GUI 起動時に固定されるため）:
+   ```powershell
+   setx GROQ_API_KEY (az keyvault secret show --vault-name autofor-kv --name groq-api-key --query value -o tsv)
+   ```
+2. Windows 設定 > プライバシーとセキュリティ > マイク で「デスクトップ アプリがマイクにアクセスできるようにする」を ON
 
 ### Claude Code 通知連携
 

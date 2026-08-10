@@ -1,30 +1,38 @@
-# voice-input.ps1 -- マイク録音 → Groq Whisper (whisper-large-v3-turbo) で文字起こしし、
-# 結果を WezTerm のペイン（tmux 内の Claude Code プロンプト等）へ流し込む。
+# voice-input.ps1 -- マイク音声を Groq Whisper (whisper-large-v3-turbo) で文字起こしし、
+# WezTerm のペイン（tmux 内の Claude Code プロンプト等）へ「疑似ストリーム」で流し込む。
 # WezTerm の LEADER+Space (toggle_voice_input) から起動される。
+#
+# 疑似ストリームの仕組み:
+#   録音しっぱなしにして音量 (RMS) を監視し、「約 0.7 秒の無音 = フレーズの切れ目」で
+#   チャンクを切り出してその場で Groq に POST → 結果を即ペインへ入力、を停止まで繰り返す。
+#   Groq の Whisper API はストリーミング非対応 (ファイル一括のみ) のため、
+#   本物のストリームではなくフレーズ単位の逐次変換で体感を近づけている。
 #
 # 流れ:
 #   1) .wezterm.lua が LEADER+Space の 1 回目でこのスクリプトを background 起動
-#   2) winmm (MCI) でマイク録音を開始し、$StopFlag の出現を待つ
-#      (2 回目の LEADER+Space で .wezterm.lua がフラグファイルを作成する)
-#   3) 録音停止 → WAV 保存 → Groq の transcriptions API に POST
-#   4) `wezterm cli send-text --pane-id <押下時のペイン>` で文字起こし結果を入力
-#      (失敗時はクリップボードに退避してトースト通知)
+#   2) winmm (waveIn) で 16kHz/16bit/mono 録音を開始し、100ms フレームごとに VAD 判定
+#   3) フレーズの切れ目ごとに WAV を組み立てて Groq へ POST →
+#      `wezterm cli send-text --pane-id <押下時のペイン>` で逐次入力
+#   4) $StopFlag の出現 (2 回目の LEADER+Space) で残りを変換して終了
 #
 # 事前準備 (Windows 側):
-#   - Groq の API キーを取得 (https://console.groq.com/keys) してユーザー環境変数に設定:
-#       pwsh> setx GROQ_API_KEY "gsk_..."
+#   - Groq の API キー (正本は Azure Key Vault autofor-kv/groq-api-key) を環境変数に設定:
+#       pwsh> setx GROQ_API_KEY (az keyvault secret show --vault-name autofor-kv --name groq-api-key --query value -o tsv)
 #     設定後は WezTerm を再起動する (環境変数は GUI 起動時に固定されるため)
 #   - Windows 設定 > プライバシー > マイク で「デスクトップ アプリのマイク アクセス」を許可
 #
-# 録音は winmm.dll (MCI) 直叩きなので ffmpeg 等の追加インストールは不要。
+# 録音は winmm.dll (waveIn) 直叩きなので ffmpeg 等の追加インストールは不要。
 param(
   [Parameter(Mandatory)][int]$PaneId,        # 文字起こし結果の送り先 WezTerm ペイン ID
   [string]$WezTermExe = 'wezterm.exe',       # wezterm.executable_dir から渡される
   [string]$StopFlag = (Join-Path $env:TEMP 'wezterm-voice-stop.flag'),
   [string]$RecordingFlag = (Join-Path $env:TEMP 'wezterm-voice-recording.flag'),
-  [int]$MaxSeconds = 180,                    # 停止し忘れの保険。超えたら自動停止して文字起こしする
+  [int]$MaxSeconds = 300,                    # 停止し忘れの保険。超えたら自動停止する
   [string]$Model = 'whisper-large-v3-turbo',
-  [string]$Language = 'ja'                   # 空文字で自動判定 (英語で話すときなど)
+  [string]$Language = 'ja',                  # 空文字で自動判定 (英語で話すときなど)
+  [int]$SilenceThreshold = 300,              # これ未満の RMS (16bit 振幅) を無音とみなす。誤検出が多ければ上げる
+  [int]$SilenceMs = 700,                     # この長さの無音でフレーズを区切って変換に回す
+  [int]$MaxChunkSeconds = 15                 # 無音が来なくても強制的に区切る上限
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,98 +54,270 @@ function Show-Toast([string]$msg) {
 
 if (-not $env:GROQ_API_KEY) {
   Write-Log 'GROQ_API_KEY 未設定'
-  Show-Toast 'GROQ_API_KEY が未設定。pwsh で setx GROQ_API_KEY "gsk_..." を実行して WezTerm を再起動して'
+  Show-Toast 'GROQ_API_KEY が未設定。setx GROQ_API_KEY (az keyvault secret show ...) を実行して WezTerm を再起動して'
   exit 1
 }
 
-# winmm の MCI で録音する (依存ゼロ)。record は非同期なのでフラグ待ちループと相性が良い
-Add-Type -Namespace Win32 -Name Mci -MemberDefinition @'
-[DllImport("winmm.dll", CharSet = CharSet.Unicode)]
-public static extern int mciSendStringW(string command, System.Text.StringBuilder ret, int retLen, System.IntPtr hwnd);
+# winmm の waveIn 直叩き録音 (依存ゼロ)。MCI と違い録音を止めずにフレーム単位で
+# データを取り出せるため、無音検出でのチャンク分割 (疑似ストリーム) ができる。
+# バッファは FIFO で完了するので Poll は次に完了すべき番号だけ見ればよい。
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+namespace Voice {
+  public class Recorder : IDisposable {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WaveFormat {
+      public ushort wFormatTag, nChannels;
+      public uint nSamplesPerSec, nAvgBytesPerSec;
+      public ushort nBlockAlign, wBitsPerSample, cbSize;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WaveHdr {
+      public IntPtr lpData;
+      public uint dwBufferLength, dwBytesRecorded;
+      public IntPtr dwUser;
+      public uint dwFlags, dwLoops;
+      public IntPtr lpNext, reserved;
+    }
+
+    [DllImport("winmm.dll")] static extern int waveInOpen(out IntPtr h, uint dev, ref WaveFormat fmt, IntPtr cb, IntPtr inst, uint flags);
+    [DllImport("winmm.dll")] static extern int waveInPrepareHeader(IntPtr h, IntPtr hdr, int size);
+    [DllImport("winmm.dll")] static extern int waveInUnprepareHeader(IntPtr h, IntPtr hdr, int size);
+    [DllImport("winmm.dll")] static extern int waveInAddBuffer(IntPtr h, IntPtr hdr, int size);
+    [DllImport("winmm.dll")] static extern int waveInStart(IntPtr h);
+    [DllImport("winmm.dll")] static extern int waveInReset(IntPtr h);
+    [DllImport("winmm.dll")] static extern int waveInClose(IntPtr h);
+
+    const uint WHDR_DONE = 1;
+    const uint WAVE_MAPPER = 0xFFFFFFFF;
+
+    IntPtr handle;
+    IntPtr[] headers, buffers;
+    int bufBytes, bufCount, next;
+    public const int SampleRate = 16000;
+
+    static void Check(int rc, string what) {
+      if (rc != 0) throw new Exception("waveIn " + what + " failed: rc=" + rc);
+    }
+
+    public void Start(int frameMs, int frameCount) {
+      bufBytes = SampleRate * 2 * frameMs / 1000;
+      bufCount = frameCount;
+      var fmt = new WaveFormat {
+        wFormatTag = 1, nChannels = 1, nSamplesPerSec = SampleRate,
+        wBitsPerSample = 16, nBlockAlign = 2, nAvgBytesPerSec = SampleRate * 2, cbSize = 0
+      };
+      Check(waveInOpen(out handle, WAVE_MAPPER, ref fmt, IntPtr.Zero, IntPtr.Zero, 0), "open");
+      int hdrSize = Marshal.SizeOf(typeof(WaveHdr));
+      headers = new IntPtr[bufCount];
+      buffers = new IntPtr[bufCount];
+      for (int i = 0; i < bufCount; i++) {
+        buffers[i] = Marshal.AllocHGlobal(bufBytes);
+        headers[i] = Marshal.AllocHGlobal(hdrSize);
+        var h = new WaveHdr { lpData = buffers[i], dwBufferLength = (uint)bufBytes };
+        Marshal.StructureToPtr(h, headers[i], false);
+        Check(waveInPrepareHeader(handle, headers[i], hdrSize), "prepare");
+        Check(waveInAddBuffer(handle, headers[i], hdrSize), "add");
+      }
+      Check(waveInStart(handle), "start");
+    }
+
+    // 完了済みフレームを 1 つ返す (無ければ null)。返したバッファは録音キューに戻す
+    public byte[] Poll() {
+      int hdrSize = Marshal.SizeOf(typeof(WaveHdr));
+      var h = (WaveHdr)Marshal.PtrToStructure(headers[next], typeof(WaveHdr));
+      if ((h.dwFlags & WHDR_DONE) == 0) return null;
+      var data = new byte[(int)h.dwBytesRecorded];
+      Marshal.Copy(h.lpData, data, 0, data.Length);
+      Check(waveInUnprepareHeader(handle, headers[next], hdrSize), "unprepare");
+      var fresh = new WaveHdr { lpData = buffers[next], dwBufferLength = (uint)bufBytes };
+      Marshal.StructureToPtr(fresh, headers[next], false);
+      Check(waveInPrepareHeader(handle, headers[next], hdrSize), "re-prepare");
+      Check(waveInAddBuffer(handle, headers[next], hdrSize), "re-add");
+      next = (next + 1) % bufCount;
+      return data;
+    }
+
+    // 16bit PCM の RMS (0-32768 目安)。VAD のしきい値判定に使う
+    public static double Rms(byte[] data) {
+      if (data == null || data.Length < 2) return 0;
+      long sum = 0;
+      int n = data.Length / 2;
+      for (int i = 0; i < n; i++) {
+        short s = (short)(data[2 * i] | (data[2 * i + 1] << 8));
+        sum += (long)s * s;
+      }
+      return Math.Sqrt((double)sum / n);
+    }
+
+    public void Dispose() {
+      if (handle == IntPtr.Zero) return;
+      waveInReset(handle);
+      int hdrSize = Marshal.SizeOf(typeof(WaveHdr));
+      for (int i = 0; i < bufCount; i++) {
+        waveInUnprepareHeader(handle, headers[i], hdrSize);
+        Marshal.FreeHGlobal(headers[i]);
+        Marshal.FreeHGlobal(buffers[i]);
+      }
+      waveInClose(handle);
+      handle = IntPtr.Zero;
+    }
+  }
+}
 '@
 
-function Invoke-Mci([string]$command) {
-  $sb = [System.Text.StringBuilder]::new(256)
-  $rc = [Win32.Mci]::mciSendStringW($command, $sb, $sb.Capacity, [System.IntPtr]::Zero)
-  if ($rc -ne 0) { throw "MCI error $rc : $command" }
-  return $sb.ToString()
+# 16kHz/16bit/mono の PCM に RIFF ヘッダを付けて WAV として書き出す
+function Write-Wav([string]$path, [byte[]]$pcm) {
+  $bw = [System.IO.BinaryWriter]::new([System.IO.File]::Create($path))
+  try {
+    $bw.Write([System.Text.Encoding]::ASCII.GetBytes('RIFF'))
+    $bw.Write([int](36 + $pcm.Length))
+    $bw.Write([System.Text.Encoding]::ASCII.GetBytes('WAVEfmt '))
+    $bw.Write([int]16)         # fmt チャンクサイズ
+    $bw.Write([int16]1)        # PCM
+    $bw.Write([int16]1)        # mono
+    $bw.Write([int]16000)      # サンプルレート
+    $bw.Write([int]32000)      # バイトレート
+    $bw.Write([int16]2)        # ブロックアライン
+    $bw.Write([int16]16)       # ビット深度
+    $bw.Write([System.Text.Encoding]::ASCII.GetBytes('data'))
+    $bw.Write([int]$pcm.Length)
+    $bw.Write($pcm)
+  } finally {
+    $bw.Dispose()
+  }
 }
 
-$wav = Join-Path $env:TEMP ("wezterm-voice-{0}.wav" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
-$opened = $false
-try {
-  Invoke-Mci 'open new type waveaudio alias cap'
-  $opened = $true
-  # Whisper 推奨の 16kHz/16bit/mono。失敗しても既定フォーマットで録音は続行できる
+$FrameMs = 100
+$MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみなして捨てる (Whisper の無音幻聴対策も兼ねる)
+
+# フレームのリストを 1 本の PCM バイト列に結合する
+function Join-Frames($frames) {
+  $total = 0
+  foreach ($f in $frames) { $total += $f.Length }
+  $pcm = [byte[]]::new($total)
+  $pos = 0
+  foreach ($f in $frames) { [System.Array]::Copy($f, 0, $pcm, $pos, $f.Length); $pos += $f.Length }
+  return $pcm
+}
+$script:allText = ''  # send-text 失敗時のクリップボード退避と、Groq への文脈ヒント (prompt) 用
+
+# チャンクを Groq で文字起こしして送り先ペインへ入力する。失敗は throw (呼び元の catch で通知)
+function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
+  $wav = Join-Path $env:TEMP ("wezterm-voice-chunk{0}.wav" -f $chunkNo)
   try {
-    Invoke-Mci 'set cap time format ms bitspersample 16 channels 1 samplespersec 16000 bytespersec 32000 alignment 2'
-  } catch {
-    Write-Log "set format failed (既定フォーマットで続行): $_"
+    Write-Wav $wav $pcm
+    $form = @{
+      model           = $Model
+      file            = Get-Item -LiteralPath $wav
+      temperature     = '0'
+      response_format = 'json'
+    }
+    if ($Language) { $form.language = $Language }
+    # 直前までの文字起こしを文脈ヒントに渡すと、フレーズ間の用語・文体が繋がりやすい
+    if ($script:allText) {
+      $tail = $script:allText
+      if ($tail.Length -gt 200) { $tail = $tail.Substring($tail.Length - 200) }
+      $form.prompt = $tail
+    }
+    try {
+      $resp = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/audio/transcriptions' `
+        -Method Post -Headers @{ Authorization = "Bearer $env:GROQ_API_KEY" } -Form $form
+    } catch {
+      $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
+      throw "Groq API 失敗: $detail"
+    }
+    $text = ([string]$resp.text).Trim()
+    Write-Log ("chunk{0} ({1:n1}s): {2}" -f $chunkNo, ($pcm.Length / 32000.0), $text)
+    if (-not $text) { return }
+    $script:allText += $text + ' '
+    # 続けて文章を打てるよう末尾へスペースを 1 つ足す (LEADER+v のパス貼り付けと同じ流儀)
+    & $WezTermExe cli send-text --pane-id $PaneId -- ($text + ' ')
+    if ($LASTEXITCODE -ne 0) {
+      Set-Clipboard -Value $script:allText
+      throw "ペインへの入力に失敗 (pane=$PaneId)。ここまでの全文をクリップボードに退避した (Ctrl+Shift+V で貼り付け)"
+    }
+  } finally {
+    Remove-Item -LiteralPath $wav -Force -ErrorAction SilentlyContinue
   }
-  Invoke-Mci 'record cap'
+}
+
+$recorder = $null
+try {
+  $recorder = [Voice.Recorder]::new()
+  # フレーム 100ms × 300 本 = 30 秒分の取りこぼし余裕 (Groq への POST 中も録音は途切れない)
+  $recorder.Start($FrameMs, 300)
 
   # 右ステータスの「マイク起動中…」→「録音中」切り替え用 (.wezterm.lua が存在を見る)
   New-Item -ItemType File -Force -Path $RecordingFlag | Out-Null
-  Write-Log "recording started (pane=$PaneId)"
+  Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
 
+  # VAD 状態機械: 無音の間は preRoll (直近 300ms) だけ保持し、声が出たら preRoll ごと
+  # チャンクに積み始める。$SilenceMs の無音が続いたらチャンクを閉じて変換に回す
+  $chunk = [System.Collections.Generic.List[byte[]]]::new()
+  $preRoll = [System.Collections.Generic.List[byte[]]]::new()
+  $voicedMs = 0; $trailingMs = 0; $chunkMs = 0
+  $chunkNo = 0; $sawVoice = $false
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
-  while (-not (Test-Path -LiteralPath $StopFlag)) {
-    if ($sw.Elapsed.TotalSeconds -ge $MaxSeconds) {
-      Write-Log "MaxSeconds ($MaxSeconds s) に達したため自動停止"
-      break
+  $stopping = $false
+
+  while (-not $stopping) {
+    if ((Test-Path -LiteralPath $StopFlag) -or ($sw.Elapsed.TotalSeconds -ge $MaxSeconds)) {
+      $stopping = $true
     }
-    Start-Sleep -Milliseconds 200
+    while ($true) {
+      $frame = $recorder.Poll()
+      if ($null -eq $frame -or $frame.Length -eq 0) { break }
+      $voiced = [Voice.Recorder]::Rms($frame) -ge $SilenceThreshold
+      if ($chunk.Count -eq 0) {
+        if ($voiced) {
+          $sawVoice = $true
+          $chunk.AddRange($preRoll)
+          $preRoll.Clear()
+          $chunk.Add($frame)
+          $chunkMs = $chunk.Count * $FrameMs
+          $voicedMs = $FrameMs; $trailingMs = 0
+        } else {
+          $preRoll.Add($frame)
+          while ($preRoll.Count -gt 3) { $preRoll.RemoveAt(0) }
+        }
+        continue
+      }
+      $chunk.Add($frame)
+      $chunkMs += $FrameMs
+      if ($voiced) { $voicedMs += $FrameMs; $trailingMs = 0 } else { $trailingMs += $FrameMs }
+      if ($trailingMs -ge $SilenceMs -or $chunkMs -ge $MaxChunkSeconds * 1000) {
+        $pcm = Join-Frames $chunk
+        $chunk.Clear()
+        if ($voicedMs -ge $MinVoicedMs) {
+          $chunkNo++
+          Send-Chunk $pcm $chunkNo
+        }
+        $voicedMs = 0; $trailingMs = 0; $chunkMs = 0
+      }
+    }
+    if (-not $stopping) { Start-Sleep -Milliseconds 30 }
   }
 
-  Invoke-Mci 'stop cap'
-  Invoke-Mci "save cap ""$wav"""
+  # 停止時に言いかけのフレーズが残っていれば最後に変換する
+  if ($chunk.Count -gt 0 -and $voicedMs -ge $MinVoicedMs) {
+    $chunkNo++
+    Send-Chunk (Join-Frames $chunk) $chunkNo
+  }
+
+  if (-not $sawVoice) {
+    Show-Toast "音声を検出しなかった。マイクが小さすぎるなら voice-input.ps1 の -SilenceThreshold ($SilenceThreshold) を下げる"
+  }
+  Write-Log "recording finished (chunks=$chunkNo)"
+}
+catch {
+  Write-Log "error: $_"
+  Show-Toast "音声入力エラー: $_"
+  exit 1
 }
 finally {
-  if ($opened) { try { Invoke-Mci 'close cap' } catch {} }
+  if ($recorder) { $recorder.Dispose() }
   Remove-Item -LiteralPath $StopFlag, $RecordingFlag -Force -ErrorAction SilentlyContinue
-}
-
-try {
-  # 16kHz/16bit/mono = 32KB/s。0.5 秒未満は誤爆 (即 2 度押し等) とみなして捨てる
-  if (-not (Test-Path -LiteralPath $wav) -or (Get-Item -LiteralPath $wav).Length -lt 16000) {
-    Write-Log '録音が短すぎるため破棄'
-    exit 0
-  }
-
-  $form = @{
-    model           = $Model
-    file            = Get-Item -LiteralPath $wav
-    temperature     = '0'
-    response_format = 'json'
-  }
-  if ($Language) { $form.language = $Language }
-
-  try {
-    $resp = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/audio/transcriptions' `
-      -Method Post -Headers @{ Authorization = "Bearer $env:GROQ_API_KEY" } -Form $form
-  } catch {
-    $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-    Write-Log "Groq API 失敗: $detail"
-    Show-Toast "文字起こしに失敗: $detail"
-    exit 1
-  }
-
-  $text = ([string]$resp.text).Trim()
-  Write-Log "transcribed: $text"
-  if (-not $text) {
-    Show-Toast '無音のため文字起こし結果が空だった'
-    exit 0
-  }
-
-  # 続けて文章を打てるよう末尾へスペースを 1 つ足す (LEADER+v のパス貼り付けと同じ流儀)
-  & $WezTermExe cli send-text --pane-id $PaneId -- ($text + ' ')
-  if ($LASTEXITCODE -ne 0) {
-    Set-Clipboard -Value $text
-    Write-Log "send-text 失敗 (pane=$PaneId)。クリップボードに退避"
-    Show-Toast 'ペインへの入力に失敗したため、クリップボードにコピーした (Ctrl+Shift+V で貼り付け)'
-    exit 1
-  }
-}
-finally {
-  Remove-Item -LiteralPath $wav -Force -ErrorAction SilentlyContinue
 }
