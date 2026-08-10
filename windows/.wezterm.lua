@@ -497,6 +497,19 @@ wezterm.on("update-right-status", function(window, pane)
       local state = rec:read("*l")
       rec:close()
       color = (state == "1") and "#f7768e" or "#7aa2f7"
+      wezterm.GLOBAL.voice_flag_missing_since = nil
+    else
+      -- 録音プロセスが死んだ/自動終了した場合、GLOBAL だけが残って灰色アイコンが
+      -- 出続け、次の LEADER+Space が「幻の停止」になってしまう。フラグ不在が
+      -- 続いたら状態を自動リセットする (初回は C# コンパイルで数秒かかるので猶予 10 秒)
+      local now = os.time()
+      local since = wezterm.GLOBAL.voice_flag_missing_since
+      if not since then
+        wezterm.GLOBAL.voice_flag_missing_since = now
+      elseif now - since > 10 then
+        wezterm.GLOBAL.voice_recording = false
+        wezterm.GLOBAL.voice_flag_missing_since = nil
+      end
     end
     table.insert(items, { Foreground = { Color = color } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_microphone })
@@ -678,6 +691,7 @@ local function toggle_voice_input()
       os.remove(VOICE_STOP_FLAG)
       os.remove(VOICE_RECORDING_FLAG)
       wezterm.GLOBAL.voice_recording = true
+      wezterm.GLOBAL.voice_flag_missing_since = nil
       local ok = pcall(wezterm.background_child_process, {
         "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", VOICE_PS1,
         "-PaneId", tostring(pane:pane_id()),

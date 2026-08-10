@@ -263,6 +263,7 @@ function Join-Frames($frames) {
   return $pcm
 }
 $script:allText = ''  # send-text 失敗時のクリップボード退避と、Groq への文脈ヒント (prompt) 用
+$script:apiFails = 0  # Groq API の連続失敗回数。単発の失敗で録音セッションを殺さないため
 
 # チャンクを Groq で文字起こしして送り先ペインへ入力する。失敗は throw (呼び元の catch で通知)
 function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
@@ -290,9 +291,17 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
       $resp = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/audio/transcriptions' `
         -Method Post -Headers @{ Authorization = "Bearer $env:GROQ_API_KEY" } -Form $form
     } catch {
+      # 一時的な失敗 (レート制限・ネットワーク断) でセッション全体を殺すと、
+      # 灰色アイコンだけ残って「反応しなくなった」ように見える。
+      # このチャンクは諦めて録音は続行し、連続 3 回失敗したときだけ終了する
       $detail = if ($_.ErrorDetails.Message) { $_.ErrorDetails.Message } else { $_.Exception.Message }
-      throw "Groq API 失敗: $detail"
+      $script:apiFails++
+      Write-Log "Groq API 失敗 ($($script:apiFails) 回連続): $detail"
+      if ($script:apiFails -ge 3) { throw "Groq API が連続で失敗: $detail" }
+      if ($script:apiFails -eq 1) { Show-Toast "文字起こしに失敗した (録音は継続中): $detail" }
+      return
     }
+    $script:apiFails = 0
     $text = ([string]$resp.text).Trim()
     # 辞書の置換ルールを適用 (用語ヒントで寄せきれなかった誤変換を確実に直す)
     foreach ($pair in $script:dictReplace) {
