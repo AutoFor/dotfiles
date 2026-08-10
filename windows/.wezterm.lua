@@ -125,6 +125,9 @@ end)
 
 
 config.automatically_reload_config = true
+-- 右ステータスの更新間隔 (既定 1000ms)。音声入力のマイクアイコンの色を
+-- 実際の声にほぼリアルタイムで追従させるため短めにする
+config.status_update_interval = 250
 -- ウィンドウを閉じるときの確認を出さない。
 -- セッションの実体は devbox の tmux が保持しているので (#214)、
 -- WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
@@ -484,19 +487,20 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#e0af68" } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…" })
   end
-  -- LEADER+Space の音声入力の可視化。アイコンのみ (灰色=マイク起動待ち、赤=録音中)
+  -- LEADER+Space の音声入力の可視化。アイコンのみで、色が実際の音声に連動する
+  -- (灰色=マイク起動待ち、青=録音中だが無音、赤=声を拾っている)。
+  -- 声の有無は voice-input.ps1 が録音フラグファイルの中身 (1/0) で知らせる
   if wezterm.GLOBAL.voice_recording then
-    local rec = io.open(VOICE_RECORDING_FLAG, "r")
     local color = "#565f89"
+    local rec = io.open(VOICE_RECORDING_FLAG, "r")
     if rec then
+      local state = rec:read("*l")
       rec:close()
-      color = "#f7768e"
+      color = (state == "1") and "#f7768e" or "#7aa2f7"
     end
     table.insert(items, { Foreground = { Color = color } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_microphone })
   end
-  table.insert(items, { Foreground = { Color = "#a9b1d6" } })
-  table.insert(items, { Text = "  " .. wezterm.strftime("%m/%d %H:%M") })
   table.insert(items, { Text = "  " })
   window:set_right_status(wezterm.format(items))
 end)
@@ -657,7 +661,7 @@ end
 -- Groq Whisper の結果が `wezterm cli send-text` で押下時のペイン
 -- (tmux 内の Claude Code プロンプト等) へ逐次入力される (疑似ストリーム)。
 -- pwsh の起動に 1 秒弱かかるため、実際に録音が始まったかは右ステータスの
--- 「マイク起動中…」→「録音中」で確認する (recording フラグの有無で切り替え)。
+-- マイクアイコンの色で確認する (灰色=起動待ち、青=録音中で無音、赤=声を拾っている)。
 local function toggle_voice_input()
   return wezterm.action_callback(function(window, pane)
     if wezterm.GLOBAL.voice_recording then

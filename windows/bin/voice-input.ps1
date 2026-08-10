@@ -387,8 +387,9 @@ try {
   # フレーム 100ms × 300 本 = 30 秒分の取りこぼし余裕 (Groq への POST 中も録音は途切れない)
   $recorder.Start($FrameMs, 300)
 
-  # 右ステータスの「マイク起動中…」→「録音中」切り替え用 (.wezterm.lua が存在を見る)
-  New-Item -ItemType File -Force -Path $RecordingFlag | Out-Null
+  # 右ステータスのマイクアイコン用フラグ。ファイルの存在 = 録音中、
+  # 中身 (1/0) = 声を拾っているか。.wezterm.lua が読んで色を変える
+  Set-Content -LiteralPath $RecordingFlag -Value '0' -NoNewline
   Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
 
   # 画面中央の波形フローティング表示 (既定オフ。表示が煩わしいとの評でアイコンのみ運用に)。
@@ -409,6 +410,7 @@ try {
   $preRoll = [System.Collections.Generic.List[byte[]]]::new()
   $voicedMs = 0; $trailingMs = 0; $chunkMs = 0
   $chunkNo = 0; $sawVoice = $false
+  $speaking = $false   # マイクアイコンの色用。状態が変わったときだけフラグに書く
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   $stopping = $false
 
@@ -424,6 +426,10 @@ try {
         try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
       }
       $voiced = $rms -ge $SilenceThreshold
+      if ($voiced -ne $speaking) {
+        $speaking = $voiced
+        try { [System.IO.File]::WriteAllText($RecordingFlag, $(if ($voiced) { '1' } else { '0' })) } catch {}
+      }
       if ($chunk.Count -eq 0) {
         if ($voiced) {
           $sawVoice = $true
