@@ -15,6 +15,11 @@
 #      `wezterm cli send-text --pane-id <押下時のペイン>` で逐次入力
 #   4) $StopFlag の出現 (2 回目の LEADER+Space) で残りを変換して終了
 #
+# 辞書 (windows/voice-dictionary.txt):
+#   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を
+#   正しい表記へ寄せ、それでも外した分は「誤=正」ルールでローカル置換する。
+#   辞書はリポジトリ管理なので devbox から編集して push → pull でも反映できる。
+#
 # 事前準備 (Windows 側):
 #   - Groq の API キー (正本は Azure Key Vault autofor-kv/groq-api-key) を環境変数に設定:
 #       pwsh> setx GROQ_API_KEY (az keyvault secret show --vault-name autofor-kv --name groq-api-key --query value -o tsv)
@@ -32,7 +37,9 @@ param(
   [string]$Language = 'ja',                  # 空文字で自動判定 (英語で話すときなど)
   [int]$SilenceThreshold = 300,              # これ未満の RMS (16bit 振幅) を無音とみなす。誤検出が多ければ上げる
   [int]$SilenceMs = 700,                     # この長さの無音でフレーズを区切って変換に回す
-  [int]$MaxChunkSeconds = 15                 # 無音が来なくても強制的に区切る上限
+  [int]$MaxChunkSeconds = 15,                # 無音が来なくても強制的に区切る上限
+  # 辞書: 「誤=正」の置換ルールと Whisper への用語ヒント (書式はファイル先頭のコメント参照)
+  [string]$DictionaryFile = (Join-Path $PSScriptRoot '..\voice-dictionary.txt')
 )
 
 $ErrorActionPreference = 'Stop'
@@ -193,6 +200,28 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 $FrameMs = 100
 $MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみなして捨てる (Whisper の無音幻聴対策も兼ねる)
 
+# 辞書の読み込み。置換ルール (順序保持) と用語ヒントに分ける。
+# Groq/Whisper にはクラウド側の辞書機能が無いため、
+# 「用語ヒント (prompt) で認識を寄せる + 取りこぼしはローカル置換で直す」の二段構え
+$script:dictReplace = @()   # @(誤, 正) の配列
+$script:glossary = ''       # prompt に渡す用語リスト (「、」区切り)
+if (Test-Path -LiteralPath $DictionaryFile) {
+  $terms = [System.Collections.Generic.List[string]]::new()
+  foreach ($line in Get-Content -LiteralPath $DictionaryFile -Encoding utf8) {
+    $line = $line.Trim()
+    if (-not $line -or $line.StartsWith('#')) { continue }
+    if ($line -match '^(.+?)[=＝](.+)$') {
+      $wrong = $Matches[1].Trim()
+      $right = $Matches[2].Trim()
+      $script:dictReplace += , @($wrong, $right)
+      if (-not $terms.Contains($right)) { $terms.Add($right) }
+    } elseif (-not $terms.Contains($line)) {
+      $terms.Add($line)
+    }
+  }
+  $script:glossary = $terms -join '、'
+}
+
 # フレームのリストを 1 本の PCM バイト列に結合する
 function Join-Frames($frames) {
   $total = 0
@@ -216,12 +245,16 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
       response_format = 'json'
     }
     if ($Language) { $form.language = $Language }
-    # 直前までの文字起こしを文脈ヒントに渡すと、フレーズ間の用語・文体が繋がりやすい
+    # prompt = 辞書の用語ヒント + 直前までの文字起こし (文脈)。
+    # 用語ヒントで固有名詞の表記が寄り、文脈でフレーズ間の文体が繋がる
+    $hint = ''
+    if ($script:glossary) { $hint = $script:glossary + '。' }
     if ($script:allText) {
       $tail = $script:allText
       if ($tail.Length -gt 200) { $tail = $tail.Substring($tail.Length - 200) }
-      $form.prompt = $tail
+      $hint += $tail
     }
+    if ($hint) { $form.prompt = $hint }
     try {
       $resp = Invoke-RestMethod -Uri 'https://api.groq.com/openai/v1/audio/transcriptions' `
         -Method Post -Headers @{ Authorization = "Bearer $env:GROQ_API_KEY" } -Form $form
@@ -230,6 +263,10 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
       throw "Groq API 失敗: $detail"
     }
     $text = ([string]$resp.text).Trim()
+    # 辞書の置換ルールを適用 (用語ヒントで寄せきれなかった誤変換を確実に直す)
+    foreach ($pair in $script:dictReplace) {
+      $text = $text.Replace($pair[0], $pair[1])
+    }
     Write-Log ("chunk{0} ({1:n1}s): {2}" -f $chunkNo, ($pcm.Length / 32000.0), $text)
     if (-not $text) { return }
     $script:allText += $text + ' '

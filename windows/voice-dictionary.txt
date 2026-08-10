@@ -1,0 +1,32 @@
+# 音声入力の辞書 (windows/bin/voice-input.ps1 が起動時に読む)
+#
+# 書き方 (1 行 1 エントリ、# 始まりはコメント):
+#   誤変換=正しい表記   → 文字起こし結果をこの通りに置換する (確実)
+#   単語のみ            → Whisper への用語ヒント (prompt) に加える (認識がその表記に寄る)
+# ※「誤=正」の右辺も自動で用語ヒントに入る
+#
+# devbox から編集しても OK (push → pull で Windows に反映。スクリプトは毎回読み直す)
+
+# --- 用語ヒント (正しい表記を並べる) ---
+tmux
+WezTerm
+devbox
+ghq
+Claude Code
+Groq
+Whisper
+GitHub
+Azure
+Key Vault
+PowerShell
+dotfiles
+
+# --- 置換 (誤=正) ---
+グロック=Groq
+グロク=Groq
+ウェズターム=WezTerm
+デブボックス=devbox
+クロードコード=Claude Code
+クロード コード=Claude Code
+ティーマックス=tmux
+ウィスパー=Whisper
