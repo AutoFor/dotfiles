@@ -921,14 +921,15 @@ config.keys = {
   -- Session (tmux セッション。旧 workspace の代替。tm <名前> でも作成できる)
   { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択
   { key = "n", mods = "LEADER", action = tmux_bridge("N", act.Nop) }, -- 新規セッション (名前を聞かれる)
-  -- 現在のペインを一覧から選んだウィンドウ (別セッションも可) へ移動。
+  -- 移動系は小文字/大文字で「ペイン単位/ウィンドウ単位」を対にする。
+  -- LEADER+m : 現在のペインを一覧から選んだウィンドウ (別セッションも可) へ移動。
   -- 移動でペインの位置が変わるとペイン名・claude セッションの対応がズレるため、
-  -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+M)
-  { key = "m", mods = "LEADER", action = tmux_bridge("M", act.Nop) },
-  -- 現在のウィンドウ (= このタブ) を丸ごと、一覧から選んだセッションへ移動して追従する。
+  -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+m)
+  { key = "m", mods = "LEADER", action = tmux_bridge("m", act.Nop) },
+  -- LEADER+M (Shift+m) : 現在のウィンドウ (= このタブ) を丸ごと、選んだセッションへ移動して追従。
   -- LEADER+m がペイン単位なのに対し、こちらはウィンドウ単位。タブ名・ペイン名は維持される
-  -- (.tmux.conf の prefix+g)
-  { key = "g", mods = "LEADER", action = tmux_bridge("g", act.Nop) },
+  -- (.tmux.conf の prefix+M)
+  { key = "M", mods = "LEADER|SHIFT", action = tmux_bridge("M", act.Nop) },
 
   -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
   { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },
