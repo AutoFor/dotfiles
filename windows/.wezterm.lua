@@ -102,9 +102,15 @@ local TMUX_PREFIX = "\x02" -- C-b
 -- ペイン管理を tmux 側に一本化するためのブリッジ (#214 Phase 2)。
 local function tmux_bridge(keys, fallback_action)
   return wezterm.action_callback(function(window, pane)
+    -- 押したショートカットを右ステータスに一瞬出して「効いたか / 何が tmux に渡ったか」を
+    -- 目視できるようにする (LEADER 表示に続く反応の可視化)。表示・消去は update-status 側。
+    wezterm.GLOBAL.last_shortcut = keys
+    wezterm.GLOBAL.last_shortcut_at = os.time()
     if is_tmux_client_pane(pane) then
+      wezterm.GLOBAL.last_shortcut_sent = true   -- 緑: tmux に prefix+keys を送った
       window:perform_action(act.SendString(TMUX_PREFIX .. keys), pane)
     else
+      wezterm.GLOBAL.last_shortcut_sent = false  -- 赤: tmux ペインでないのでフォールバック
       window:perform_action(fallback_action, pane)
     end
   end)
@@ -481,6 +487,16 @@ wezterm.on("update-right-status", function(window, pane)
   if window:leader_is_active() then
     table.insert(items, { Foreground = { Color = "#e0af68" } })
     table.insert(items, { Text = "  LEADER" })
+  end
+  -- LEADER に続けて押したショートカットを ~1 秒だけ表示し、効いたか目視できるようにする。
+  -- 緑 = tmux に prefix+キーを送信 / 赤 = tmux ペインでなくフォールバック動作。
+  -- (tmux_bridge を通るキーのみ。LEADER+m→m / LEADER+M→M のように tmux に渡した実キーを出す)
+  local ls = wezterm.GLOBAL.last_shortcut
+  if ls and (os.time() - (wezterm.GLOBAL.last_shortcut_at or 0)) <= 1 then
+    local sent = wezterm.GLOBAL.last_shortcut_sent
+    local kb = wezterm.nerdfonts.md_keyboard_outline or wezterm.nerdfonts.md_keyboard or ""
+    table.insert(items, { Foreground = { Color = sent and "#9ece6a" or "#f7768e" } })
+    table.insert(items, { Text = "  " .. kb .. " " .. ls })
   end
   -- LEADER+v のクリップボード転送中の可視化（定期更新に上書きされないようこちらにも出す）
   if wezterm.GLOBAL.clip_transferring then

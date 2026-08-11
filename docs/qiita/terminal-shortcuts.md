@@ -43,6 +43,8 @@ Leader キーは `Ctrl+q`（2秒タイムアウト）。tmux の prefix も `Ctr
 ただし **WezTerm 上では `Ctrl+q` は WezTerm 自身が Leader として食う**ため、tmux までは届かない。
 WezTerm から tmux のキーを叩く経路は `<leader> →キー` のブリッジで、これが内部で `Ctrl+b` を送っている。
 tmux の `Ctrl+q` が prefix として直接効くのは、iPad / Termius / 素の `ssh` など **WezTerm 以外のクライアント**から入ったとき。
+
+`Ctrl+q` を押すと右下ステータスに **`LEADER`** と出て「待ち受け中」が分かる。続けてキーを押すと、`<leader>` ブリッジ経由のショートカット（`m` / `M` など）は右下に **押したキーが約 1 秒表示**される（緑＝tmux に送信できた／赤＝tmux ペインでないためフォールバック）。何も出なければそのキーはブリッジに割り当てられていない。
 `Ctrl+b` を prefix2 として残しているのはこのブリッジを壊さないため。
 
 **#214 以降、Window / Tab / Pane の管理は devbox 上の tmux に一本化した。**
