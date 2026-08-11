@@ -81,6 +81,7 @@ link_file "$DOTFILES_DIR/claude/CLAUDE.md"                      "$CLAUDE_DIR/CLA
 link_file "$DOTFILES_DIR/claude/settings.json"                  "$CLAUDE_DIR/settings.json"
 link_file "$DOTFILES_DIR/claude/windows-notify.ps1"             "$CLAUDE_DIR/windows-notify.ps1"
 link_file "$DOTFILES_DIR/claude/notify.sh"                      "$CLAUDE_DIR/notify.sh"
+link_file "$DOTFILES_DIR/claude/gh-issue-start.sh"              "$CLAUDE_DIR/gh-issue-start.sh"
 link_file "$DOTFILES_DIR/claude/github-app-config.env.example"  "$CLAUDE_DIR/github-app-config.env.example"
 
 # --- Claude mcp ---
