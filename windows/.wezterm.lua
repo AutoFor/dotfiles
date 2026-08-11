@@ -925,6 +925,10 @@ config.keys = {
   -- 移動でペインの位置が変わるとペイン名・claude セッションの対応がズレるため、
   -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+M)
   { key = "m", mods = "LEADER", action = tmux_bridge("M", act.Nop) },
+  -- 現在のウィンドウ (= このタブ) を丸ごと、一覧から選んだセッションへ移動して追従する。
+  -- LEADER+m がペイン単位なのに対し、こちらはウィンドウ単位。タブ名・ペイン名は維持される
+  -- (.tmux.conf の prefix+g)
+  { key = "g", mods = "LEADER", action = tmux_bridge("g", act.Nop) },
 
   -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
   { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },

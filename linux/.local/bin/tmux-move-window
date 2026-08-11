@@ -1,0 +1,23 @@
+#!/bin/sh
+# 現在のウィンドウを、選んだセッションへ丸ごと移動する (.tmux.conf の prefix+g から呼ばれる)。
+#
+# 移動元ウィンドウ ID は、キー押下時に prefix+g が @move-window-src へ退避している
+# (choose-tree で移動先を選ぶ間にカレントウィンドウが変わっても正しい元ウィンドウを指すよう、
+#  ID で覚えておく)。ウィンドウ名 (= WezTerm タブ名) と各ペインの @name は move-window が
+# そのまま引き継ぐため、別途の復元処理は要らない。
+#
+# クライアントを移動先へ追従させる switch-client だけは、正しいクライアント文脈が要るので
+# このスクリプトではなく呼び出し側 (choose-tree のテンプレート) が直接実行する。
+raw="$1"
+target="${raw%%:*}"                        # "sess" / "sess:win" いずれも "sess" に正規化
+[ -n "$target" ] || exit 0
+src="$(tmux show -gv @move-window-src 2>/dev/null)"
+[ -n "$src" ] || exit 0
+cur="$(tmux display -p -t "$src" '#{session_name}' 2>/dev/null)"
+[ "$cur" = "$target" ] && exit 0           # 既に移動先にいれば何もしない
+tmux move-window -s "$src" -t "$target:"   # 末尾に追加。ウィンドウ名・ペイン名は保持される
+tmux select-window -t "$src"               # 移動先セッションのカレントウィンドウにする (ID 不変)
+# 位置キー (セッション:ウィンドウ.ペイン) が変わったので、ペイン名・claude セッションの
+# 対応表を保存し直す (prefix+M / prefix+! と同じ理由)
+sh ~/.local/bin/tmux-resurrect-autosave force >/dev/null 2>&1 &
+sh ~/.local/bin/wezterm-tabs-sync >/dev/null 2>&1 &
