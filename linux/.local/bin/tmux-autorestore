@@ -56,10 +56,18 @@ SESSIONS_TSV="$HOME/.local/share/tmux/resurrect/claude-sessions.tsv"
 rm -rf "$CLAIM_DIR"
 mkdir -p "$CLAIM_DIR"
 if [ -r "$SESSIONS_TSV" ]; then
-  while IFS="$(printf '\t')" read -r s w p sid; do
+  # 新形式(5列): session_name  window_name  pane_index  window_index  sid
+  # owner は resume 側の ME (= s:window_name.pane_index) と一致させる。
+  # 旧形式(4列): session_name  window_index  pane_index  sid も後方互換で読む。
+  while IFS="$(printf '\t')" read -r c1 c2 c3 c4 c5; do
+    if [ -n "${c5:-}" ]; then
+      sid=$c5                 # 新形式: c2=window_name, c3=pane_index
+    else
+      sid=$c4                 # 旧形式: c2=window_index, c3=pane_index
+    fi
     [ -n "${sid:-}" ] || continue
     mkdir -p "$CLAIM_DIR/$sid"
-    printf '%s:%s.%s\n' "$s" "$w" "$p" > "$CLAIM_DIR/$sid/owner"
+    printf '%s:%s.%s\n' "$c1" "$c2" "$c3" > "$CLAIM_DIR/$sid/owner"
   done < "$SESSIONS_TSV"
 fi
 
