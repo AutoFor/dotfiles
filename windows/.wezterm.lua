@@ -994,6 +994,9 @@ config.keys = {
     mods = "CTRL",
     action = toggle_voice_input(),
   },
+  -- Shift+↓ でも音声入力トグル。矢印は文字入力の流れで Shift と同時押しに
+  -- ならないので誤爆しない。代償としてペイン内アプリには Shift+↓ が届かない
+  { key = "DownArrow", mods = "SHIFT", action = toggle_voice_input() },
 
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
   { key = "Enter", mods = "ALT", action = cycle_window_mode() },
