@@ -116,7 +116,7 @@ function Confirm-Devbox {
 
     $state = Get-VmState
     if ($state -ne "PowerState/running") {
-        Write-Host "devbox を起動中... (現在: $(if ($state) { $state } else { 'unknown' }))"
+        Write-Host "devbox を起動中... (現在: $(if ($state) { $state } else { 'unknown' })。1〜2 分かかります)"
         az vm start -g $RG -n $VM -o none
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "devbox の起動に失敗しました。"
@@ -124,11 +124,17 @@ function Confirm-Devbox {
         }
     }
 
-    # sshd と tailscaled の起動を待つ
+    # sshd と tailscaled の起動を待つ (経過が見えるよう 3 秒ごとにドットを打つ)
+    Write-Host "SSH の応答を待っています" -NoNewline
     for ($i = 0; $i -lt 15; $i++) {
-        if (Test-Ssh) { return $true }
+        if (Test-Ssh) {
+            Write-Host " OK"
+            return $true
+        }
+        Write-Host "." -NoNewline
         Start-Sleep -Seconds 3
     }
+    Write-Host ""
 
     Write-Warning "$($IP):22 に依然到達できません（Tailscale 未接続 or 別要因）。"
     Write-Warning "フォールバック: 'devbox.ps1 nsg' で現在IPを許可してから 'ssh devbox-public'"
