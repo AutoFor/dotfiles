@@ -937,7 +937,11 @@ config.keys = {
   { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
   { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
   { key = "p", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
-  { key = "q", mods = "LEADER", action = tmux_bridge("q", act.Nop) }, -- ペイン番号を表示して選択
+  -- LEADER+q: 音声入力トグル (LEADER+Space と同じ)。Ctrl を押しっぱなしの
+  -- Ctrl+q → q / Ctrl+q → Ctrl+q 連打で始められるよう CTRL 付きも同じ動作にする。
+  -- 旧割当のペイン番号表示は Ctrl+b → q (tmux prefix2) で引き続き使える
+  { key = "q", mods = "LEADER", action = toggle_voice_input() },
+  { key = "q", mods = "LEADER|CTRL", action = toggle_voice_input() },
   { key = "f", mods = "LEADER", action = tmux_bridge("f", act.Nop) }, -- ファイラー (yazi) を浮遊ポップアップで開く
   { key = "o", mods = "LEADER", action = tmux_bridge("o", act.Nop) }, -- 画面上の URL を選んでブラウザで開く (折り返し URL 対応)
   -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
