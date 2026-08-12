@@ -317,7 +317,7 @@ WezTerm で見ている最中は上記の OSC トーストだけになり、二�
 - ntfy 経由の通知はクリックしてもペインへジャンプしない（そもそも WezTerm に
   その画面が出ていないときに飛ぶ通知なので、ジャンプ先が無い）
 
-なお tmux を挟む場合（#214 以降の標準構成）は、`.tmux.conf` の `set -g allow-passthrough on` に加えて、
+なお tmux を挟む場合（#214 以降の標準構成）は、`.tmux.conf` の `set -g allow-passthrough all` に加えて、
 送信側が OSC を `ESC Ptmux; ... ESC \` の passthrough 形式でラップする必要がある（`notify.sh` / zshrc の
 `__term_emit` / nvim の `agent_terminal.lua` が対応済み）。素の OSC 7 や OSC 1337 は tmux に飲まれて届かない。
 
