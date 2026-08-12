@@ -346,12 +346,13 @@ local function tmux_overflow_segment(items, text)
   table.insert(items, { Text = text .. " " })
 end
 
--- 1 ウィンドウ分のセグメントが消費するセル幅の目安。
--- 三角矢印(1) + 左右パディング(2) + 三角矢印(1) + 隙間(1) = 5 に、
--- 名前部分の最大表示幅を足したもの（全角文字は truncate_right が 2 セル扱いする）
+-- 名前部分の最大表示幅（全角文字は 2 セル扱い）。これを超える名前は truncate。
 local TMUX_TAB_TEXT_MAX_WIDTH = 12
-local TMUX_TAB_SLOT_WIDTH = TMUX_TAB_TEXT_MAX_WIDTH + 5
-local TMUX_TAB_INDICATOR_RESERVE = 6
+-- 1 タブの装飾ぶんのセル幅: 左三角(1) + 左右パディング(2) + 右三角(1) + 隙間(1) = 5。
+-- タブ全体の消費幅 = 名前の実セル幅 + これ。名前の実幅で数えるので短いタブは狭い。
+local TMUX_TAB_CHROME_WIDTH = 5
+-- "+N " インジケータ 1 個ぶんのセル幅（N が 2 桁でも収まるよう気持ち多め）
+local TMUX_TAB_INDICATOR_WIDTH = 4
 
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
   -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
@@ -373,24 +374,41 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       end
     end
 
-    local budget = math.max(max_width - TMUX_TAB_INDICATOR_RESERVE, TMUX_TAB_SLOT_WIDTH)
-    local slots = math.max(1, math.floor(budget / TMUX_TAB_SLOT_WIDTH))
+    -- 各ウィンドウの実表示幅を見積もる (truncate 後の実セル幅 + 装飾)。
+    for _, w in ipairs(windows) do
+      w.disp = wezterm.truncate_right(w.text, TMUX_TAB_TEXT_MAX_WIDTH)
+      w.cells = wezterm.column_width(w.disp) + TMUX_TAB_CHROME_WIDTH
+    end
 
-    local first, last
-    if #windows <= slots then
-      first, last = 1, #windows
-    else
-      first = active_pos - math.floor((slots - 1) / 2)
-      last = first + slots - 1
-      if first < 1 then
-        last = last + (1 - first)
-        first = 1
+    -- 全部が幅に収まるならそのまま全表示。収まらないときだけ、アクティブを起点に
+    -- 実幅を積みながら左右へ広げ、溢れは "+N" で示す。一律 17 セル見積りをやめ
+    -- 実際の名前幅で数えるので、短い名前のタブが場所を取らず同じ幅でより多く見える。
+    local total = 0
+    for _, w in ipairs(windows) do
+      total = total + w.cells
+    end
+
+    local first, last = 1, #windows
+    if total > max_width then
+      -- 両端の "+N" ぶんを先に確保する (片側だけになれば 1 つ余る程度で無害)。
+      -- budget は最低でもアクティブ 1 枚は必ず出せる幅を保証する。
+      local budget = math.max(max_width - 2 * TMUX_TAB_INDICATOR_WIDTH, windows[active_pos].cells)
+      first, last = active_pos, active_pos
+      local used = windows[active_pos].cells
+      local grew = true
+      while grew do
+        grew = false
+        if last < #windows and used + windows[last + 1].cells <= budget then
+          last = last + 1
+          used = used + windows[last].cells
+          grew = true
+        end
+        if first > 1 and used + windows[first - 1].cells <= budget then
+          first = first - 1
+          used = used + windows[first].cells
+          grew = true
+        end
       end
-      if last > #windows then
-        first = first - (last - #windows)
-        last = #windows
-      end
-      first = math.max(first, 1)
     end
 
     local items = {}
@@ -400,9 +418,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       tmux_overflow_segment(items, "+" .. hidden_left)
     end
     for i = first, last do
-      local w = windows[i]
-      local display = wezterm.truncate_right(w.text, TMUX_TAB_TEXT_MAX_WIDTH)
-      tmux_tab_segment(items, display, w.is_active)
+      tmux_tab_segment(items, windows[i].disp, windows[i].is_active)
     end
     if hidden_right > 0 then
       tmux_overflow_segment(items, "+" .. hidden_right)
