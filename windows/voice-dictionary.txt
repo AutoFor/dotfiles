@@ -145,3 +145,7 @@ Tmax=tmux
 # プロリクール=プルリクエスト
 # プランチ=プラン
 # 逃亡する=連携する
+
+# --- 自動提案 2026-08-13 06:44 (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---
+# PowerPolicity=Power Automate
+# MVP=Minimum Viable Product
