@@ -42,10 +42,10 @@ local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
 -- クリップボードの内容 (画像/ファイル/フォルダ/パス文字列) を devbox へ scp する
 -- スクリプト（LEADER+v のクリップボード転送ペースト用）
 local CLIP_PASTE_PS1 = DOTFILES_DIR .. "\\windows\\bin\\send-clipboard.ps1"
--- マイク録音 → Groq Whisper 文字起こし → ペインへ入力するスクリプト（LEADER+Space）
+-- マイク録音 → Groq Whisper 文字起こし → ペインへ入力するスクリプト（Ctrl+Space）
 local VOICE_PS1 = DOTFILES_DIR .. "\\windows\\bin\\voice-input.ps1"
 -- 録音の開始/停止は voice-input.ps1 とフラグファイルで連携する
--- (stop: 2 度目の LEADER+Space で作成し録音停止を指示 / recording: 録音が実際に始まると script が作成)
+-- (stop: 2 度目の Ctrl+Space で作成し録音停止を指示 / recording: 録音が実際に始まると script が作成)
 local VOICE_TEMP_DIR = os.getenv("TEMP") or (wezterm.home_dir .. "\\AppData\\Local\\Temp")
 local VOICE_STOP_FLAG = VOICE_TEMP_DIR .. "\\wezterm-voice-stop.flag"
 local VOICE_RECORDING_FLAG = VOICE_TEMP_DIR .. "\\wezterm-voice-recording.flag"
@@ -519,7 +519,7 @@ wezterm.on("update-right-status", function(window, pane)
     table.insert(items, { Foreground = { Color = "#e0af68" } })
     table.insert(items, { Text = "  " .. wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…" })
   end
-  -- LEADER+Space の音声入力の可視化。アイコンのみで、色が実際の音声に連動する
+  -- Ctrl+Space の音声入力の可視化。アイコンのみで、色が実際の音声に連動する
   -- (灰色=マイク起動待ち、青=録音中だが無音、赤=声を拾っている)。
   -- 声の有無は voice-input.ps1 が録音フラグファイルの中身 (1/0) で知らせる
   if wezterm.GLOBAL.voice_recording then
@@ -532,7 +532,7 @@ wezterm.on("update-right-status", function(window, pane)
       wezterm.GLOBAL.voice_flag_missing_since = nil
     else
       -- 録音プロセスが死んだ/自動終了した場合、GLOBAL だけが残って灰色アイコンが
-      -- 出続け、次の LEADER+Space が「幻の停止」になってしまう。フラグ不在が
+      -- 出続け、次の Ctrl+Space が「幻の停止」になってしまう。フラグ不在が
       -- 続いたら状態を自動リセットする (初回は C# コンパイルで数秒かかるので猶予 10 秒)
       local now = os.time()
       local since = wezterm.GLOBAL.voice_flag_missing_since
@@ -701,7 +701,7 @@ local function paste_image_or_clipboard()
   end)
 end
 
--- 音声入力トグル (LEADER+Space)。1 回目で録音開始、2 回目で終了。
+-- 音声入力トグル (Ctrl+Space)。1 回目で録音開始、2 回目で終了。
 -- 録音〜文字起こし〜入力は voice-input.ps1 が背景で行い、話の切れ目 (無音) ごとに
 -- Groq Whisper の結果が `wezterm cli send-text` で押下時のペイン
 -- (tmux 内の Claude Code プロンプト等) へ逐次入力される (疑似ストリーム)。
@@ -937,7 +937,7 @@ config.keys = {
   { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
   { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
   { key = "p", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
-  -- LEADER+q: 音声入力トグル (LEADER+Space と同じ)。Ctrl を押しっぱなしの
+  -- LEADER+q: 音声入力トグル (Ctrl+Space と同じ)。Ctrl を押しっぱなしの
   -- Ctrl+q → q / Ctrl+q → Ctrl+q 連打で始められるよう CTRL 付きも同じ動作にする。
   -- 旧割当のペイン番号表示は Ctrl+b → q (tmux prefix2) で引き続き使える
   { key = "q", mods = "LEADER", action = toggle_voice_input() },
@@ -984,12 +984,14 @@ config.keys = {
   },
 
   {
-    -- LEADER+Space: 音声入力トグル。1 回目で Windows のマイク録音開始、
+    -- Ctrl+Space: 音声入力トグル (1 発)。1 回目で Windows のマイク録音開始、
     -- 以降は話の切れ目ごとに Groq Whisper (whisper-large-v3-turbo) の文字起こしが
     -- このペイン (tmux 内の Claude Code プロンプト等) へ逐次入力される。2 回目で終了。
     -- 録音状態は右ステータスの 🎤 表示で確認できる。
+    -- 旧割当は LEADER+Space。MS-IME 側で Ctrl+Space を「IME オン/オフ」に
+    -- 割り当てていると IME に食われるので、その場合は IME のキー設定を外す
     key = "Space",
-    mods = "LEADER",
+    mods = "CTRL",
     action = toggle_voice_input(),
   },
 

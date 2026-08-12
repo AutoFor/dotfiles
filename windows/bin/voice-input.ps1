@@ -1,6 +1,6 @@
 # voice-input.ps1 -- マイク音声を Groq Whisper (whisper-large-v3-turbo) で文字起こしし、
 # WezTerm のペイン（tmux 内の Claude Code プロンプト等）へ「疑似ストリーム」で流し込む。
-# WezTerm の LEADER+Space (toggle_voice_input) から起動される。
+# WezTerm の Ctrl+Space (toggle_voice_input) から起動される。
 #
 # 疑似ストリームの仕組み:
 #   録音しっぱなしにして音量 (RMS) を監視し、「約 0.7 秒の無音 = フレーズの切れ目」で
@@ -9,11 +9,11 @@
 #   本物のストリームではなくフレーズ単位の逐次変換で体感を近づけている。
 #
 # 流れ:
-#   1) .wezterm.lua が LEADER+Space の 1 回目でこのスクリプトを background 起動
+#   1) .wezterm.lua が Ctrl+Space の 1 回目でこのスクリプトを background 起動
 #   2) winmm (waveIn) で 16kHz/16bit/mono 録音を開始し、100ms フレームごとに VAD 判定
 #   3) フレーズの切れ目ごとに WAV を組み立てて Groq へ POST →
 #      `wezterm cli send-text --pane-id <押下時のペイン>` で逐次入力
-#   4) $StopFlag の出現 (2 回目の LEADER+Space) で残りを変換して終了
+#   4) $StopFlag の出現 (2 回目の Ctrl+Space) で残りを変換して終了
 #
 # 辞書 (windows/voice-dictionary.txt):
 #   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を

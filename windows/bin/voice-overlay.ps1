@@ -17,7 +17,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-# フォーカスを奪わないフォーム。フォーカスが移ると 2 度目の LEADER+Space (停止) が
+# フォーカスを奪わないフォーム。フォーカスが移ると 2 度目の Ctrl+Space (停止) が
 # WezTerm に届かなくなるため、WS_EX_NOACTIVATE が実質必須
 $src = @'
 using System.Windows.Forms;
