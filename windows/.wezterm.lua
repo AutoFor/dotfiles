@@ -118,6 +118,45 @@ local function tmux_bridge(keys, fallback_action)
   end)
 end
 
+-- 素の Ctrl+Tab / Ctrl+Shift+Tab の統一巡回。
+-- tmux ペイン上では tmux ウィンドウを順に巡り、端 (next なら最後 / prev なら先頭) の
+-- ウィンドウにいて、かつ WezTerm タブが複数あるときだけ隣の WezTerm タブ
+-- (PowerShell 等) へ抜ける。ローカルペイン上では常に WezTerm タブ切替。
+-- tmux のウィンドウ一覧とアクティブ位置は wezterm-tabs-sync が SetUserVar で
+-- 同期している wezterm.GLOBAL.tmux_windows (タブバー表示と同じデータ) から読む。
+local function cycle_tabs(direction, tmux_key)
+  return wezterm.action_callback(function(window, pane)
+    wezterm.GLOBAL.last_shortcut = tmux_key
+    wezterm.GLOBAL.last_shortcut_at = os.time()
+    if not is_tmux_client_pane(pane) then
+      wezterm.GLOBAL.last_shortcut_sent = false
+      window:perform_action(act.ActivateTabRelative(direction), pane)
+      return
+    end
+    local at_edge = false
+    if #window:mux_window():tabs() > 1 then
+      local data = (wezterm.GLOBAL.tmux_windows or {})[tostring(pane:pane_id())]
+      if data and data ~= "" then
+        local count, active = 0, nil
+        for entry in data:gmatch("[^\t]+") do
+          count = count + 1
+          if entry:sub(-1) == "*" then
+            active = count
+          end
+        end
+        at_edge = (direction > 0 and active == count) or (direction < 0 and active == 1)
+      end
+    end
+    if at_edge then
+      wezterm.GLOBAL.last_shortcut_sent = false
+      window:perform_action(act.ActivateTabRelative(direction), pane)
+    else
+      wezterm.GLOBAL.last_shortcut_sent = true
+      window:perform_action(act.SendString(TMUX_PREFIX .. tmux_key), pane)
+    end
+  end)
+end
+
 -- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
 -- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
 -- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
@@ -1037,10 +1076,10 @@ config.keys = {
   -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
   { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
   { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (確認なし)
-  -- tmux ペインでは tmux ウィンドウ切替、ローカルペイン (PowerShell 等) では
-  -- WezTerm タブ切替にフォールバック (PowerShell タブから devbox タブへ戻れる)
-  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.ActivateTabRelative(1)) }, -- 次へ
-  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.ActivateTabRelative(-1)) }, -- 前へ
+  -- 統一巡回: tmux ウィンドウを順に巡り、端まで来たら WezTerm タブ (PowerShell 等) へ
+  -- 抜けて一周する。ローカルペインでは WezTerm タブ切替 (cycle_tabs 参照)
+  { key = "Tab", mods = "CTRL", action = cycle_tabs(1, "n") }, -- 次へ
+  { key = "Tab", mods = "SHIFT|CTRL", action = cycle_tabs(-1, "p") }, -- 前へ
   -- WezTerm タブ (devbox ⇔ PowerShell 等) の行き来。tmux 内からでも必ずタブが切り替わる。
   -- Ctrl+q の Ctrl を押しっぱなしのまま Tab を押しても効くよう LEADER|CTRL も定義する
   { key = "Tab", mods = "LEADER", action = act.ActivateTabRelative(1) },

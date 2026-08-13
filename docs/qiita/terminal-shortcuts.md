@@ -84,8 +84,8 @@ prefix シーケンスに自動変換される（ローカルの PowerShell ペ�
 |--------------|------|------|
 | `Ctrl+t` | 新規タブ | ブラウザ由来（**t**ab） |
 | `Ctrl+w` | 現在のタブを閉じる（確認なしで即クローズ） | ブラウザ由来（**w**indow close） |
-| `Ctrl+Tab` | 次のタブへ移動（ローカルペイン＝PowerShell 等では **WezTerm タブ**の切り替えになるので、PowerShell タブから devbox タブへ戻れる） | ブラウザ由来 |
-| `Ctrl+Shift+Tab` | 前のタブへ移動 | 上記の逆 |
+| `Ctrl+Tab` | 次のタブへ移動（**統一巡回**: tmux ウィンドウを順に巡り、最後のウィンドウまで来たら隣の WezTerm タブ＝PowerShell 等へ抜けて一周する。ローカルペイン上では WezTerm タブ切替なので devbox タブへも戻れる。WezTerm タブが 1 枚だけのときは従来どおり tmux 内でループ） | ブラウザ由来 |
+| `Ctrl+Shift+Tab` | 前のタブへ移動（同上の逆回り。先頭ウィンドウから前の WezTerm タブへ抜ける） | 上記の逆 |
 | `Ctrl+1`〜`Ctrl+9` | タブ番号で切り替え（ローカルペインでは WezTerm タブの番号ジャンプ） | 番号＝タブ位置 |
 | `<leader> →Tab` / `<leader> →Shift+Tab` | **WezTerm タブ**（devbox ⇔ PowerShell 等）の次/前へ移動。tmux 内からでも必ず WezTerm タブが切り替わるので、tmux ⇔ ローカル PowerShell の行き来はこれ。Ctrl を押しっぱなしにした `Ctrl+q → Ctrl+Tab` でも効く | タブ切り替えの WezTerm 版 |
 | `Alt+1`〜`Alt+9` | タブ番号で切り替え（プレフィックス不要。Termius 等 WezTerm 以外の端末でも効く） | 番号＝タブ位置 |
