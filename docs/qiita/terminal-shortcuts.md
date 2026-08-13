@@ -121,7 +121,7 @@ prefix シーケンスに自動変換される（ローカルの PowerShell ペ�
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
 | `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
-| `<leader> →l` | ランチャーメニューを表示（tmux main / mux フォールバック / PowerShell） | **l**aunch |
+| `<leader> →l` | ランチャーメニューを表示（tmux main / mux フォールバック / devbox SSH / Windows Server rpa / PowerShell） | **l**aunch |
 | `<leader> →Shift+P` | ローカル PowerShell タブを開く（切り分け用） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |

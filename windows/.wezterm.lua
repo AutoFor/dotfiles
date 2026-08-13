@@ -36,6 +36,8 @@ local DOTFILES_DIR = find_dotfiles_dir()
 wezterm.add_to_config_reload_watch_list(DOTFILES_DIR .. "\\windows\\.wezterm.lua")
 -- VM 起動を担保するスクリプト
 local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
+-- rpa (UiPath 用 Windows Server) の起動担保 + SSH 接続スクリプト
+local RPA_PS1 = DOTFILES_DIR .. "\\windows\\bin\\rpa.ps1"
 -- クリックで通知元ペインへジャンプできるトーストを出すスクリプト（BurntToast）。
 -- クリック時の wezterm-jump: URI は windows/bin/register-wezterm-jump.ps1 で登録したハンドラが処理する。
 local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
@@ -258,6 +260,12 @@ config.launch_menu = {
     label = "Azure devbox (SSH)",
     domain = { DomainName = "local" },
     args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", DEVBOX_PS1, "connect" },
+  },
+  {
+    -- UiPath 用 Windows Server (Azure VM rpa)。VM 起動を担保してから SSH で入る
+    label = "Windows Server rpa (SSH)",
+    domain = { DomainName = "local" },
+    args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", RPA_PS1, "connect" },
   },
   {
     label = "PowerShell",
