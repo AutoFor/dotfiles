@@ -15,6 +15,13 @@
 #      `wezterm cli send-text --pane-id <押下時のペイン>` で逐次入力
 #   4) $StopFlag の出現 (2 回目の Ctrl+Space) で残りを変換して終了
 #
+# 幻聴・ゾンビ対策 (issue #229):
+#   - PID ファイルで単一インスタンス化。停止フラグを取り逃したゾンビ録音が
+#     タイピング音を拾って幻聴を貼り付け続けないよう、起動時に旧プロセスを kill
+#   - verbose_json の no_speech_prob / compression_ratio、定型幻聴パターン
+#     (「ご視聴ありがとうございました」等)、直前チャンクとの完全一致で
+#     雑音チャンクの幻聴テキストをローカルで破棄する
+#
 # 辞書 (windows/voice-dictionary.txt):
 #   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を
 #   正しい表記へ寄せ、それでも外した分は「誤=正」ルールでローカル置換する。
@@ -73,6 +80,21 @@ if (-not $env:GROQ_API_KEY) {
   Show-Toast 'GROQ_API_KEY が未設定。setx GROQ_API_KEY (az keyvault secret show ...) を実行して WezTerm を再起動して'
   exit 1
 }
+
+# 多重起動ガード。トグルのレース (例: .wezterm.lua のフラグ不在 10 秒自動リセット後の
+# Ctrl+Space が停止ではなく 2 個目の起動になる) で旧プロセスが停止フラグを取り逃すと、
+# ゾンビ録音がタイピング音などの雑音を拾って幻聴テキストを貼り付け続ける (issue #229)。
+# 新しい起動を正として、生き残りの旧インスタンスは kill してから始める
+$PidFile = Join-Path $env:TEMP 'wezterm-voice.pid'
+$oldPid = Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue
+if ($oldPid -match '^\d+$' -and $oldPid -ne "$PID") {
+  $old = Get-Process -Id $oldPid -ErrorAction SilentlyContinue
+  if ($old -and $old.ProcessName -eq 'pwsh') {
+    Write-Log "旧インスタンス (PID=$oldPid) が残っていたので kill する"
+    Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
+  }
+}
+Set-Content -LiteralPath $PidFile -Value $PID
 
 # winmm の waveIn 直叩き録音 (依存ゼロ)。MCI と違い録音を止めずにフレーム単位で
 # データを取り出せるため、無音検出でのチャンク分割 (疑似ストリーム) ができる。
@@ -264,6 +286,15 @@ function Join-Frames($frames) {
 }
 $script:allText = ''  # send-text 失敗時のクリップボード退避と、Groq への文脈ヒント (prompt) 用
 $script:apiFails = 0  # Groq API の連続失敗回数。単発の失敗で録音セッションを殺さないため
+$script:lastChunkText = ''  # 直前チャンクのテキスト。プロンプト反響 (同文の繰り返し幻聴) の検出用
+
+# ほぼ無音・雑音だけのチャンクで Whisper が出す定型幻聴 (学習データの YouTube 字幕由来)。
+# この文脈で本物の入力として現れることはまず無いので、含むセグメントは丸ごと捨てる
+$HallucinationPatterns = @(
+  'ご視聴ありがとうございました'
+  'ご清聴ありがとうございました'
+  'チャンネル登録'
+)
 
 # チャンクを Groq で文字起こしして送り先ペインへ入力する。失敗は throw (呼び元の catch で通知)
 function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
@@ -274,7 +305,9 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
       model           = $Model
       file            = Get-Item -LiteralPath $wav
       temperature     = '0'
-      response_format = 'json'
+      # verbose_json はセグメントごとの no_speech_prob / compression_ratio を返すので、
+      # 雑音チャンクの幻聴 (issue #229) をローカルで足切りできる
+      response_format = 'verbose_json'
     }
     if ($Language) { $form.language = $Language }
     # prompt = 辞書の用語ヒント + 直前までの文字起こし (文脈)。
@@ -302,13 +335,46 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
       return
     }
     $script:apiFails = 0
-    $text = ([string]$resp.text).Trim()
+    # 幻聴の足切り (issue #229)。セグメント単位で
+    #   - no_speech_prob 高 = 声ではない (打鍵音・環境音) → 捨てる
+    #   - compression_ratio 高 = 同語反復ループ (「おわり おわり おわり…」) → 捨てる
+    #   - 定型幻聴パターンを含む → 捨てる
+    $parts = [System.Collections.Generic.List[string]]::new()
+    foreach ($seg in @($resp.segments)) {
+      $segText = ([string]$seg.text).Trim()
+      if (-not $segText) { continue }
+      if ([double]$seg.no_speech_prob -gt 0.5) {
+        Write-Log ("chunk{0}: no_speech_prob={1:n2} で破棄: {2}" -f $chunkNo, [double]$seg.no_speech_prob, $segText)
+        continue
+      }
+      if ([double]$seg.compression_ratio -gt 2.4) {
+        Write-Log ("chunk{0}: compression_ratio={1:n2} (反復ループ) で破棄: {2}" -f $chunkNo, [double]$seg.compression_ratio, $segText)
+        continue
+      }
+      $isHallucination = $false
+      foreach ($p in $HallucinationPatterns) {
+        if ($segText.Contains($p)) { $isHallucination = $true; break }
+      }
+      if ($isHallucination) {
+        Write-Log "chunk${chunkNo}: 幻聴パターンで破棄: $segText"
+        continue
+      }
+      $parts.Add($segText)
+    }
+    $text = ($parts -join ' ').Trim()
     # 辞書の置換ルールを適用 (用語ヒントで寄せきれなかった誤変換を確実に直す)
     foreach ($pair in $script:dictReplace) {
       $text = $text.Replace($pair[0], $pair[1])
     }
     Write-Log ("chunk{0} ({1:n1}s): {2}" -f $chunkNo, ($pcm.Length / 32000.0), $text)
     if (-not $text) { return }
+    # prompt (直前の文字起こし) の反響: 雑音チャンクが直前の発話をそのまま繰り返す幻聴。
+    # 短文 (「はい」等) は本当に連呼することがあるので、10 文字以上の完全一致だけ捨てる
+    if ($text.Length -ge 10 -and $text -eq $script:lastChunkText) {
+      Write-Log "chunk${chunkNo}: 直前チャンクと同一のため破棄 (プロンプト反響)"
+      return
+    }
+    $script:lastChunkText = $text
     $script:allText += $text + ' '
     # 続けて文章を打てるよう末尾へスペースを 1 つ足す (LEADER+v のパス貼り付けと同じ流儀)
     & $WezTermExe cli send-text --pane-id $PaneId -- ($text + ' ')
@@ -501,4 +567,8 @@ finally {
   if ($recorder) { $recorder.Dispose() }
   # RecordingFlag を消すとオーバーレイも自動で閉じる
   Remove-Item -LiteralPath $StopFlag, $RecordingFlag, $LevelFile -Force -ErrorAction SilentlyContinue
+  # PID ファイルは自分のものだったときだけ消す (新インスタンスが上書き済みなら触らない)
+  if ((Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue) -eq "$PID") {
+    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
+  }
 }
