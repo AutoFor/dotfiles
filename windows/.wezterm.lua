@@ -863,38 +863,48 @@ local function paste_image_or_clipboard()
   end)
 end
 
--- 音声入力トグル (Ctrl+Space)。1 回目で録音開始、2 回目で終了。
+-- 音声入力トグル (Ctrl+Space)。1 回目で録音開始、2 回目で終了。Enter でも自動終了する。
 -- 録音〜文字起こし〜入力は voice-input.ps1 が背景で行い、話の切れ目 (無音) ごとに
 -- Groq Whisper の結果が `wezterm cli send-text` で押下時のペイン
 -- (tmux 内の Claude Code プロンプト等) へ逐次入力される (疑似ストリーム)。
 -- pwsh の起動に 1 秒弱かかるため、実際に録音が始まったかは右ステータスの
 -- マイクアイコンの色で確認する (灰色=起動待ち、青=録音中で無音、赤=声を拾っている)。
+
+-- 録音中なら停止フラグを置いて終了させる。止めたら true。
+-- Ctrl+Space の 2 回目と、Enter 押下時の自動終了 (issue #230) の両方から呼ぶ
+local function stop_voice_recording()
+  if not wezterm.GLOBAL.voice_recording then
+    return false
+  end
+  wezterm.GLOBAL.voice_recording = false
+  local f = io.open(VOICE_STOP_FLAG, "w")
+  if f then
+    f:write("stop")
+    f:close()
+  end
+  return true
+end
+
 local function toggle_voice_input()
   return wezterm.action_callback(function(window, pane)
-    if wezterm.GLOBAL.voice_recording then
-      -- 2 回目: 停止フラグを置く → スクリプトが検知して文字起こしへ進む
+    if stop_voice_recording() then
+      -- 2 回目: 停止フラグを置いた → スクリプトが検知して文字起こしへ進む
+      return
+    end
+    -- 前回の残骸フラグを消してから起動する (script 側で消すと、起動前に
+    -- 2 度目が押されたときの正当な stop フラグまで消してしまうため Lua 側で消す)
+    os.remove(VOICE_STOP_FLAG)
+    os.remove(VOICE_RECORDING_FLAG)
+    wezterm.GLOBAL.voice_recording = true
+    wezterm.GLOBAL.voice_flag_missing_since = nil
+    local ok = pcall(wezterm.background_child_process, {
+      "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", VOICE_PS1,
+      "-PaneId", tostring(pane:pane_id()),
+      "-WezTermExe", wezterm.executable_dir .. "\\wezterm.exe",
+    })
+    if not ok then
       wezterm.GLOBAL.voice_recording = false
-      local f = io.open(VOICE_STOP_FLAG, "w")
-      if f then
-        f:write("stop")
-        f:close()
-      end
-    else
-      -- 前回の残骸フラグを消してから起動する (script 側で消すと、起動前に
-      -- 2 度目が押されたときの正当な stop フラグまで消してしまうため Lua 側で消す)
-      os.remove(VOICE_STOP_FLAG)
-      os.remove(VOICE_RECORDING_FLAG)
-      wezterm.GLOBAL.voice_recording = true
-      wezterm.GLOBAL.voice_flag_missing_since = nil
-      local ok = pcall(wezterm.background_child_process, {
-        "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", VOICE_PS1,
-        "-PaneId", tostring(pane:pane_id()),
-        "-WezTermExe", wezterm.executable_dir .. "\\wezterm.exe",
-      })
-      if not ok then
-        wezterm.GLOBAL.voice_recording = false
-        window:toast_notification("WezTerm", "音声入力の起動に失敗", nil, 4000)
-      end
+      window:toast_notification("WezTerm", "音声入力の起動に失敗", nil, 4000)
     end
   end)
 end
@@ -1162,13 +1172,25 @@ config.keys = {
   {
     -- Ctrl+Space: 音声入力トグル (1 発)。1 回目で Windows のマイク録音開始、
     -- 以降は話の切れ目ごとに Groq Whisper (whisper-large-v3-turbo) の文字起こしが
-    -- このペイン (tmux 内の Claude Code プロンプト等) へ逐次入力される。2 回目で終了。
+    -- このペイン (tmux 内の Claude Code プロンプト等) へ逐次入力される。
+    -- 終了は 2 回目の Ctrl+Space か、Enter (送信と同時に自動停止)。
     -- 録音状態は右ステータスの 🎤 表示で確認できる。
     -- 旧割当は LEADER+Space。MS-IME 側で Ctrl+Space を「IME オン/オフ」に
     -- 割り当てていると IME に食われるので、その場合は IME のキー設定を外す
     key = "Space",
     mods = "CTRL",
     action = toggle_voice_input(),
+  },
+  {
+    -- Enter: 通常どおりペインへ送りつつ、音声入力中なら録音も自動終了する (issue #230)。
+    -- 「話し終わってそのまま Enter で送信」で Ctrl+Space の停止し忘れを防ぐ。
+    -- 停止時点で変換中のフレーズは、変換が済み次第入力される (送信後になることもある)
+    key = "Enter",
+    mods = "NONE",
+    action = wezterm.action_callback(function(window, pane)
+      stop_voice_recording()
+      window:perform_action(act.SendKey({ key = "Enter" }), pane)
+    end),
   },
   -- 画面モード切り替え: 通常 -> 最大化（タスクバーを残す） -> フルスクリーン -> 通常
   { key = "Enter", mods = "ALT", action = cycle_window_mode() },
