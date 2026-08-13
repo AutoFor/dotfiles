@@ -156,3 +156,6 @@ Tmax=tmux
 # ガス=Google Apps Script
 # Fable5=Fable
 # ガス=Google Apps Script
+
+# --- 自動提案 2026-08-13 14:05 (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---
+# AIエージェント=AI エージェント
