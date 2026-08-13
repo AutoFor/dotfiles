@@ -1133,10 +1133,10 @@ config.keys = {
   -- LEADER+m : 現在のペインを一覧から選んだウィンドウ (別セッションも可) へ移動。
   -- 移動でペインの位置が変わるとペイン名・claude セッションの対応がズレるため、
   -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+m)
-  -- Ctrl+Shift+K / J : 前 / 次のセッションへ移動 (tmux 既定の prefix+( / prefix+) )。
+  -- Ctrl+Alt+K / J : 前 / 次のセッションへ移動 (tmux 既定の prefix+( / prefix+) )。
   -- k=上=前, j=下=次 の vim 方向。ローカルペイン (PowerShell 等) では何もしない
-  { key = "k", mods = "CTRL|SHIFT", action = tmux_bridge("(", act.Nop) },
-  { key = "j", mods = "CTRL|SHIFT", action = tmux_bridge(")", act.Nop) },
+  { key = "k", mods = "CTRL|ALT", action = tmux_bridge("(", act.Nop) },
+  { key = "j", mods = "CTRL|ALT", action = tmux_bridge(")", act.Nop) },
   { key = "m", mods = "LEADER", action = tmux_bridge("m", act.Nop) },
   -- LEADER+M (Shift+m) : 現在のウィンドウ (= このタブ) を丸ごと、選んだセッションへ移動して追従。
   -- LEADER+m がペイン単位なのに対し、こちらはウィンドウ単位。タブ名・ペイン名は維持される
