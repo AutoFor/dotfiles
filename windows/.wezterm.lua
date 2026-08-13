@@ -243,7 +243,8 @@ config.ssh_domains = {
 -- LEADER+l のランチャーから PowerShell を開いて切り分けする。
 config.default_domain = DEVBOX_TMUX_DOMAIN
 
--- ランチャーメニュー（LEADER + l で表示）
+-- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示。
+-- LEADER+l は tmux セッション一覧を動的に取得する show_session_launcher が担当）
 config.launch_menu = {
   {
     -- 通常の入口: ネイティブ SSH + tmux main セッション（セッションはリモート tmux が保持）
@@ -646,6 +647,120 @@ local function attach_devbox_domain()
   end)
 end
 
+-- LEADER+l の動的ランチャー。devbox の tmux セッション一覧をその場で取得し、
+-- どのセッションに入るかを選べるようにする（入り口を main 固定にしない）。
+-- 直近に使ったセッション（= 現在のセッション）が一番上に来る。
+-- 一覧取得に失敗した場合（VM 停止・tmux サーバ未起動など）は
+-- main + 静的項目だけのメニューにフォールバックする。
+local function show_session_launcher()
+  return wezterm.action_callback(function(window, pane)
+    local ssh_exe = (os.getenv("SystemRoot") or "C:\\Windows") .. "\\System32\\OpenSSH\\ssh.exe"
+    -- BatchMode: パスワード問合せで固まらせない / ConnectTimeout: VM 停止時に素早く諦める
+    -- セッション名に区切り文字が混ざっても壊れないよう、名前は最後のフィールドに置く
+    local ok, stdout = wezterm.run_child_process({
+      ssh_exe, "-o", "BatchMode=yes", "-o", "ConnectTimeout=2", "devbox",
+      "tmux list-sessions -F '#{session_activity}|#{session_windows}|#{session_attached}|#{session_name}' 2>/dev/null",
+    })
+
+    local sessions = {}
+    if ok then
+      for line in (stdout or ""):gmatch("[^\r\n]+") do
+        local activity, wins, attached, name = line:match("^(%d+)|(%d+)|(%d+)|(.+)$")
+        if name then
+          table.insert(sessions, {
+            activity = tonumber(activity),
+            windows = tonumber(wins),
+            attached = tonumber(attached),
+            name = name,
+          })
+        end
+      end
+      table.sort(sessions, function(a, b)
+        return a.activity > b.activity
+      end)
+    end
+
+    local choices = {}
+    local has_main = false
+    for _, s in ipairs(sessions) do
+      if s.name == "main" then
+        has_main = true
+      end
+      table.insert(choices, {
+        id = "tmux:" .. s.name,
+        label = string.format(
+          "tmux: %s  (%d win)%s",
+          s.name, s.windows, s.attached > 0 and "  [attach中]" or ""
+        ),
+      })
+    end
+    if not has_main then
+      table.insert(choices, {
+        id = "tmux:main",
+        label = "tmux: main" .. (#sessions > 0 and "  (新規作成)" or ""),
+      })
+    end
+    table.insert(choices, { id = "mux", label = "Azure devbox (mux フォールバック)" })
+    table.insert(choices, { id = "ssh", label = "Azure devbox (SSH)" })
+    table.insert(choices, { id = "rpa", label = "Windows Server rpa (SSH)" })
+    table.insert(choices, { id = "pwsh", label = "PowerShell" })
+
+    window:perform_action(
+      act.InputSelector({
+        title = "Launch",
+        description = "Enter=launch  Esc=cancel  /=filter",
+        fuzzy_description = "絞り込み: ",
+        choices = choices,
+        action = wezterm.action_callback(function(win, p, id)
+          if not id then
+            return -- Esc でキャンセル
+          end
+          local session = id:match("^tmux:(.+)$")
+          if session then
+            -- 既存セッションなら attach、無ければ作成 (-A)。多重 attach も tmux 側で問題ない
+            ensure_devbox()
+            win:perform_action(
+              act.SpawnCommandInNewTab({
+                domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+                args = { "tmux", "new-session", "-A", "-s", session },
+              }),
+              p
+            )
+          elseif id == "mux" then
+            ensure_devbox()
+            win:perform_action(act.AttachDomain(DEVBOX_DOMAIN), p)
+          elseif id == "ssh" then
+            win:perform_action(
+              act.SpawnCommandInNewTab({
+                domain = { DomainName = "local" },
+                args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", DEVBOX_PS1, "connect" },
+              }),
+              p
+            )
+          elseif id == "rpa" then
+            win:perform_action(
+              act.SpawnCommandInNewTab({
+                domain = { DomainName = "local" },
+                args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", RPA_PS1, "connect" },
+              }),
+              p
+            )
+          elseif id == "pwsh" then
+            win:perform_action(
+              act.SpawnCommandInNewTab({
+                domain = { DomainName = "local" },
+                args = { "pwsh.exe", "-NoLogo" },
+              }),
+              p
+            )
+          end
+        end),
+      }),
+      pane
+    )
+  end)
+end
+
 local function cwd_from_nvim_user_var(value)
   if not value or value == "" then
     return nil
@@ -1023,10 +1138,11 @@ config.keys = {
   -- デバッグオーバーレイ（問題調査用）
   { key = "l", mods = "SHIFT|CTRL", action = act.ShowDebugOverlay },
   {
-    -- ランチャーメニュー表示（Azure devbox / PowerShell 切り替えなど）
+    -- 動的ランチャー: devbox の tmux セッション一覧から入り先を選ぶ
+    -- （直近使用順。rpa / PowerShell などの静的項目も末尾に出る）
     key = "l",
     mods = "LEADER",
-    action = act.ShowLauncherArgs({ flags = "LAUNCH_MENU_ITEMS", title = "Launch" }),
+    action = show_session_launcher(),
   },
   {
     -- QuickSelect: 画面上の URL / パス / ハッシュ等にラベルを振り、
