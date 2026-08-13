@@ -1041,9 +1041,12 @@ config.keys = {
   -- WezTerm タブ切替にフォールバック (PowerShell タブから devbox タブへ戻れる)
   { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.ActivateTabRelative(1)) }, -- 次へ
   { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.ActivateTabRelative(-1)) }, -- 前へ
-  -- WezTerm タブ (devbox ⇔ PowerShell 等) の行き来。tmux 内からでも必ずタブが切り替わる
+  -- WezTerm タブ (devbox ⇔ PowerShell 等) の行き来。tmux 内からでも必ずタブが切り替わる。
+  -- Ctrl+q の Ctrl を押しっぱなしのまま Tab を押しても効くよう LEADER|CTRL も定義する
   { key = "Tab", mods = "LEADER", action = act.ActivateTabRelative(1) },
+  { key = "Tab", mods = "LEADER|CTRL", action = act.ActivateTabRelative(1) },
   { key = "Tab", mods = "LEADER|SHIFT", action = act.ActivateTabRelative(-1) },
+  { key = "Tab", mods = "LEADER|CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
   { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
   { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
   { key = "t", mods = "LEADER", action = tmux_bridge(",", act.Nop) }, -- 名前変更
