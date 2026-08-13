@@ -1037,22 +1037,28 @@ config.keys = {
   -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
   { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
   { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (確認なし)
-  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.Nop) }, -- 次へ
-  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.Nop) }, -- 前へ
+  -- tmux ペインでは tmux ウィンドウ切替、ローカルペイン (PowerShell 等) では
+  -- WezTerm タブ切替にフォールバック (PowerShell タブから devbox タブへ戻れる)
+  { key = "Tab", mods = "CTRL", action = tmux_bridge("n", act.ActivateTabRelative(1)) }, -- 次へ
+  { key = "Tab", mods = "SHIFT|CTRL", action = tmux_bridge("p", act.ActivateTabRelative(-1)) }, -- 前へ
+  -- WezTerm タブ (devbox ⇔ PowerShell 等) の行き来。tmux 内からでも必ずタブが切り替わる
+  { key = "Tab", mods = "LEADER", action = act.ActivateTabRelative(1) },
+  { key = "Tab", mods = "LEADER|SHIFT", action = act.ActivateTabRelative(-1) },
   { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
   { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
   { key = "t", mods = "LEADER", action = tmux_bridge(",", act.Nop) }, -- 名前変更
   { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
   -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
-  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.Nop) },
-  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.Nop) },
-  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.Nop) },
-  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.Nop) },
-  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.Nop) },
-  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.Nop) },
-  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.Nop) },
-  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.Nop) },
-  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.Nop) },
+  -- ローカルペインでは WezTerm タブの番号ジャンプにフォールバック
+  { key = "1", mods = "CTRL", action = tmux_bridge("1", act.ActivateTab(0)) },
+  { key = "2", mods = "CTRL", action = tmux_bridge("2", act.ActivateTab(1)) },
+  { key = "3", mods = "CTRL", action = tmux_bridge("3", act.ActivateTab(2)) },
+  { key = "4", mods = "CTRL", action = tmux_bridge("4", act.ActivateTab(3)) },
+  { key = "5", mods = "CTRL", action = tmux_bridge("5", act.ActivateTab(4)) },
+  { key = "6", mods = "CTRL", action = tmux_bridge("6", act.ActivateTab(5)) },
+  { key = "7", mods = "CTRL", action = tmux_bridge("7", act.ActivateTab(6)) },
+  { key = "8", mods = "CTRL", action = tmux_bridge("8", act.ActivateTab(7)) },
+  { key = "9", mods = "CTRL", action = tmux_bridge("9", act.ActivateTab(8)) },
 
   -- Pane (tmux ペイン)
   { key = "d", mods = "LEADER", action = tmux_bridge("-", act.Nop) }, -- 上下分割

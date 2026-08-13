@@ -84,9 +84,10 @@ prefix シーケンスに自動変換される（ローカルの PowerShell ペ�
 |--------------|------|------|
 | `Ctrl+t` | 新規タブ | ブラウザ由来（**t**ab） |
 | `Ctrl+w` | 現在のタブを閉じる（確認なしで即クローズ） | ブラウザ由来（**w**indow close） |
-| `Ctrl+Tab` | 次のタブへ移動 | ブラウザ由来 |
+| `Ctrl+Tab` | 次のタブへ移動（ローカルペイン＝PowerShell 等では **WezTerm タブ**の切り替えになるので、PowerShell タブから devbox タブへ戻れる） | ブラウザ由来 |
 | `Ctrl+Shift+Tab` | 前のタブへ移動 | 上記の逆 |
-| `Ctrl+1`〜`Ctrl+9` | タブ番号で切り替え | 番号＝タブ位置 |
+| `Ctrl+1`〜`Ctrl+9` | タブ番号で切り替え（ローカルペインでは WezTerm タブの番号ジャンプ） | 番号＝タブ位置 |
+| `<leader> →Tab` / `<leader> →Shift+Tab` | **WezTerm タブ**（devbox ⇔ PowerShell 等）の次/前へ移動。tmux 内からでも必ず WezTerm タブが切り替わるので、tmux ⇔ ローカル PowerShell の行き来はこれ | タブ切り替えの WezTerm 版 |
 | `Alt+1`〜`Alt+9` | タブ番号で切り替え（プレフィックス不要。Termius 等 WezTerm 以外の端末でも効く） | 番号＝タブ位置 |
 | `Shift+←` / `Shift+→` | 前/次のタブへ移動（プレフィックス不要。どの端末でも効く。代償としてペイン内アプリに Shift+矢印は届かない） | 矢印＝方向 |
 | `Alt+,` | タブを左に移動 | `,` = `<`（左向き）と同キー |
