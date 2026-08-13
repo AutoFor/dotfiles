@@ -1074,8 +1074,9 @@ config.keys = {
   ----------------------------------------------------
 
   -- Tab (実体は tmux ウィンドウ。画面下部のステータスラインに表示)
-  { key = "t", mods = "CTRL", action = tmux_bridge("c", act.Nop) }, -- 新規
-  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.Nop) }, -- 閉じる (確認なし)
+  -- ローカルペイン (PowerShell 等) では WezTerm タブの新規作成/クローズにフォールバック
+  { key = "t", mods = "CTRL", action = tmux_bridge("c", act.SpawnTab("CurrentPaneDomain")) }, -- 新規
+  { key = "w", mods = "CTRL", action = tmux_bridge("&", act.CloseCurrentTab({ confirm = false })) }, -- 閉じる (確認なし)
   -- 統一巡回: tmux ウィンドウを順に巡り、端まで来たら WezTerm タブ (PowerShell 等) へ
   -- 抜けて一周する。ローカルペインでは WezTerm タブ切替 (cycle_tabs 参照)
   { key = "Tab", mods = "CTRL", action = cycle_tabs(1, "n") }, -- 次へ
