@@ -596,6 +596,23 @@ wezterm.on("update-right-status", function(window, pane)
   end
   table.insert(items, { Text = "  " })
   window:set_right_status(wezterm.format(items))
+
+  -- 左ステータス: 現在の tmux セッション名をタブバー左端 (左上) に常時表示する。
+  -- wezterm-tabs-sync が SetUserVar=tmux_session で通知。タブと同じ三角形のセグメント
+  -- だが、色を青系にしてウィンドウ (タブ) と区別する。tmux 以外のペインでは消す
+  local sess = (wezterm.GLOBAL.tmux_session or {})[tostring(pane:pane_id())]
+  if sess and sess ~= "" then
+    window:set_left_status(wezterm.format({
+      { Background = { Color = "#3d59a1" } },
+      { Foreground = { Color = "#c0caf5" } },
+      { Text = " " .. (wezterm.nerdfonts.cod_terminal_tmux or "") .. " " .. sess .. " " },
+      { Background = { Color = "none" } },
+      { Foreground = { Color = "#3d59a1" } },
+      { Text = SOLID_RIGHT_ARROW .. " " },
+    }))
+  else
+    window:set_left_status("")
+  end
 end)
 
 -- tmux が mouse on でクリックを掴んでいても、Ctrl+クリックだけは WezTerm が
@@ -998,6 +1015,14 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     return
   end
 
+  if name == "tmux_session" then
+    -- 現在の tmux セッション名 (wezterm-tabs-sync が送信)。左ステータス表示に使う
+    local store = wezterm.GLOBAL.tmux_session or {}
+    store[tostring(pane:pane_id())] = value
+    wezterm.GLOBAL.tmux_session = store
+    return
+  end
+
   if name == "send_to_right_agent_pane" then
     local tab = window:active_tab()
     local adjacent = tab and tab.get_pane_direction and tab:get_pane_direction("Right") or nil
@@ -1126,11 +1151,13 @@ config.keys = {
   { key = "q", mods = "LEADER|CTRL", action = toggle_voice_input() },
   { key = "f", mods = "LEADER", action = tmux_bridge("f", act.Nop) }, -- ファイラー (yazi) を浮遊ポップアップで開く
   { key = "o", mods = "LEADER", action = tmux_bridge("o", act.Nop) }, -- 画面上の URL を選んでブラウザで開く (折り返し URL 対応)
-  -- Pane移動 Alt + hjkl: WezTerm → tmux → nvim の順で、その方向に無ければ透過
+  -- Pane移動 Alt + h/l: WezTerm → tmux → nvim の順で、その方向に無ければ透過
   { key = "h", mods = "ALT", action = activate_pane_or_send_alt("Left", "h") },
   { key = "l", mods = "ALT", action = activate_pane_or_send_alt("Right", "l") },
-  { key = "k", mods = "ALT", action = activate_pane_or_send_alt("Up", "k") },
-  { key = "j", mods = "ALT", action = activate_pane_or_send_alt("Down", "j") },
+  -- Alt+k/j はセッション切替 (tmux 側の bind -n M-k/M-j が switch-client)。
+  -- SendKey で明示送信しないと OS の文字合成に食われるため常に tmux へ透過する
+  { key = "k", mods = "ALT", action = act.SendKey({ key = "k", mods = "ALT" }) },
+  { key = "j", mods = "ALT", action = act.SendKey({ key = "j", mods = "ALT" }) },
   -- ペインサイズ調整は tmux 側 (prefix + H/J/K/L、またはマウスドラッグ)
   -- Alt+f: nvim-tree のフロート表示切替。SendKey で明示送信しないと
   -- OS の文字合成に食われて Alt 抜きの "f" しか下流に届かない (hjkl と同じ理由)
@@ -1143,8 +1170,8 @@ config.keys = {
   -- LEADER+m : 現在のペインを一覧から選んだウィンドウ (別セッションも可) へ移動。
   -- 移動でペインの位置が変わるとペイン名・claude セッションの対応がズレるため、
   -- tmux 側のバインドが移動直後に resurrect を保存し直す (.tmux.conf の prefix+m)
-  -- Alt+↑ / ↓ : 前 / 次のセッションへ移動 (旧 Ctrl+Alt+K/J)。WezTerm は Alt+矢印を
-  -- そのまま透過し、tmux 側の bind -n M-Up/M-Down (switch-client) が受けるためブリッジ不要
+  -- Alt+K / J : 前 / 次のセッションへ移動 (旧 Ctrl+Alt+K/J)。上の Alt+k/j SendKey が
+  -- tmux に透過し、tmux 側の bind -n M-k/M-j (switch-client) が受けるためブリッジ不要
   { key = "m", mods = "LEADER", action = tmux_bridge("m", act.Nop) },
   -- LEADER+M (Shift+m) : 現在のウィンドウ (= このタブ) を丸ごと、選んだセッションへ移動して追従。
   -- LEADER+m がペイン単位なのに対し、こちらはウィンドウ単位。タブ名・ペイン名は維持される

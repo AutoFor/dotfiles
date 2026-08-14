@@ -12,5 +12,8 @@ while IFS='|' read -r tty sess; do
   list=$(tmux list-windows -t "$sess" -F '#{window_name}#{?window_active,*,}' 2>/dev/null | tr '\n' '\t')
   payload=$(printf '%s' "$list" | base64 | tr -d '\n')
   printf '\033]1337;SetUserVar=tmux_windows=%s\007' "$payload" > "$tty" 2>/dev/null
+  # セッション名も通知する。.wezterm.lua が左ステータス (タブバー左端) に常時表示する
+  sess_payload=$(printf '%s' "$sess" | base64 | tr -d '\n')
+  printf '\033]1337;SetUserVar=tmux_session=%s\007' "$sess_payload" > "$tty" 2>/dev/null
 done
 exit 0
