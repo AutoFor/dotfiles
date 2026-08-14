@@ -1,0 +1,7 @@
+#!/bin/sh
+# アクティブペインの cwd の git ブランチ名を出力する (.tmux.conf の status-left の #() から呼ばれる)。
+# git リポジトリ外なら何も出さない。detached HEAD のときは短縮 SHA を出す
+cd "$1" 2>/dev/null || exit 0
+b=$(git symbolic-ref --short -q HEAD 2>/dev/null) || b=$(git rev-parse --short HEAD 2>/dev/null)
+[ -n "$b" ] && printf '%s' "$b"
+exit 0
