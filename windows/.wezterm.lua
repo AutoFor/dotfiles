@@ -373,9 +373,10 @@ local SOLID_LEFT_ARROW = wezterm.nerdfonts.ple_lower_right_triangle
 local SOLID_RIGHT_ARROW = wezterm.nerdfonts.ple_upper_left_triangle
 
 -- 1つの tmux ウィンドウを WezTerm タブ風のセグメントとして描画する
-local function tmux_tab_segment(items, text, is_active)
+-- (color 指定時はその背景色で描く。セッション名リボンがタブと同形で色だけ変えるのに使う)
+local function tmux_tab_segment(items, text, is_active, color)
   local edge_background = "none"
-  local background = is_active and "#ae8b2d" or "#5c6d74"
+  local background = color or (is_active and "#ae8b2d" or "#5c6d74")
   table.insert(items, { Background = { Color = edge_background } })
   table.insert(items, { Foreground = { Color = background } })
   table.insert(items, { Text = SOLID_LEFT_ARROW })
@@ -428,6 +429,18 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       w.cells = wezterm.column_width(w.disp) + TMUX_TAB_CHROME_WIDTH
     end
 
+    -- セッション名リボン: タブ列の左端に、タブとまったく同じ形 (同じ三角形・パディング) の
+    -- セグメントを青色で描いて現在のセッションを常時表示する (色でウィンドウのタブと区別)。
+    -- wezterm-tabs-sync が SetUserVar=tmux_session で通知した値を使う
+    local items = {}
+    local sess = (wezterm.GLOBAL.tmux_session or {})[tostring(tab.active_pane.pane_id)]
+    if sess and sess ~= "" then
+      local disp = wezterm.truncate_right(sess, TMUX_TAB_TEXT_MAX_WIDTH)
+      tmux_tab_segment(items, disp, false, "#3d59a1")
+      table.insert(items, { Text = " " }) -- タブ列との区切りを 1 セル広めに
+      max_width = max_width - (wezterm.column_width(disp) + TMUX_TAB_CHROME_WIDTH + 1)
+    end
+
     -- 全部が幅に収まるならそのまま全表示。収まらないときだけ、アクティブを起点に
     -- 実幅を積みながら左右へ広げ、溢れは "+N" で示す。一律 17 セル見積りをやめ
     -- 実際の名前幅で数えるので、短い名前のタブが場所を取らず同じ幅でより多く見える。
@@ -459,7 +472,6 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       end
     end
 
-    local items = {}
     local hidden_left = first - 1
     local hidden_right = #windows - last
     if hidden_left > 0 then
@@ -597,22 +609,9 @@ wezterm.on("update-right-status", function(window, pane)
   table.insert(items, { Text = "  " })
   window:set_right_status(wezterm.format(items))
 
-  -- 左ステータス: 現在の tmux セッション名をタブバー左端 (左上) に常時表示する。
-  -- wezterm-tabs-sync が SetUserVar=tmux_session で通知。タブと同じ三角形のセグメント
-  -- だが、色を青系にしてウィンドウ (タブ) と区別する。tmux 以外のペインでは消す
-  local sess = (wezterm.GLOBAL.tmux_session or {})[tostring(pane:pane_id())]
-  if sess and sess ~= "" then
-    window:set_left_status(wezterm.format({
-      { Background = { Color = "#3d59a1" } },
-      { Foreground = { Color = "#c0caf5" } },
-      { Text = " " .. (wezterm.nerdfonts.cod_terminal_tmux or "") .. " " .. sess .. " " },
-      { Background = { Color = "none" } },
-      { Foreground = { Color = "#3d59a1" } },
-      { Text = SOLID_RIGHT_ARROW .. " " },
-    }))
-  else
-    window:set_left_status("")
-  end
+  -- セッション名リボンは format-tab-title 側でタブと同じセグメントとして描画する。
+  -- 旧実装が左ステータスに残した表示を消しておく
+  window:set_left_status("")
 end)
 
 -- tmux が mouse on でクリックを掴んでいても、Ctrl+クリックだけは WezTerm が
