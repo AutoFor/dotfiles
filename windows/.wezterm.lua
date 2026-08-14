@@ -514,46 +514,12 @@ end)
 -- keybinds
 ----------------------------------------------------
 
--- 右ステータス: 接続状態 / アクティブなキーテーブル / 日時
--- 接続状態は「mux 経由（永続）」「素の SSH（切断で消える）」「ローカル」の3値で表示する。
--- ドメイン名だけでは素の SSH（devbox ペイン内からさらに ssh した場合）を検出できないため、
--- シェルが OSC 7 で報告するホスト名（pane:get_current_working_dir().host）も併用する。
+-- 右ステータス: 一時的なインジケータのみ (キーテーブル / LEADER / ショートカット可視化 /
+-- クリップボード転送 / 音声入力)。普段は何も表示しない。
+-- 常設の接続ラベル (devbox 等) は tmux の下部ステータスバー左下に移設した
+-- (.tmux.conf の status-left。音声入力の録音状態だけは Windows 側にしか無いためここに残る)
 wezterm.on("update-right-status", function(window, pane)
-  local ok, domain = pcall(function()
-    return pane:get_domain_name()
-  end)
-  domain = (ok and domain) and domain or "?"
-
-  local host
-  local ok_cwd, cwd = pcall(function()
-    return pane:get_current_working_dir()
-  end)
-  if ok_cwd and cwd and cwd.host and cwd.host ~= "" then
-    host = cwd.host
-  end
-
-  local label, color
-  if domain == DEVBOX_DOMAIN then
-    -- 旧 mux ドメイン（切り分け用フォールバック）
-    label = "MUX:" .. (host or DEVBOX_DOMAIN)
-    color = "#e0af68"
-  elseif host and host ~= "" and host:lower() ~= DEVBOX_HOSTNAME and domain ~= "local" then
-    -- devbox からさらに別ホストへ素の ssh で入っている状態。切断でセッションも消える
-    label = "SSH:" .. host
-    color = "#f7768e"
-  elseif domain == DEVBOX_TMUX_DOMAIN or (host and host:lower() == DEVBOX_HOSTNAME) then
-    -- ネイティブ SSH + tmux の通常運用（セッションはリモート tmux が保持）
-    label = "devbox"
-    color = "#9ece6a"
-  else
-    label = domain
-    color = "#9ece6a"
-  end
-
-  local items = {
-    { Foreground = { Color = color } },
-    { Text = wezterm.nerdfonts.md_server_network .. " " .. label },
-  }
+  local items = {}
   local key_table = window:active_key_table()
   if key_table then
     table.insert(items, { Foreground = { Color = "#bb9af7" } })
