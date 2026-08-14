@@ -296,3 +296,7 @@ Tmax=tmux
 # PurpleXity=Applicability
 # Grooze=Groq
 # Claudeね、Groozeじゃなくて=Claude Code
+
+# --- 自動提案 2026-08-15 05:43 (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---
+# ノース=ノート
+# Play Lite=プロライテ
