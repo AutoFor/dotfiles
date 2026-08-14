@@ -291,3 +291,8 @@ Tmax=tmux
 
 # --- 自動提案 2026-08-15 05:31 (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---
 # Claume=Claude
+
+# --- 自動提案 2026-08-15 05:39 (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---
+# PurpleXity=Applicability
+# Grooze=Groq
+# Claudeね、Groozeじゃなくて=Claude Code
