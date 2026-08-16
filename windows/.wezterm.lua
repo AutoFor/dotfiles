@@ -118,6 +118,24 @@ local function tmux_bridge(keys, fallback_action)
   end)
 end
 
+-- prefix を付けず、キー列をそのまま tmux に届ける (tmux 側が bind -n で受けるキー用)。
+-- Alt 系は OS の文字合成に食われて Alt 抜きの文字しか下流に届かないことがあるため、
+-- ESC + 文字のバイト列 (Alt = ESC プレフィックス) を明示的に送る。
+-- label は右下ステータスの可視化用 (生のバイト列は読めないため)。
+local function tmux_send_raw(seq, label, fallback_action)
+  return wezterm.action_callback(function(window, pane)
+    wezterm.GLOBAL.last_shortcut = label
+    wezterm.GLOBAL.last_shortcut_at = os.time()
+    if is_tmux_client_pane(pane) then
+      wezterm.GLOBAL.last_shortcut_sent = true
+      window:perform_action(act.SendString(seq), pane)
+    else
+      wezterm.GLOBAL.last_shortcut_sent = false
+      window:perform_action(fallback_action, pane)
+    end
+  end)
+end
+
 -- 素の Ctrl+Tab / Ctrl+Shift+Tab の統一巡回。
 -- tmux ペイン上では tmux ウィンドウを順に巡り、端 (next なら最後 / prev なら先頭) の
 -- ウィンドウにいて、かつ WezTerm タブが複数あるときだけ隣の WezTerm タブ
@@ -262,7 +280,14 @@ config.ssh_domains = {
     },
     multiplexing = "None",
     assume_shell = "Posix",
-    default_prog = { "tmux", "new-session", "-A", "-s", "main" },
+    -- セッション名には並び順の番号プレフィックス (01-main 等。devbox 側の
+    -- tmux-session-order 参照) が付くため、番号無しの "main" から実際の名前を
+    -- 引いて attach する。スクリプトが無い環境では従来どおりの起動にフォールバック
+    default_prog = {
+      "sh",
+      "-c",
+      '"$HOME/.local/bin/tmux-session-order" attach main || exec tmux new-session -A -s main',
+    },
   },
   -- 旧 wezterm mux ドメイン（切り分け用フォールバック）
   {
@@ -704,7 +729,8 @@ local function show_session_launcher()
     local choices = {}
     local has_main = false
     for _, s in ipairs(sessions) do
-      if s.name == "main" then
+      -- 並び順の番号プレフィックス (01-main) を外した名前で判定する
+      if s.name:gsub("^%d%d%-", "") == "main" then
         has_main = true
       end
       table.insert(choices, {
@@ -738,12 +764,19 @@ local function show_session_launcher()
           end
           local session = id:match("^tmux:(.+)$")
           if session then
-            -- 既存セッションなら attach、無ければ作成 (-A)。多重 attach も tmux 側で問題ない
+            -- 既存セッションなら attach、無ければ作成 (-A)。多重 attach も tmux 側で問題ない。
+            -- 番号プレフィックス付きの実名は tmux-session-order が引く (既定タブと同じ経路)
+            local quoted = "'" .. session:gsub("'", "'\\''") .. "'"
             ensure_devbox()
             win:perform_action(
               act.SpawnCommandInNewTab({
                 domain = { DomainName = DEVBOX_TMUX_DOMAIN },
-                args = { "tmux", "new-session", "-A", "-s", session },
+                args = {
+                  "sh",
+                  "-c",
+                  '"$HOME/.local/bin/tmux-session-order" attach ' .. quoted
+                    .. " || exec tmux new-session -A -s " .. quoted,
+                },
               }),
               p
             )
@@ -1146,6 +1179,16 @@ config.keys = {
   -- LEADER+m がペイン単位なのに対し、こちらはウィンドウ単位。タブ名・ペイン名は維持される
   -- (.tmux.conf の prefix+M)
   { key = "M", mods = "LEADER|SHIFT", action = tmux_bridge("M", act.Nop) },
+  -- LEADER+T (Shift+t) : セッション名を変更 (LEADER+t のタブ名変更のセッション版)。
+  -- 名前の先頭の並び順番号 (01-main の "01-") は tmux 側で維持される (.tmux.conf の prefix+$)
+  { key = "T", mods = "LEADER|SHIFT", action = tmux_bridge("$", act.Nop) },
+  -- Alt+Shift+, / Alt+Shift+. : セッションを並びの前/後ろへ入れ替える
+  -- (タブ入れ替え Alt+, / Alt+. のセッション版。tmux 側は bind -n M-< / M->)。
+  -- キーボードレイアウトによって "<" と "," のどちらで届くか変わるため両方に割り当てる
+  { key = "<", mods = "ALT|SHIFT", action = tmux_send_raw("\x1b<", "M-<", act.Nop) },
+  { key = ",", mods = "ALT|SHIFT", action = tmux_send_raw("\x1b<", "M-<", act.Nop) },
+  { key = ">", mods = "ALT|SHIFT", action = tmux_send_raw("\x1b>", "M->", act.Nop) },
+  { key = ".", mods = "ALT|SHIFT", action = tmux_send_raw("\x1b>", "M->", act.Nop) },
 
   -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
   { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },

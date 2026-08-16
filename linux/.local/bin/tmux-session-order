@@ -1,0 +1,179 @@
+#!/bin/sh
+# セッションの並び順を、セッション名の番号プレフィックス "NN-" で制御する (#232)。
+#
+# tmux はセッション一覧 (choose-tree / switch-client -n/-p / list-sessions) を
+# 常に名前の昇順で並べるため、「並びを入れ替える」機能そのものを持たない。
+# そこで全セッション名を "01-main" "02-dotfiles" のように採番し、
+# 番号の入れ替え = 並びの入れ替えとして扱う。番号は 2 桁固定 (10 番目以降でも
+# 昇順が崩れないため)。
+#
+# 使い方 (.tmux.conf / .zshrc / .wezterm.lua から呼ばれる):
+#   tmux-session-order renumber          採番を正規化する (session-created フック)
+#   tmux-session-order move prev|next    現在のセッションを並びの前/後ろへ (Alt+< / Alt+>)
+#   tmux-session-order rename <名前>     番号を保ったまま改名する (prefix+$ / LEADER+T)
+#   tmux-session-order resolve <名前>    番号無しの名前から実際のセッション名を引く
+#   tmux-session-order attach <名前>     resolve して attach (無ければ作成)
+#
+# セッション名が変わると、ペイン名・claude 会話の対応表 (位置キーがセッション名)
+# が実態とズレて次の復元で元の位置に付いてしまうため、変更後は必ず
+# tmux-resurrect-autosave force を回す (prefix+m / prefix+M と同じ理由)。
+set -eu
+
+TAB=$(printf '\t')
+TMPBASE="${TMPDIR:-/tmp}/tmux-session-order.$$"
+
+# 並び替えの対象になるセッション名を、現在の並び順 (= 名前の昇順) で列挙する。
+# tm が作るグループセッション (<base>-view-<pid>) は既存セッションの別ビューなので除く。
+list_sessions() {
+  # ビューかどうかは名前で判定する (#{session_group} は共有元にも付くため、
+  # グループの有無で弾くと実体のセッションまで採番から漏れて番号が重複する)
+  # "_" 始まりは道具用の一時セッション (bootstrap.sh の _bootstrap 等)。
+  # 名前を書き換えると呼び出し側の kill-session が外れるので採番しない
+  tmux list-sessions -F '#{session_name}' 2>/dev/null |
+    while read -r name; do
+      case "$name" in *-view-* | _*) continue ;; esac
+      printf '%s\n' "$name"
+    done
+}
+
+# "01-main" -> "main" (番号プレフィックスを外した表示上の名前)
+bare_name() {
+  case "$1" in
+    [0-9][0-9]-*) printf '%s\n' "${1#??-}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+# 操作対象のセッション名。引数があればそれを使い (バインドから #{session_name} を渡す)、
+# グループセッション (<base>-view-<pid>) から押されたときは実体のセッションに読み替える。
+target_session() {
+  name="${1:-}"
+  [ -n "$name" ] || name=$(tmux display-message -p '#{session_name}' 2>/dev/null || true)
+  case "$name" in
+    *-view-*) printf '%s\n' "${name%-view-*}" ;;
+    *) printf '%s\n' "$name" ;;
+  esac
+}
+
+# セッション名が変わった後始末: 位置キーの保存し直しと WezTerm への通知。
+# 動作確認用の別サーバー (tmux -L foo) から呼ばれたときは保存しない。
+# resurrect の保存は「今つないでいるサーバーの中身」を last / pane-names.tsv /
+# claude-sessions.tsv に丸ごと書き出すため、テスト用サーバーで走らせると本番の
+# 復元素材とペイン→会話 ID の対応が消える (2026-08-17 に実際に踏んだ)。
+refresh() {
+  socket=$(tmux display-message -p '#{socket_path}' 2>/dev/null || true)
+  case "$socket" in
+    */default) ;;
+    *) return 0 ;;
+  esac
+  sh "$HOME/.local/bin/tmux-resurrect-autosave" force >/dev/null 2>&1 &
+  sh "$HOME/.local/bin/wezterm-tabs-sync" >/dev/null 2>&1 &
+}
+
+# 標準入力の並び順 (1 行 1 セッション名) どおりに 01, 02, ... を振り直す。
+apply_order() {
+  cat > "$TMPBASE.want"
+  awk -v tab="$TAB" '
+    { old = $0; b = old; sub(/^[0-9][0-9]-/, "", b)
+      printf "%s%s%02d-%s\n", old, tab, NR, b }
+  ' "$TMPBASE.want" > "$TMPBASE.pairs"
+  awk -F "$TAB" '$1 != $2' "$TMPBASE.pairs" > "$TMPBASE.diff"
+
+  if [ -s "$TMPBASE.diff" ]; then
+    # 番号の入れ替えでは移動先の名前が別セッションとぶつかる (01-a -> 02-a が
+    # 既存の 02-b と衝突) ため、いったん一時名へ逃がしてから確定させる
+    n=0
+    while IFS="$TAB" read -r old new; do
+      n=$((n + 1))
+      tmux rename-session -t "=$old" "__reorder-$n" 2>/dev/null || true
+    done < "$TMPBASE.diff"
+    n=0
+    while IFS="$TAB" read -r old new; do
+      n=$((n + 1))
+      tmux rename-session -t "=__reorder-$n" "$new" 2>/dev/null || true
+    done < "$TMPBASE.diff"
+    refresh
+  fi
+  rm -f "$TMPBASE.want" "$TMPBASE.pairs" "$TMPBASE.diff"
+}
+
+case "${1:-}" in
+renumber)
+  # session-created フックから呼ばれる。復元 (tmux-autorestore) の最中に
+  # 名前を書き換えると restore.sh のセッション名指定が外れて構成が壊れるため、
+  # 復元完了マークが付くまでは何もしない (tmux-resurrect-autosave と同じゲート)。
+  if [ "${2:-}" != force ]; then
+    tmux show-environment -g TMUX_AUTORESTORE_FINISHED >/dev/null 2>&1 || exit 0
+  fi
+  list_sessions | apply_order
+  ;;
+
+move)
+  dir="${2:-}"
+  cur=$(target_session "${3:-}")
+  [ -n "$cur" ] || exit 0
+  list_sessions > "$TMPBASE.all"
+  awk -v cur="$cur" -v dir="$dir" '
+    { a[NR] = $0; if ($0 == cur) idx = NR }
+    END {
+      j = (dir == "prev") ? idx - 1 : idx + 1
+      if (idx && j >= 1 && j <= NR) { t = a[idx]; a[idx] = a[j]; a[j] = t }
+      for (i = 1; i <= NR; i++) print a[i]
+    }
+  ' "$TMPBASE.all" | apply_order
+  rm -f "$TMPBASE.all"
+  # 入れ替え後の並びを一瞬表示する (端では動かないので、そのことも見て分かる)
+  order=$(list_sessions | tr '\n' ' ')
+  tmux display-message "セッションの並び: $order"
+  ;;
+
+rename)
+  # 入力に番号を書かれても二重に付かないよう落とす。前後の空白も落とす
+  new=$(printf '%s' "${2:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^[0-9][0-9]-//')
+  [ -n "$new" ] || exit 0
+  cur=$(target_session "${3:-}")
+  [ -n "$cur" ] || exit 0
+  case "$cur" in
+    [0-9][0-9]-*) target="${cur%%-*}-$new" ;;
+    *) target="$new" ;;
+  esac
+  [ "$target" = "$cur" ] && exit 0
+  if tmux rename-session -t "=$cur" "$target" 2>/dev/null; then
+    refresh
+  else
+    tmux display-message "セッション名を変更できませんでした (同名が既にある?): $target"
+  fi
+  ;;
+
+resolve)
+  want="${2:-}"
+  [ -n "$want" ] || exit 0
+  # 番号付き ("01-main") でも番号無し ("main") でも引ける。ビューは実体ではないので除く
+  found=$(list_sessions | awk -v want="$want" '
+    { b = $0; sub(/^[0-9][0-9]-/, "", b)
+      if ($0 == want || b == want) { print $0; exit } }')
+  # 生きているセッションに無ければ resurrect の保存内容から引く。
+  # VM 再起動直後 (サーバー未起動) に "main" で入ると、復元が作る "01-main" の
+  # 隣に空の "main" が居座ってしまう。保存済みの名前で作れば復元がそこへ入る
+  if [ -z "$found" ] && [ -r "$HOME/.local/share/tmux/resurrect/last" ]; then
+    found=$(awk -F "$TAB" -v want="$want" '
+      $1 == "pane" { s = $2; b = s; sub(/^[0-9][0-9]-/, "", b)
+        if (s == want || b == want) { print s; exit } }
+    ' "$HOME/.local/share/tmux/resurrect/last")
+  fi
+  if [ -n "$found" ]; then printf '%s\n' "$found"; fi
+  ;;
+
+attach)
+  want="${2:-main}"
+  found=$(sh "$0" resolve "$want" || true)
+  [ -n "$found" ] || found="$want"
+  # 既にあれば attach、無ければ作成 (採番は session-created フックの renumber が行う)
+  exec tmux new-session -A -s "$found"
+  ;;
+
+*)
+  echo "usage: tmux-session-order {renumber|move prev|next|rename <名前>|resolve <名前>|attach <名前>}" >&2
+  exit 2
+  ;;
+esac

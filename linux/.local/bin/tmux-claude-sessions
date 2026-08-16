@@ -54,12 +54,24 @@ save)
   # (2026-08-01 の復元失敗を起点に、2026-08-02 まで 3 会話 7 プロセスが継続した)
   # 出力列: session_name  window_name  pane_index  window_index  session_id
   # (照合の主キーは名前。番号 w はフォールバック用に 4 列目に残す)
-  printf '%s\n' "$PANES" | while IFS="$TAB" read -r s w wn p id; do
-    [ -r "$PANE_DIR/${id#%}" ] || continue
-    sid=$(head -n 1 "$PANE_DIR/${id#%}")
-    [ -n "$sid" ] || continue
-    printf '%s\t%s\t%s\t%s\t%s\n' "$s" "$wn" "$p" "$w" "$sid"
-  done | awk -F '\t' '!seen[$5]++' > "$FILE.tmp"
+  # 列の取り出しは awk で行う。ウィンドウ名は空になりうる (claude が一瞬だけ空の
+  # タイトルを出すと automatic-rename で名前が消える) が、shell の read は IFS の
+  # 空白文字 (タブを含む) が連続すると 1 つに畳むため、空の列があった行だけ
+  # 列がずれて pane_id を取り違える。awk -F の分割なら空の列はそのまま残る
+  # (2026-08-17: ずれた行で head がディレクトリを読んで失敗し、set -e でループごと
+  #  止まって claude-sessions.tsv が空になった)
+  printf '%s\n' "$PANES" | awk -F "$TAB" -v dir="$PANE_DIR" '
+    {
+      id = $5; sub(/^%/, "", id)
+      if (id == "") next
+      f = dir "/" id
+      sid = ""
+      if ((getline sid < f) > 0 && sid != "") {
+        print $1 "\t" $3 "\t" $4 "\t" $2 "\t" sid
+      }
+      close(f)
+    }
+  ' | awk -F '\t' '!seen[$5]++' > "$FILE.tmp"
   # 上書き前に旧版を 3 世代残す (claude-sessions.tsv.1 〜 .3)。
   # 一点物のまま復元失敗直後の保存に空で潰されると、どのペインがどの会話だったか
   # 永久に分からなくなる (2026-08-01 に実際に発生)

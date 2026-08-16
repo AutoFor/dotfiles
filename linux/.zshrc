@@ -313,14 +313,25 @@ alias tssh='trzsz -d ssh'
 # 既存セッションにはグループセッション（ウィンドウ共有・ビュー独立）で入る:
 #   - 端末ごとにアクティブウィンドウを独立して切り替えられる
 #   - status line を表示（iPad/iPhone 等、WezTerm のタブバーが無いクライアント向け。
-#     WezTerm は直接 attach (new -As main) するので status off のまま）
+#     WezTerm は直接 attach (tmux-session-order attach main) するので status off のまま）
 #   - detach で自動削除（destroy-unattached on）
+# セッション名には並び順の番号プレフィックス（01-main 等。tmux-session-order 参照）が
+# 付くため、tm main のように番号無しで呼ばれた名前は実際のセッション名に読み替える。
+# サーバー未起動のときは resurrect の保存内容から引くので、VM 再起動直後に
+# 復元される名前（01-main）でそのまま作られ、空の main が別に居座らない。
 tm() {
   local base="${1:-main}"
+  local resolved
+  resolved="$(~/.local/bin/tmux-session-order resolve "$base" 2>/dev/null)"
+  [[ -n "$resolved" ]] && base="$resolved"
   if [[ -n "${TMUX:-}" ]]; then
     # tmux 内から呼ばれたらセッション切り替え
     tmux switch-client -t "=$base" 2>/dev/null || {
-      tmux new-session -d -s "$base" && tmux switch-client -t "=$base"
+      # 作った直後に採番フック（session-created）が改名するため、
+      # 名前ではなくセッション ID で切り替える
+      local id
+      id="$(tmux new-session -dP -F '#{session_id}' -s "$base")" \
+        && tmux switch-client -t "$id"
     }
     return
   fi
