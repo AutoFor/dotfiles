@@ -1,0 +1,138 @@
+#!/bin/sh
+# 閉じたウィンドウを開き直せるようにする (issue #231)。
+# ブラウザの「タブを閉じる Ctrl+W / 閉じたタブを開き直す Ctrl+Shift+W」の tmux 版。
+#
+# close: prefix + & (WezTerm の Ctrl+W ブリッジ) から呼ばれる。kill-window する前に
+#        ウィンドウ名・レイアウト・各ペインの cwd / ペイン名 (@name) /
+#        claude の会話 ID を記録してから閉じる。
+# undo:  prefix + W (WezTerm の Ctrl+Shift+W ブリッジ)。直近の記録から復元する。
+#        記録はスタックなので連打すると閉じた順に遡って開き直せる。
+#
+# 復元できるのは「構成」まで。動いていたコマンドは自動実行しない
+# (プロンプトに打ちかけの危険なコマンドが残っていることがあるため)。
+# 例外は claude で、記録した会話 ID があれば --resume で同じ会話に戻す。
+set -eu
+
+DIR="$HOME/.local/share/tmux/closed-windows"
+PANE_DIR="$HOME/.local/share/tmux/claude-panes"   # ペイン ID → claude 会話 ID (tmux-claude-sessions track)
+KEEP=20                                            # 保持する記録の数 (これより古いものから捨てる)
+TAB=$(printf '\t')
+
+# 記録ファイルは連番。数値順の末尾が「直近に閉じたウィンドウ」
+records() { ls -1 "$DIR" 2>/dev/null | grep -E '^[0-9]+$' | sort -n; }
+
+# ウィンドウ 1 枚分の構成を標準出力へ。空のフィールド (@name 未設定など) が
+# 潰れないよう、行の分解には read ではなく cut を使う
+# (IFS にタブを入れた read は連続タブを 1 つの区切りとして扱うため列がずれる)
+record_window() {
+  tmux display-message -p -t "$1" \
+    "win${TAB}#{session_name}${TAB}#{window_index}${TAB}#{window_name}${TAB}#{window_layout}"
+  tmux list-panes -t "$1" \
+    -F "#{pane_index}${TAB}#{pane_current_path}${TAB}#{@name}${TAB}#{?pane_active,1,0}${TAB}#{pane_id}" |
+    while IFS= read -r line; do
+      pid=$(printf '%s' "$line" | cut -f5)
+      sid=""
+      [ -n "$pid" ] && [ -f "$PANE_DIR/${pid#%}" ] && sid=$(head -n 1 "$PANE_DIR/${pid#%}")
+      # 列: pane / pane_index / cwd / @name / claude 会話 ID / アクティブか
+      printf 'pane\t%s\t%s\t%s\n' \
+        "$(printf '%s' "$line" | cut -f1-3)" "$sid" "$(printf '%s' "$line" | cut -f4)"
+    done
+}
+
+do_close() {
+  target=${1:-}
+  [ -n "$target" ] || target=$(tmux display-message -p '#{window_id}')
+  mkdir -p "$DIR"
+  prev_seq=$(records | tail -n 1)
+  rec="$DIR/$(( ${prev_seq:-0} + 1 ))"
+
+  # 記録に失敗しても「閉じる」は止めない (閉じられない方が困る)
+  if record_window "$target" > "$rec.tmp" 2>/dev/null; then
+    mv "$rec.tmp" "$rec"
+    # 古い記録を捨てる (KEEP 件を超えた分)
+    total=$(records | wc -l)
+    if [ "$total" -gt "$KEEP" ]; then
+      records | head -n $(( total - KEEP )) | while read -r old; do rm -f "$DIR/$old"; done
+    fi
+  else
+    rm -f "$rec.tmp"
+  fi
+
+  tmux kill-window -t "$target"
+}
+
+do_undo() {
+  last=$(records | tail -n 1)
+  if [ -z "${last:-}" ]; then
+    tmux display-message "開き直せるウィンドウはありません"
+    return 0
+  fi
+  file="$DIR/$last"
+
+  sess=$(awk -F "$TAB" '$1=="win"{print $2; exit}' "$file")
+  widx=$(awk -F "$TAB" '$1=="win"{print $3; exit}' "$file")
+  wname=$(awk -F "$TAB" '$1=="win"{print $4; exit}' "$file")
+  layout=$(awk -F "$TAB" '$1=="win"{print $5; exit}' "$file")
+  first_path=$(awk -F "$TAB" '$1=="pane"{print $3; exit}' "$file")
+  npanes=$(awk -F "$TAB" '$1=="pane"' "$file" | wc -l)
+
+  # 閉じたときのセッションが消えていたら現在のセッションへ復元する
+  tmux has-session -t "=$sess" 2>/dev/null || sess=$(tmux display-message -p '#{session_name}')
+
+  # 元のウィンドウ番号の位置に割り込ませる (その番号が無ければ末尾へ)
+  win=$(tmux new-window -d -b -t "=$sess:$widx" -n "$wname" -c "$first_path" \
+          -P -F '#{window_id}' 2>/dev/null) ||
+    win=$(tmux new-window -d -t "=$sess" -n "$wname" -c "$first_path" -P -F '#{window_id}')
+
+  # 2 枚目以降のペインを作る。常に「直前に作ったペイン」を分割することで
+  # 作成順 = ペイン一覧の並び順になり、あとから流し込むレイアウトと対応が取れる。
+  # 分割のたびに tiled で均すのは、狭いウィンドウで「空きが無い」と失敗しないため。
+  if [ "$npanes" -gt 1 ]; then
+    prev=$(tmux list-panes -t "$win" -F '#{pane_id}' | head -n 1)
+    n=2
+    while [ "$n" -le "$npanes" ]; do
+      p=$(awk -F "$TAB" -v n="$n" '$1=="pane"{c++; if(c==n){print $3; exit}}' "$file")
+      prev=$(tmux split-window -d -t "$prev" -c "$p" -P -F '#{pane_id}')
+      tmux select-layout -t "$win" tiled >/dev/null 2>&1 || true
+      n=$(( n + 1 ))
+    done
+    tmux select-layout -t "$win" "$layout" >/dev/null 2>&1 || true
+  fi
+
+  # ペイン名を戻し、claude が動いていたペインは同じ会話で開き直す
+  n=1
+  for pid in $(tmux list-panes -t "$win" -F '#{pane_id}'); do
+    line=$(awk -F "$TAB" -v n="$n" '$1=="pane"{c++; if(c==n){print; exit}}' "$file")
+    pname=$(printf '%s' "$line" | cut -f4)
+    sid=$(printf '%s' "$line" | cut -f5)
+    active=$(printf '%s' "$line" | cut -f6)
+    [ -n "$pname" ] && tmux set -p -t "$pid" @name "$pname"
+    if [ -n "$sid" ] && ls "$HOME"/.claude/projects/*/"$sid".jsonl >/dev/null 2>&1; then
+      tmux send-keys -t "$pid" "claude --resume $sid --dangerously-skip-permissions" Enter
+    fi
+    [ "$active" = "1" ] && tmux select-pane -t "$pid"
+    n=$(( n + 1 ))
+  done
+
+  rm -f "$file"
+  tmux select-window -t "$win"
+  # ペイン名・claude 会話の位置キーが変わるので保存し直し、WezTerm のタブバーも更新する
+  # (.tmux.conf の prefix+m / ! と同じ理由)
+  sh "$HOME/.local/bin/wezterm-tabs-sync" >/dev/null 2>&1 || true
+  sh "$HOME/.local/bin/tmux-resurrect-autosave" force >/dev/null 2>&1 || true
+  tmux display-message "ウィンドウ '$wname' を開き直しました"
+}
+
+case "${1:-}" in
+close|"") do_close "${2:-}" ;;
+undo)     do_undo ;;
+list)
+  records | while read -r r; do
+    printf '%s\t%s\n' "$r" "$(awk -F "$TAB" '$1=="win"{print $2":"$3" "$4; exit}' "$DIR/$r")"
+  done
+  ;;
+*)
+  echo "usage: tmux-close-window [close [window-id]|undo|list]" >&2
+  exit 1
+  ;;
+esac

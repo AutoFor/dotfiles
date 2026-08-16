@@ -1077,6 +1077,10 @@ config.keys = {
   -- ローカルペイン (PowerShell 等) では WezTerm タブの新規作成/クローズにフォールバック
   { key = "t", mods = "CTRL", action = tmux_bridge("c", act.SpawnTab("CurrentPaneDomain")) }, -- 新規
   { key = "w", mods = "CTRL", action = tmux_bridge("&", act.CloseCurrentTab({ confirm = false })) }, -- 閉じる (確認なし)
+  -- 閉じたタブを開き直す (ブラウザの Ctrl+Shift+W ならぬ Ctrl+Shift+T 相当)。
+  -- tmux 側が閉じる直前に構成を記録しているので、名前・レイアウト・各ペインの cwd と
+  -- ペイン名が戻る。claude が動いていたペインは同じ会話で再開する。連打で閉じた順に遡る
+  { key = "w", mods = "SHIFT|CTRL", action = tmux_bridge("W", act.Nop) }, -- 開き直す
   -- 統一巡回: tmux ウィンドウを順に巡り、端まで来たら WezTerm タブ (PowerShell 等) へ
   -- 抜けて一周する。ローカルペインでは WezTerm タブ切替 (cycle_tabs 参照)
   { key = "Tab", mods = "CTRL", action = cycle_tabs(1, "n") }, -- 次へ
