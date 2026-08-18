@@ -10,7 +10,9 @@
 # 使い方 (.tmux.conf / .zshrc / .wezterm.lua から呼ばれる):
 #   tmux-session-order renumber          採番を正規化する (session-created フック)
 #   tmux-session-order move prev|next    現在のセッションを並びの前/後ろへ (Alt+< / Alt+>)
-#   tmux-session-order rename <名前>     番号を保ったまま改名する (prefix+$ / LEADER+T)
+#   tmux-session-order rename <名前>     番号を保ったまま改名する (prefix+$ / LEADER+T)。
+#                                        "3-main" のように先頭に 1〜2 桁の番号を書くと
+#                                        その位置へ移してから採番し直す
 #   tmux-session-order resolve <名前>    番号無しの名前から実際のセッション名を引く
 #   tmux-session-order attach <名前>     resolve して attach (無ければ作成)
 #
@@ -97,6 +99,28 @@ apply_order() {
   rm -f "$TMPBASE.want" "$TMPBASE.pairs" "$TMPBASE.diff"
 }
 
+# 指定のセッションを並びの pos 番目へ移す (1 始まり。範囲外は端に丸める)。
+move_to_pos() {
+  cur="$1"; pos="$2"
+  list_sessions > "$TMPBASE.all"
+  awk -v cur="$cur" -v pos="$pos" '
+    { a[NR] = $0; if ($0 == cur) idx = NR }
+    END {
+      n = NR
+      if (!idx) { for (i = 1; i <= n; i++) print a[i]; exit }
+      if (pos < 1) pos = 1
+      if (pos > n) pos = n
+      j = 0
+      for (i = 1; i <= n; i++) if (i != idx) b[++j] = a[i]
+      k = 0
+      for (i = 1; i <= n; i++) {
+        if (i == pos) print cur; else print b[++k]
+      }
+    }
+  ' "$TMPBASE.all" | apply_order
+  rm -f "$TMPBASE.all"
+}
+
 case "${1:-}" in
 renumber)
   # session-created フックから呼ばれる。復元 (tmux-autorestore) の最中に
@@ -128,8 +152,16 @@ move)
   ;;
 
 rename)
-  # 入力に番号を書かれても二重に付かないよう落とす。前後の空白も落とす
-  new=$(printf '%s' "${2:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/^[0-9][0-9]-//')
+  # 前後の空白は落とす
+  new=$(printf '%s' "${2:-}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+  [ -n "$new" ] || exit 0
+  # 先頭に 1〜2 桁の番号を書いたら「その位置へ移す」指定として扱う
+  # ("3-main" なら 3 番目へ)。番号は入力どおりには使わず、移動後に採番し直す。
+  # 3 桁以上 ("2024-plans" 等) は番号ではなく名前の一部とみなす
+  pos=""
+  case "$new" in
+    [0-9]-* | [0-9][0-9]-*) pos="${new%%-*}"; new="${new#*-}" ;;
+  esac
   [ -n "$new" ] || exit 0
   cur=$(target_session "${3:-}")
   [ -n "$cur" ] || exit 0
@@ -137,11 +169,17 @@ rename)
     [0-9][0-9]-*) target="${cur%%-*}-$new" ;;
     *) target="$new" ;;
   esac
-  [ "$target" = "$cur" ] && exit 0
-  if tmux rename-session -t "=$cur" "$target" 2>/dev/null; then
-    refresh
-  else
-    tmux display-message "セッション名を変更できませんでした (同名が既にある?): $target"
+  if [ "$target" != "$cur" ]; then
+    if tmux rename-session -t "=$cur" "$target" 2>/dev/null; then
+      [ -n "$pos" ] || refresh
+    else
+      tmux display-message "セッション名を変更できませんでした (同名が既にある?): $target"
+      exit 0
+    fi
+  fi
+  if [ -n "$pos" ]; then
+    move_to_pos "$target" "$pos"   # 採番し直しと保存は apply_order の中
+    tmux display-message "セッションの並び: $(list_sessions | tr '\n' ' ')"
   fi
   ;;
 
