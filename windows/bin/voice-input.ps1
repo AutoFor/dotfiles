@@ -288,11 +288,9 @@ $MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみな
 # 固定値だと音量の小さいマイクで発話が「声あり」と判定されず、チャンクごと捨てられていた。
 # 録音開始直後の環境音を実測し、そのノイズフロアの $NoiseMultiplier 倍をしきい値にする
 $CalibrateFrames = 6    # ノイズフロアの計測に使うフレーム数 (x $FrameMs = 600ms)。計測中は $MinThreshold で判定する (取りこぼし防止)
-$NoiseMultiplier = 2.0
+$NoiseMultiplier = 3.0
 $MinThreshold = 120     # 静かすぎる環境でしきい値が 0 付近に張り付くのを防ぐ下限
-# 上限は旧来の固定値。自動決定は「小さい声も拾えるよう緩める」ためのものなので、
-# 環境ノイズが大きくても旧来より厳しくはしない (厳しくすると声を一切拾わなくなる)
-$MaxThreshold = 300
+$MaxThreshold = 800     # 計測中に話し始めたときにしきい値が高くなりすぎるのを防ぐ上限
 # 送信前の音量正規化。小さいまま投げると Whisper 側の認識精度も落ちる
 $NormalizePeak = 22000     # 目標ピーク (16bit フルスケール 32767 の約 67%)
 $NormalizeMaxGain = 8.0
@@ -512,8 +510,7 @@ try {
   # 右ステータスのマイクアイコン用フラグ。ファイルの存在 = 録音中、
   # 中身 (1/0) = 声を拾っているか。.wezterm.lua が読んで色を変える
   Set-Content -LiteralPath $RecordingFlag -Value '0' -NoNewline
-  Write-Log ("recording started (pane={0}, threshold={1})" -f $PaneId,
-    $(if ($SilenceThreshold -gt 0) { "$SilenceThreshold (固定)" } else { '環境音から自動決定' }))
+  Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
 
   # 画面中央の波形フローティング表示 (既定オフ。表示が煩わしいとの評でアイコンのみ運用に)。
   # 録音フラグが消えると自動で閉じる
@@ -560,8 +557,7 @@ try {
           [Array]::Sort($sorted)
           $floor = $sorted[[int][math]::Floor(($sorted.Count - 1) * 0.25)]
           $threshold = [int][math]::Min([double]$MaxThreshold, [math]::Max([double]$MinThreshold, $floor * $NoiseMultiplier))
-          Write-Log ("ノイズフロア={0:n0} (計測 {1} フレームの最大={2:n0}) → 無音しきい値={3}" -f `
-            $floor, $sorted.Count, $sorted[$sorted.Count - 1], $threshold)
+          Write-Log ("ノイズフロア={0:n0} → 無音しきい値={1}" -f $floor, $threshold)
           $calibrating = $false
           $calibRms.Clear()
         }
