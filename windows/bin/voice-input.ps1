@@ -22,13 +22,6 @@
 #     (「ご視聴ありがとうございました」等)、直前チャンクとの完全一致で
 #     雑音チャンクの幻聴テキストをローカルで破棄する
 #
-# 小音量マイク対策 (issue #233):
-#   VAD のしきい値が固定値だと、マイクの入力ボリュームが小さい環境で発話が
-#   「声あり」と判定されず、チャンクごと捨てられて丸ごと取りこぼす。そこで
-#   録音開始直後 600ms の環境音からノイズフロアを実測してしきい値を自動決定し
-#   (計測中は下限値で判定するので頭は切れない)、さらに Groq へ送る前に
-#   ピークを揃えて増幅する (小さいままだと Whisper 側の認識精度も落ちるため)。
-#
 # 辞書 (windows/voice-dictionary.txt):
 #   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を
 #   正しい表記へ寄せ、それでも外した分は「誤=正」ルールでローカル置換する。
@@ -52,7 +45,7 @@ param(
   [int]$MaxSeconds = 300,                    # 停止し忘れの保険。超えたら自動停止する
   [string]$Model = 'whisper-large-v3-turbo',
   [string]$Language = 'ja',                  # 空文字で自動判定 (英語で話すときなど)
-  [int]$SilenceThreshold = 0,                # これ未満の RMS (16bit 振幅) を無音とみなす。0 = 環境音から自動決定
+  [int]$SilenceThreshold = 300,              # これ未満の RMS (16bit 振幅) を無音とみなす。誤検出が多ければ上げる
   [int]$SilenceMs = 700,                     # この長さの無音でフレーズを区切って変換に回す
   [int]$MaxChunkSeconds = 15,                # 無音が来なくても強制的に区切る上限
   # 辞書: 「誤=正」の置換ルールと Whisper への用語ヒント (書式はファイル先頭のコメント参照)
@@ -197,31 +190,6 @@ namespace Voice {
       return Math.Sqrt((double)sum / n);
     }
 
-    // 小音量のマイク対策 (issue #233)。ピークが targetPeak になるよう 16bit PCM を
-    // その場で増幅する (倍率の上限は maxGain)。返り値は実際に掛けた倍率 (1.0 = 未加工)
-    public static double Normalize(byte[] data, int targetPeak, double maxGain) {
-      if (data == null || data.Length < 2) return 1.0;
-      int n = data.Length / 2;
-      int peak = 0;
-      for (int i = 0; i < n; i++) {
-        short s = (short)(data[2 * i] | (data[2 * i + 1] << 8));
-        int a = s < 0 ? -s : s;
-        if (a > peak) peak = a;
-      }
-      if (peak == 0) return 1.0;
-      double g = (double)targetPeak / peak;
-      if (g > maxGain) g = maxGain;
-      if (g <= 1.0) return 1.0;   // 既に十分な音量なら触らない (歪ませない)
-      for (int i = 0; i < n; i++) {
-        short s = (short)(data[2 * i] | (data[2 * i + 1] << 8));
-        int v = (int)Math.Round(s * g);
-        if (v > 32767) v = 32767; else if (v < -32768) v = -32768;
-        data[2 * i] = (byte)(v & 0xff);
-        data[2 * i + 1] = (byte)((v >> 8) & 0xff);
-      }
-      return g;
-    }
-
     public void Dispose() {
       if (handle == IntPtr.Zero) return;
       waveInReset(handle);
@@ -283,17 +251,6 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 
 $FrameMs = 100
 $MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみなして捨てる (Whisper の無音幻聴対策も兼ねる)
-
-# VAD しきい値の自動決定 (issue #233)。マイクの入力ボリュームは環境ごとにまちまちで、
-# 固定値だと音量の小さいマイクで発話が「声あり」と判定されず、チャンクごと捨てられていた。
-# 録音開始直後の環境音を実測し、そのノイズフロアの $NoiseMultiplier 倍をしきい値にする
-$CalibrateFrames = 6    # ノイズフロアの計測に使うフレーム数 (x $FrameMs = 600ms)。計測中は $MinThreshold で判定する (取りこぼし防止)
-$NoiseMultiplier = 3.0
-$MinThreshold = 120     # 静かすぎる環境でしきい値が 0 付近に張り付くのを防ぐ下限
-$MaxThreshold = 800     # 計測中に話し始めたときにしきい値が高くなりすぎるのを防ぐ上限
-# 送信前の音量正規化。小さいまま投げると Whisper 側の認識精度も落ちる
-$NormalizePeak = 22000     # 目標ピーク (16bit フルスケール 32767 の約 67%)
-$NormalizeMaxGain = 8.0
 $LevelFile = Join-Path $env:TEMP 'wezterm-voice-level.txt'   # 実測 RMS。オーバーレイの波形が読む
 
 # 辞書の読み込み。置換ルール (順序保持) と用語ヒントに分ける。
@@ -343,8 +300,6 @@ $HallucinationPatterns = @(
 function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
   $wav = Join-Path $env:TEMP ("wezterm-voice-chunk{0}.wav" -f $chunkNo)
   try {
-    $gain = [Voice.Recorder]::Normalize($pcm, $NormalizePeak, $NormalizeMaxGain)
-    if ($gain -gt 1.0) { Write-Log ("chunk{0}: 音量を {1:n1} 倍に正規化" -f $chunkNo, $gain) }
     Write-Wav $wav $pcm
     $form = @{
       model           = $Model
@@ -531,10 +486,6 @@ try {
   $voicedMs = 0; $trailingMs = 0; $chunkMs = 0
   $chunkNo = 0; $sawVoice = $false
   $speaking = $false   # マイクアイコンの色用。状態が変わったときだけフラグに書く
-  # しきい値は計測が終わるまで暫定値 ($MinThreshold)。明示的に値を渡されたら計測しない
-  $threshold = if ($SilenceThreshold -gt 0) { $SilenceThreshold } else { $MinThreshold }
-  $calibrating = ($SilenceThreshold -le 0)
-  $calibRms = [System.Collections.Generic.List[double]]::new()
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   $stopping = $false
 
@@ -549,20 +500,7 @@ try {
       if ($Overlay) {
         try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
       }
-      if ($calibrating) {
-        $calibRms.Add($rms)
-        if ($calibRms.Count -ge $CalibrateFrames) {
-          # いきなり話し始めると平均が跳ねるので、下位 25% 分位をノイズフロアとみなす
-          $sorted = $calibRms.ToArray()
-          [Array]::Sort($sorted)
-          $floor = $sorted[[int][math]::Floor(($sorted.Count - 1) * 0.25)]
-          $threshold = [int][math]::Min([double]$MaxThreshold, [math]::Max([double]$MinThreshold, $floor * $NoiseMultiplier))
-          Write-Log ("ノイズフロア={0:n0} → 無音しきい値={1}" -f $floor, $threshold)
-          $calibrating = $false
-          $calibRms.Clear()
-        }
-      }
-      $voiced = $rms -ge $threshold
+      $voiced = $rms -ge $SilenceThreshold
       if ($voiced -ne $speaking) {
         $speaking = $voiced
         try { [System.IO.File]::WriteAllText($RecordingFlag, $(if ($voiced) { '1' } else { '0' })) } catch {}
