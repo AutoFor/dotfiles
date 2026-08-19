@@ -197,6 +197,31 @@ namespace Voice {
       return Math.Sqrt((double)sum / n);
     }
 
+    // 小音量のマイク対策 (issue #233)。ピークが targetPeak になるよう 16bit PCM を
+    // その場で増幅する (倍率の上限は maxGain)。返り値は実際に掛けた倍率 (1.0 = 未加工)
+    public static double Normalize(byte[] data, int targetPeak, double maxGain) {
+      if (data == null || data.Length < 2) return 1.0;
+      int n = data.Length / 2;
+      int peak = 0;
+      for (int i = 0; i < n; i++) {
+        short s = (short)(data[2 * i] | (data[2 * i + 1] << 8));
+        int a = s < 0 ? -s : s;
+        if (a > peak) peak = a;
+      }
+      if (peak == 0) return 1.0;
+      double g = (double)targetPeak / peak;
+      if (g > maxGain) g = maxGain;
+      if (g <= 1.0) return 1.0;   // 既に十分な音量なら触らない (歪ませない)
+      for (int i = 0; i < n; i++) {
+        short s = (short)(data[2 * i] | (data[2 * i + 1] << 8));
+        int v = (int)Math.Round(s * g);
+        if (v > 32767) v = 32767; else if (v < -32768) v = -32768;
+        data[2 * i] = (byte)(v & 0xff);
+        data[2 * i + 1] = (byte)((v >> 8) & 0xff);
+      }
+      return g;
+    }
+
     public void Dispose() {
       if (handle == IntPtr.Zero) return;
       waveInReset(handle);
@@ -228,6 +253,11 @@ if (-not $dllUsable) {
   # マイクアイコンが灰色のままになる (issue #233 で踏んだ症状)。必ず捕まえて
   # インメモリコンパイルへ倒す (起動が 1〜2 秒遅くなるだけで機能は保たれる)
   try {
+    # Add-Type -OutputAssembly は既存ファイルを上書きせず "already exists" で落ちる。
+    # C# を変えたときだけ発生するので、DLL キャッシュを持つ Windows 席では
+    # 「ソースを変えた次の起動が必ず死ぬ」= アイコンが灰色のまま (issue #233)。
+    # キャッシュの無い devbox では再現しなかった。必ず古い DLL を消してから生成する
+    Remove-Item -LiteralPath $recorderDll -Force -ErrorAction SilentlyContinue
     Add-Type -TypeDefinition $recorderSrc -OutputAssembly $recorderDll
     Set-Content -LiteralPath $recorderHashFile -Value $srcHash
     $dllUsable = $true
@@ -283,6 +313,9 @@ $MinThreshold = 120     # 静かすぎる環境でしきい値が 0 付近に張
 # 上限は旧来の固定値。自動決定は「小さい声も拾えるよう緩める」ためのものなので、
 # 環境ノイズが大きくても旧来より厳しくはしない (厳しくすると声を一切拾わなくなる)
 $MaxThreshold = 300
+# 送信前の音量正規化。小さいまま投げると Whisper 側の認識精度も落ちる
+$NormalizePeak = 22000     # 目標ピーク (16bit フルスケール 32767 の約 67%)
+$NormalizeMaxGain = 8.0
 $LevelFile = Join-Path $env:TEMP 'wezterm-voice-level.txt'   # 実測 RMS。オーバーレイの波形が読む
 
 # 辞書の読み込み。置換ルール (順序保持) と用語ヒントに分ける。
@@ -332,6 +365,8 @@ $HallucinationPatterns = @(
 function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
   $wav = Join-Path $env:TEMP ("wezterm-voice-chunk{0}.wav" -f $chunkNo)
   try {
+    $gain = [Voice.Recorder]::Normalize($pcm, $NormalizePeak, $NormalizeMaxGain)
+    if ($gain -gt 1.0) { Write-Log ("chunk{0}: 音量を {1:n1} 倍に正規化" -f $chunkNo, $gain) }
     Write-Wav $wav $pcm
     $form = @{
       model           = $Model
