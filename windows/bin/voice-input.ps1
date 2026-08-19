@@ -22,6 +22,13 @@
 #     (「ご視聴ありがとうございました」等)、直前チャンクとの完全一致で
 #     雑音チャンクの幻聴テキストをローカルで破棄する
 #
+# 小音量マイク対策 (issue #233):
+#   VAD のしきい値が固定値だと、マイクの入力ボリュームが小さい環境で発話が
+#   「声あり」と判定されず、チャンクごと捨てられて丸ごと取りこぼす。そこで
+#   録音開始直後 600ms の環境音からノイズフロアを実測してしきい値を自動決定する
+#   (計測中は下限値で判定するので頭は切れない)。自動決定はあくまで「緩める」ためのもので、
+#   上限は旧来の固定値 300。環境ノイズが大きくても従来より厳しくはしない
+#
 # 辞書 (windows/voice-dictionary.txt):
 #   Groq/Whisper にクラウド側の辞書機能は無いため、用語ヒント (prompt) で認識を
 #   正しい表記へ寄せ、それでも外した分は「誤=正」ルールでローカル置換する。
@@ -45,7 +52,7 @@ param(
   [int]$MaxSeconds = 300,                    # 停止し忘れの保険。超えたら自動停止する
   [string]$Model = 'whisper-large-v3-turbo',
   [string]$Language = 'ja',                  # 空文字で自動判定 (英語で話すときなど)
-  [int]$SilenceThreshold = 300,              # これ未満の RMS (16bit 振幅) を無音とみなす。誤検出が多ければ上げる
+  [int]$SilenceThreshold = 0,                # これ未満の RMS (16bit 振幅) を無音とみなす。0 = 環境音から自動決定
   [int]$SilenceMs = 700,                     # この長さの無音でフレーズを区切って変換に回す
   [int]$MaxChunkSeconds = 15,                # 無音が来なくても強制的に区切る上限
   # 辞書: 「誤=正」の置換ルールと Whisper への用語ヒント (書式はファイル先頭のコメント参照)
@@ -213,18 +220,33 @@ $recorderDll = Join-Path $env:TEMP 'wezterm-voice-recorder.dll'
 $recorderHashFile = "$recorderDll.hash"
 $srcHash = (Get-FileHash -Algorithm SHA256 -InputStream (
     [System.IO.MemoryStream]::new([System.Text.Encoding]::UTF8.GetBytes($recorderSrc)))).Hash
-if (-not (Test-Path -LiteralPath $recorderDll) -or
-    (Get-Content -LiteralPath $recorderHashFile -ErrorAction SilentlyContinue) -ne $srcHash) {
-  Add-Type -TypeDefinition $recorderSrc -OutputAssembly $recorderDll
-  Set-Content -LiteralPath $recorderHashFile -Value $srcHash
+$dllUsable = (Test-Path -LiteralPath $recorderDll) -and
+    (Get-Content -LiteralPath $recorderHashFile -ErrorAction SilentlyContinue) -eq $srcHash
+if (-not $dllUsable) {
+  # DLL の再生成はファイルロック・Defender・権限などで失敗しうる。ここは本体の
+  # try/catch より手前なので、失敗を素通しすると録音が始まらないまま即死し、
+  # マイクアイコンが灰色のままになる (issue #233 で踏んだ症状)。必ず捕まえて
+  # インメモリコンパイルへ倒す (起動が 1〜2 秒遅くなるだけで機能は保たれる)
+  try {
+    Add-Type -TypeDefinition $recorderSrc -OutputAssembly $recorderDll
+    Set-Content -LiteralPath $recorderHashFile -Value $srcHash
+    $dllUsable = $true
+  } catch {
+    Write-Log "recorder DLL の再生成に失敗 ($_)。今回はインメモリコンパイルで続行する"
+  }
 }
 if (-not ('Voice.Recorder' -as [type])) {
-  try {
-    Add-Type -Path $recorderDll
-  } catch {
-    Write-Log "recorder DLL のロード失敗 ($_)。直接コンパイルにフォールバック"
-    Add-Type -TypeDefinition $recorderSrc
+  $loaded = $false
+  # $dllUsable が false のときの DLL は古いソースのままなので読んではいけない
+  if ($dllUsable) {
+    try {
+      Add-Type -Path $recorderDll
+      $loaded = $true
+    } catch {
+      Write-Log "recorder DLL のロード失敗 ($_)。直接コンパイルにフォールバック"
+    }
   }
+  if (-not $loaded) { Add-Type -TypeDefinition $recorderSrc }
 }
 
 # 16kHz/16bit/mono の PCM に RIFF ヘッダを付けて WAV として書き出す
@@ -251,6 +273,16 @@ function Write-Wav([string]$path, [byte[]]$pcm) {
 
 $FrameMs = 100
 $MinVoicedMs = 250   # 発話がこれ未満のチャンクはノイズとみなして捨てる (Whisper の無音幻聴対策も兼ねる)
+
+# VAD しきい値の自動決定 (issue #233)。マイクの入力ボリュームは環境ごとにまちまちで、
+# 固定値だと音量の小さいマイクで発話が「声あり」と判定されず、チャンクごと捨てられていた。
+# 録音開始直後の環境音を実測し、そのノイズフロアの $NoiseMultiplier 倍をしきい値にする
+$CalibrateFrames = 6    # ノイズフロアの計測に使うフレーム数 (x $FrameMs = 600ms)。計測中は $MinThreshold で判定する (取りこぼし防止)
+$NoiseMultiplier = 2.0
+$MinThreshold = 120     # 静かすぎる環境でしきい値が 0 付近に張り付くのを防ぐ下限
+# 上限は旧来の固定値。自動決定は「小さい声も拾えるよう緩める」ためのものなので、
+# 環境ノイズが大きくても旧来より厳しくはしない (厳しくすると声を一切拾わなくなる)
+$MaxThreshold = 300
 $LevelFile = Join-Path $env:TEMP 'wezterm-voice-level.txt'   # 実測 RMS。オーバーレイの波形が読む
 
 # 辞書の読み込み。置換ルール (順序保持) と用語ヒントに分ける。
@@ -465,7 +497,8 @@ try {
   # 右ステータスのマイクアイコン用フラグ。ファイルの存在 = 録音中、
   # 中身 (1/0) = 声を拾っているか。.wezterm.lua が読んで色を変える
   Set-Content -LiteralPath $RecordingFlag -Value '0' -NoNewline
-  Write-Log "recording started (pane=$PaneId, threshold=$SilenceThreshold)"
+  Write-Log ("recording started (pane={0}, threshold={1})" -f $PaneId,
+    $(if ($SilenceThreshold -gt 0) { "$SilenceThreshold (固定)" } else { '環境音から自動決定' }))
 
   # 画面中央の波形フローティング表示 (既定オフ。表示が煩わしいとの評でアイコンのみ運用に)。
   # 録音フラグが消えると自動で閉じる
@@ -486,6 +519,10 @@ try {
   $voicedMs = 0; $trailingMs = 0; $chunkMs = 0
   $chunkNo = 0; $sawVoice = $false
   $speaking = $false   # マイクアイコンの色用。状態が変わったときだけフラグに書く
+  # しきい値は計測が終わるまで暫定値 ($MinThreshold)。明示的に値を渡されたら計測しない
+  $threshold = if ($SilenceThreshold -gt 0) { $SilenceThreshold } else { $MinThreshold }
+  $calibrating = ($SilenceThreshold -le 0)
+  $calibRms = [System.Collections.Generic.List[double]]::new()
   $sw = [System.Diagnostics.Stopwatch]::StartNew()
   $stopping = $false
 
@@ -500,7 +537,21 @@ try {
       if ($Overlay) {
         try { [System.IO.File]::WriteAllText($LevelFile, [string][int]$rms) } catch {}
       }
-      $voiced = $rms -ge $SilenceThreshold
+      if ($calibrating) {
+        $calibRms.Add($rms)
+        if ($calibRms.Count -ge $CalibrateFrames) {
+          # いきなり話し始めると平均が跳ねるので、下位 25% 分位をノイズフロアとみなす
+          $sorted = $calibRms.ToArray()
+          [Array]::Sort($sorted)
+          $floor = $sorted[[int][math]::Floor(($sorted.Count - 1) * 0.25)]
+          $threshold = [int][math]::Min([double]$MaxThreshold, [math]::Max([double]$MinThreshold, $floor * $NoiseMultiplier))
+          Write-Log ("ノイズフロア={0:n0} (計測 {1} フレームの最大={2:n0}) → 無音しきい値={3}" -f `
+            $floor, $sorted.Count, $sorted[$sorted.Count - 1], $threshold)
+          $calibrating = $false
+          $calibRms.Clear()
+        }
+      }
+      $voiced = $rms -ge $threshold
       if ($voiced -ne $speaking) {
         $speaking = $voiced
         try { [System.IO.File]::WriteAllText($RecordingFlag, $(if ($voiced) { '1' } else { '0' })) } catch {}
@@ -548,7 +599,7 @@ try {
   Remove-Item -LiteralPath $StopFlag, $RecordingFlag, $LevelFile -Force -ErrorAction SilentlyContinue
 
   if (-not $sawVoice) {
-    Show-Toast "音声を検出しなかった。マイクが小さすぎるなら voice-input.ps1 の -SilenceThreshold ($SilenceThreshold) を下げる"
+    Show-Toast "音声を検出しなかった (無音しきい値=$threshold)。マイクが小さすぎるなら Windows の入力ボリュームを上げるか -SilenceThreshold で低い値を明示する"
   }
   Write-Log "recording finished (chunks=$chunkNo)"
 
