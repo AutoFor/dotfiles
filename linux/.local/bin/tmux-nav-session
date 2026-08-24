@@ -1,0 +1,35 @@
+#!/bin/sh
+# Alt+↑/↓ (Ctrl+↑/↓) がペインの上端/下端で行き止まりになったとき、前/次のセッションへ
+# 抜けて「反対側の端のペイン」に着地する (呼び出し元: .tmux.conf の bind M-Up / M-Down)。
+# 左右の Alt+←/→ がタブ (tmux ウィンドウ) を跨ぐのと対になる形で、上下軸はセッションを跨ぐ。
+#
+# なぜスクリプトなのか: .tmux.conf 内に
+#   switch-client -p ; select-pane -t '{bottom-right}'
+# と並べても、select-pane は切り替え「前」のセッションに当たってしまう
+# (コマンドリストのカレントセッションはキュー投入時に確定するため。同一セッション内の
+#  select-window → select-pane は効くので、左右のタブ跨ぎは .tmux.conf 内で完結できる)。
+# 移動後のセッションを明示ターゲットにするには tmux を別プロセスで呼び直す必要がある。
+#
+# 使い方: tmux-nav-session prev|next <client_name>
+
+dir=$1
+client=$2
+[ -n "$dir" ] && [ -n "$client" ] || exit 0
+
+case "$dir" in
+  prev) flag=-p; edge=at_bottom ;;   # 上に抜けた → 移動先では一番下のペインに着地
+  next) flag=-n; edge=at_top ;;      # 下に抜けた → 移動先では一番上のペインに着地
+  *) exit 0 ;;
+esac
+
+tmux switch-client -c "$client" "$flag" || exit 0
+
+# 移動後のセッションのカレントウィンドウで、目的の端に接しているペインを選ぶ。
+# 同じ端に複数ペインが並ぶ場合 (上端に左右 2 ペイン等) は一番左を採る。
+sess=$(tmux display-message -p -c "$client" '#{session_name}')
+pane=$(tmux list-panes -t "$sess:" -F "#{pane_id} #{pane_$edge} #{pane_left}" |
+  awk '$2 == 1 && (best == "" || $3 + 0 < bestx + 0) { best = $1; bestx = $3 } END { print best }')
+
+if [ -n "$pane" ]; then
+  tmux select-pane -t "$pane"
+fi
