@@ -106,9 +106,22 @@ switch ($Action) {
         if (-not (Confirm-Rpa)) { exit 1 }
     }
     "connect" {
-        if (-not (Confirm-Rpa)) { exit 1 }
+        if (-not (Confirm-Rpa)) {
+            # ここで即 exit するとランチャーから開いたタブが理由を出さずに閉じてしまう
+            Write-Host ""
+            Write-Warning "rpa に接続できませんでした。上のメッセージを確認してください。"
+            Write-Host "よくある原因: rpa 側の Tailscale がログアウト状態 (VM 上で 'tailscale up --unattended')"
+            Read-Host "Enter キーで閉じます"
+            exit 1
+        }
         Write-Host "ssh $User@$IP"
         ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "$User@$IP"
-        exit $LASTEXITCODE
+        $code = $LASTEXITCODE
+        if ($code -ne 0) {
+            Write-Host ""
+            Write-Warning "ssh が異常終了しました (exit $code)。"
+            Read-Host "Enter キーで閉じます"
+        }
+        exit $code
     }
 }
