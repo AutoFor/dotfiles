@@ -141,7 +141,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
 | `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
-| `<leader> →l` | 動的ランチャーを表示。devbox の **tmux セッション一覧をその場で取得**し、選んだセッションに attach するタブを開く（直近使用順・attach 中マーク付き。main 固定ではない）。末尾に静的項目（mux フォールバック / devbox SSH / Windows Server rpa / PowerShell）も並ぶ。VM 停止中などで一覧が取れないときは main + 静的項目のみ | **l**aunch |
+| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
 | `<leader> →Shift+P` | ローカル PowerShell タブを開く（切り分け用） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |

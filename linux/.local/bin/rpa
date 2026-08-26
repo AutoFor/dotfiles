@@ -1,0 +1,123 @@
+#!/bin/sh
+# rpa (UiPath 用 Windows Server, Azure VM) への接続を tmux ペインの中で保ち続ける (#238)。
+# windows/bin/rpa.ps1 の devbox 版。az と ssh 設定 (linux/.ssh/config の Host rpa) を使う。
+#
+# なぜラッパーが要るか:
+#   rpa は「毎日 22:00 シャットダウン + 1 時間アイドルで自動 deallocate」する
+#   (rpa.ps1 冒頭のコスト対策)。ペインで素の ssh を実行しているとその時点で ssh が
+#   終了し、ペイン -> ウィンドウ -> セッションの順に畳まれて tmux セッション rpa 自体が
+#   消える。消えたセッションは resurrect の保存対象にも残らないので、翌朝には
+#   「また復元されていない」状態になる。
+#   そこで ssh が切れてもペインを終わらせず、理由を表示して再接続を待つ。
+#
+# 使い方: rpa [connect|ensure|up|down|status]
+#   connect : VM 起動を担保して ssh。切れても終了せず Enter で再接続 (既定)
+#   ensure  : VM 起動の担保だけ行う
+#   up      : VM を起動する
+#   down    : VM を停止 (deallocate) して課金をディスク代だけにする
+#   status  : 電源状態と ssh 到達性を表示
+#
+# 環境変数で上書き可: RPA_RG / RPA_VM / RPA_HOST / RPA_IP
+set -u
+
+RG=${RPA_RG:-AUTOFOR-RG}
+VM=${RPA_VM:-rpa}
+HOST=${RPA_HOST:-rpa}          # ~/.ssh/config の Host 名
+IP=${RPA_IP:-100.118.192.14}   # Tailscale IP (ノード固有で不変)
+
+# 22 番に届くか。届くなら az を呼ばずに済むので普段の connect は待たされない
+ssh_reachable() {
+  timeout 5 nc -z "$IP" 22 >/dev/null 2>&1
+}
+
+vm_state() {
+  az vm get-instance-view -g "$RG" -n "$VM" \
+    --query "instanceView.statuses[?starts_with(code,'PowerState')].displayStatus" \
+    -o tsv 2>/dev/null | head -1
+}
+
+az_ready() {
+  command -v az >/dev/null 2>&1 || { echo "az CLI がありません" >&2; return 1; }
+  az account show --only-show-errors -o none 2>/dev/null || {
+    echo "az 未ログインです。'az login' を実行してください" >&2; return 1; }
+}
+
+# VM が起動していて ssh が届く状態にする。既に届くなら即 return
+ensure() {
+  ssh_reachable && return 0
+  az_ready || return 1
+  state=$(vm_state)
+  case "$state" in
+    "VM running") ;;
+    *) echo "rpa を起動しています (現在: ${state:-unknown})..."
+       az vm start -g "$RG" -n "$VM" -o none || return 1 ;;
+  esac
+  # 起動直後は sshd が上がりきるまで少し待つ
+  i=0
+  while [ "$i" -lt 40 ]; do
+    ssh_reachable && return 0
+    i=$((i + 1))
+    sleep 3
+  done
+  echo "rpa の 22 番に届きません (Tailscale が上がっていない可能性)" >&2
+  return 1
+}
+
+case "${1:-connect}" in
+status)
+  echo "rpa: $(vm_state || echo unknown)  (ssh到達: $(ssh_reachable && echo OK || echo NG))"
+  ;;
+
+up)
+  az_ready || exit 1
+  az vm start -g "$RG" -n "$VM" -o none && echo "起動完了"
+  ;;
+
+down)
+  az_ready || exit 1
+  az vm deallocate -g "$RG" -n "$VM" -o none && echo "停止完了（課金はディスク代のみ）"
+  ;;
+
+ensure)
+  ensure
+  ;;
+
+connect)
+  # 接続先は Windows で、リモートが端末タイトルに
+  # "Administrator: C:\\Windows\\system32\\conhost.exe" を書き込んでくる。
+  # 放っておくとウィンドウ名がこれに乗っ取られてステータスバーが読めなくなる。
+  # allow-rename はグローバルに切ると claude がタイトルに書く会話名 (✳ ...) まで
+  # 止まってしまうため、この窓だけ切る。ここに置けば復元後も自動で効く。
+  if [ -n "${TMUX:-}" ]; then
+    tmux set-option -w allow-rename off 2>/dev/null || true
+    tmux rename-window rpa 2>/dev/null || true
+  fi
+
+  # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
+  while :; do
+    if ensure; then
+      ssh "$HOST"
+      code=$?
+      if [ "$code" -eq 0 ]; then
+        echo ""
+        echo "rpa との接続を終了しました。"
+      else
+        echo ""
+        echo "rpa との接続が切れました (exit $code)。"
+        echo "自動停止 (22:00 / 1時間アイドル) で VM が落ちた場合もここに来ます。"
+      fi
+    else
+      echo ""
+      echo "rpa に接続できませんでした。'rpa status' で状態を確認できます。"
+    fi
+    # ペインを閉じずに待つ。ここが tmux セッション rpa を生かし続ける肝
+    printf 'Enter で再接続 / Ctrl-C で抜ける > '
+    read -r _ || exit 0
+  done
+  ;;
+
+*)
+  echo "usage: rpa {connect|ensure|up|down|status}" >&2
+  exit 2
+  ;;
+esac

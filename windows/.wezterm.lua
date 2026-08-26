@@ -36,8 +36,6 @@ local DOTFILES_DIR = find_dotfiles_dir()
 wezterm.add_to_config_reload_watch_list(DOTFILES_DIR .. "\\windows\\.wezterm.lua")
 -- VM 起動を担保するスクリプト
 local DEVBOX_PS1 = DOTFILES_DIR .. "\\windows\\bin\\devbox.ps1"
--- rpa (UiPath 用 Windows Server) の起動担保 + SSH 接続スクリプト
-local RPA_PS1 = DOTFILES_DIR .. "\\windows\\bin\\rpa.ps1"
 -- クリックで通知元ペインへジャンプできるトーストを出すスクリプト（BurntToast）。
 -- クリック時の wezterm-jump: URI は windows/bin/register-wezterm-jump.ps1 で登録したハンドラが処理する。
 local NOTIFY_PS1 = DOTFILES_DIR .. "\\claude\\windows-notify.ps1"
@@ -316,30 +314,27 @@ config.default_domain = DEVBOX_TMUX_DOMAIN
 -- これを揃えないと、LEADER+l から main に入ったときに別 workspace が増えてしまう。
 config.default_workspace = "main"
 
--- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示。
--- LEADER+l は tmux セッション一覧を動的に取得する show_session_launcher が担当）
+-- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示）。
+-- LEADER+l の show_session_launcher と同じ 3 つに揃える (#238)。
+-- 切り分け用の 'mux フォールバック' / '素の SSH' はここからも外した
+-- （mux が要るときは LEADER+Shift+A）。
 config.launch_menu = {
   {
     -- 通常の入口: ネイティブ SSH + tmux main セッション（セッションはリモート tmux が保持）
-    label = "Azure devbox (tmux main)",
+    label = "Azure devbox (tmux)",
     domain = { DomainName = DEVBOX_TMUX_DOMAIN },
   },
   {
-    -- 旧 mux ドメイン（切り分け用フォールバック。通常は使わない）
-    label = "Azure devbox (mux フォールバック)",
-    domain = { DomainName = DEVBOX_DOMAIN },
-  },
-  {
-    -- 素の SSH 接続（mux を経由しない切り分け用。切断でセッションは消える）
-    label = "Azure devbox (SSH)",
-    domain = { DomainName = "local" },
-    args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", DEVBOX_PS1, "connect" },
-  },
-  {
-    -- UiPath 用 Windows Server (Azure VM rpa)。VM 起動を担保してから SSH で入る
+    -- UiPath 用 Windows Server (rpa)。Windows から直接 ssh すると WezTerm を
+    -- 閉じた時点でセッションが消えるため、devbox の tmux セッション "rpa" 経由で入る。
+    -- rpa VM の起動担保は devbox 側の ~/.local/bin/rpa connect が行う。
     label = "Windows Server rpa (SSH)",
-    domain = { DomainName = "local" },
-    args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", RPA_PS1, "connect" },
+    domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+    args = {
+      "sh",
+      "-c",
+      '"$HOME/.local/bin/tmux-session-order" attach rpa || exec tmux new-session -A -s rpa',
+    },
   },
   {
     label = "PowerShell",
@@ -702,72 +697,49 @@ local function attach_devbox_domain()
   end)
 end
 
--- tmux セッション名から workspace 名を作る (#234)。
--- セッション名には並び順の番号プレフィックス (01-main 等) が付くため、それを外した
--- 論理名を workspace 名に使う。config.default_workspace = "main" と一致させることで、
--- 起動時のウィンドウと LEADER+l から入った main が同じ workspace になる。
-local function session_workspace(name)
-  return (name:gsub("^%d%d%-", ""))
+-- tmux セッションのタブを、そのセッション専用の workspace に開く (#234)。
+-- workspace はウィンドウの集合で、タブバーは現在のウィンドウのタブしか描かないため、
+-- ある workspace で開いた local タブ (PowerShell 等) が他のセッションに混ざらない。
+-- SwitchToWorkspace は workspace が既にあれば spawn せず切り替えるだけなので、
+-- 同じセッションへ多重 attach するウィンドウは増えない。
+local function switch_to_tmux_session(session)
+  local quoted = "'" .. session:gsub("'", "'\\''") .. "'"
+  return act.SwitchToWorkspace({
+    name = session,
+    spawn = {
+      domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+      args = {
+        "sh",
+        "-c",
+        '"$HOME/.local/bin/tmux-session-order" attach ' .. quoted
+          .. " || exec tmux new-session -A -s " .. quoted,
+      },
+    },
+  })
 end
 
--- LEADER+l の動的ランチャー。devbox の tmux セッション一覧をその場で取得し、
--- どのセッションに入るかを選べるようにする（入り口を main 固定にしない）。
--- 直近に使ったセッション（= 現在のセッション）が一番上に来る。
--- 一覧取得に失敗した場合（VM 停止・tmux サーバ未起動など）は
--- main + 静的項目だけのメニューにフォールバックする。
+-- LEADER+l のランチャー。入り先は 3 つだけ (#238)。
+--
+-- 以前は devbox の tmux セッションを ssh 越しに列挙して 1 行ずつ並べていたが、
+-- セッション間の移動は workspace 切り替え (#234) で足りるようになったのでやめた。
+-- 列挙をやめたことで、LEADER+l を押すたびに走っていた ssh の往復も無くなる。
+--
+-- 'Azure devbox (mux フォールバック)' と 'Azure devbox (SSH)' も外した。
+-- 前者は #214 以前の wezterm-mux 経路、後者は mux も tmux も通さない素の ssh で、
+-- どちらも切り分け専用。常用の導線と並べても違いが分からず紛らわしいだけだった。
+-- mux 経路が要るときは LEADER+Shift+A で attach できる。
+--
+-- rpa は devbox の tmux セッション "rpa" に入る (#238)。以前のように Windows から
+-- 直接 ssh すると、その ssh は WezTerm の子プロセスなので WezTerm を閉じた時点で
+-- セッションが失われ、次に開いても復元されない。tmux の中から入れば他のセッションと
+-- 同じく resurrect の復元対象になり、閉じても回線が切れても残る。
 local function show_session_launcher()
   return wezterm.action_callback(function(window, pane)
-    local ssh_exe = (os.getenv("SystemRoot") or "C:\\Windows") .. "\\System32\\OpenSSH\\ssh.exe"
-    -- BatchMode: パスワード問合せで固まらせない / ConnectTimeout: VM 停止時に素早く諦める
-    -- セッション名に区切り文字が混ざっても壊れないよう、名前は最後のフィールドに置く
-    local ok, stdout = wezterm.run_child_process({
-      ssh_exe, "-o", "BatchMode=yes", "-o", "ConnectTimeout=2", "devbox",
-      "tmux list-sessions -F '#{session_activity}|#{session_windows}|#{session_attached}|#{session_name}' 2>/dev/null",
-    })
-
-    local sessions = {}
-    if ok then
-      for line in (stdout or ""):gmatch("[^\r\n]+") do
-        local activity, wins, attached, name = line:match("^(%d+)|(%d+)|(%d+)|(.+)$")
-        if name then
-          table.insert(sessions, {
-            activity = tonumber(activity),
-            windows = tonumber(wins),
-            attached = tonumber(attached),
-            name = name,
-          })
-        end
-      end
-      table.sort(sessions, function(a, b)
-        return a.activity > b.activity
-      end)
-    end
-
-    local choices = {}
-    local has_main = false
-    for _, s in ipairs(sessions) do
-      -- 並び順の番号プレフィックス (01-main) を外した名前で判定する
-      if s.name:gsub("^%d%d%-", "") == "main" then
-        has_main = true
-      end
-      table.insert(choices, {
-        id = "tmux:" .. s.name,
-        label = string.format(
-          "tmux: %s  (%d win)%s",
-          s.name, s.windows, s.attached > 0 and "  [attach中]" or ""
-        ),
-      })
-    end
-    if not has_main then
-      table.insert(choices, {
-        id = "tmux:main",
-        label = "tmux: main" .. (#sessions > 0 and "  (新規作成)" or ""),
-      })
-    end
-    table.insert(choices, { id = "mux", label = "Azure devbox (mux フォールバック)" })
-    table.insert(choices, { id = "ssh", label = "Azure devbox (SSH)" })
-    table.insert(choices, { id = "rpa", label = "Windows Server rpa (SSH)" })
-    table.insert(choices, { id = "pwsh", label = "PowerShell" })
+    local choices = {
+      { id = "devbox", label = "Azure devbox (tmux)" },
+      { id = "rpa", label = "Windows Server rpa (SSH)" },
+      { id = "pwsh", label = "PowerShell" },
+    }
 
     window:perform_action(
       act.InputSelector({
@@ -779,51 +751,14 @@ local function show_session_launcher()
           if not id then
             return -- Esc でキャンセル
           end
-          local session = id:match("^tmux:(.+)$")
-          if session then
-            -- 既存セッションなら attach、無ければ作成 (-A)。多重 attach も tmux 側で問題ない。
-            -- 番号プレフィックス付きの実名は tmux-session-order が引く (既定タブと同じ経路)
-            local quoted = "'" .. session:gsub("'", "'\\''") .. "'"
+          if id == "devbox" then
             ensure_devbox()
-            -- セッションごとに workspace を分ける (#234)。workspace はウィンドウの集合で、
-            -- タブバーは現在のウィンドウのタブしか描かないため、ある workspace で開いた
-            -- local タブ (PowerShell / rpa / ssh) が他のセッションに混ざらなくなる。
-            -- SwitchToWorkspace は workspace が既にあれば spawn せず切り替えるだけなので、
-            -- 同じセッションへ多重 attach するウィンドウは増えない。
-            win:perform_action(
-              act.SwitchToWorkspace({
-                name = session_workspace(session),
-                spawn = {
-                  domain = { DomainName = DEVBOX_TMUX_DOMAIN },
-                  args = {
-                    "sh",
-                    "-c",
-                    '"$HOME/.local/bin/tmux-session-order" attach ' .. quoted
-                      .. " || exec tmux new-session -A -s " .. quoted,
-                  },
-                },
-              }),
-              p
-            )
-          elseif id == "mux" then
-            ensure_devbox()
-            win:perform_action(act.AttachDomain(DEVBOX_DOMAIN), p)
-          elseif id == "ssh" then
-            win:perform_action(
-              act.SpawnCommandInNewTab({
-                domain = { DomainName = "local" },
-                args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", DEVBOX_PS1, "connect" },
-              }),
-              p
-            )
+            win:perform_action(switch_to_tmux_session("main"), p)
           elseif id == "rpa" then
-            win:perform_action(
-              act.SpawnCommandInNewTab({
-                domain = { DomainName = "local" },
-                args = { "pwsh.exe", "-NoLogo", "-NoProfile", "-File", RPA_PS1, "connect" },
-              }),
-              p
-            )
+            -- rpa VM の起動担保は devbox 側の ~/.local/bin/rpa connect が行うので、
+            -- ここでは devbox にだけ入れればよい
+            ensure_devbox()
+            win:perform_action(switch_to_tmux_session("rpa"), p)
           elseif id == "pwsh" then
             win:perform_action(
               act.SpawnCommandInNewTab({
