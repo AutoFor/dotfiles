@@ -140,6 +140,10 @@ end
 -- tmux ペイン上では tmux ウィンドウを順に巡り、端 (next なら最後 / prev なら先頭) の
 -- ウィンドウにいて、かつ WezTerm タブが複数あるときだけ隣の WezTerm タブ
 -- (PowerShell 等) へ抜ける。ローカルペイン上では常に WezTerm タブ切替。
+-- workspace 化 (#234) 後もこの導線は維持する (案 A)。mux_window():tabs() は
+-- 現在のウィンドウのタブだけを返し、local タブは開いた時点の workspace に属するので、
+-- 「端から隣の local タブへ抜ける」動きが workspace 内で自然に成立する。
+-- セッション間の移動はタブ巡回ではなく LEADER+l の workspace 切り替えが担う。
 -- tmux のウィンドウ一覧とアクティブ位置は wezterm-tabs-sync が SetUserVar で
 -- 同期している wezterm.GLOBAL.tmux_windows (タブバー表示と同じデータ) から読む。
 local function cycle_tabs(direction, tmux_key)
@@ -306,6 +310,11 @@ config.ssh_domains = {
 -- VM 停止中に接続失敗した場合はウィンドウにエラーが表示されるので、
 -- LEADER+l のランチャーから PowerShell を開いて切り分けする。
 config.default_domain = DEVBOX_TMUX_DOMAIN
+
+-- 起動時のウィンドウが属する workspace (#234)。tmux セッションごとに workspace を
+-- 分けるため、既定の "default" ではなく main セッションの論理名に合わせる。
+-- これを揃えないと、LEADER+l から main に入ったときに別 workspace が増えてしまう。
+config.default_workspace = "main"
 
 -- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示。
 -- LEADER+l は tmux セッション一覧を動的に取得する show_session_launcher が担当）
@@ -693,6 +702,14 @@ local function attach_devbox_domain()
   end)
 end
 
+-- tmux セッション名から workspace 名を作る (#234)。
+-- セッション名には並び順の番号プレフィックス (01-main 等) が付くため、それを外した
+-- 論理名を workspace 名に使う。config.default_workspace = "main" と一致させることで、
+-- 起動時のウィンドウと LEADER+l から入った main が同じ workspace になる。
+local function session_workspace(name)
+  return (name:gsub("^%d%d%-", ""))
+end
+
 -- LEADER+l の動的ランチャー。devbox の tmux セッション一覧をその場で取得し、
 -- どのセッションに入るかを選べるようにする（入り口を main 固定にしない）。
 -- 直近に使ったセッション（= 現在のセッション）が一番上に来る。
@@ -768,14 +785,22 @@ local function show_session_launcher()
             -- 番号プレフィックス付きの実名は tmux-session-order が引く (既定タブと同じ経路)
             local quoted = "'" .. session:gsub("'", "'\\''") .. "'"
             ensure_devbox()
+            -- セッションごとに workspace を分ける (#234)。workspace はウィンドウの集合で、
+            -- タブバーは現在のウィンドウのタブしか描かないため、ある workspace で開いた
+            -- local タブ (PowerShell / rpa / ssh) が他のセッションに混ざらなくなる。
+            -- SwitchToWorkspace は workspace が既にあれば spawn せず切り替えるだけなので、
+            -- 同じセッションへ多重 attach するウィンドウは増えない。
             win:perform_action(
-              act.SpawnCommandInNewTab({
-                domain = { DomainName = DEVBOX_TMUX_DOMAIN },
-                args = {
-                  "sh",
-                  "-c",
-                  '"$HOME/.local/bin/tmux-session-order" attach ' .. quoted
-                    .. " || exec tmux new-session -A -s " .. quoted,
+              act.SwitchToWorkspace({
+                name = session_workspace(session),
+                spawn = {
+                  domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+                  args = {
+                    "sh",
+                    "-c",
+                    '"$HOME/.local/bin/tmux-session-order" attach ' .. quoted
+                      .. " || exec tmux new-session -A -s " .. quoted,
+                  },
                 },
               }),
               p
