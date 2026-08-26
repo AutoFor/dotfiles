@@ -115,7 +115,11 @@ switch ($Action) {
             exit 1
         }
         Write-Host "ssh $User@$IP"
-        ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "$User@$IP"
+        # ServerAlive* が無いと無通信の SSH が NAT/リレーのタイムアウトで切られる。
+        # 切れると rpa 側の rpa-idle-shutdown が「SSH なし」と見て VM を deallocate
+        # してしまうため、離席中も接続を維持する (60 秒 x 10 回 = 10 分は粘る)。
+        ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 `
+            -o ServerAliveInterval=60 -o ServerAliveCountMax=10 "$User@$IP"
         $code = $LASTEXITCODE
         if ($code -ne 0) {
             Write-Host ""
