@@ -60,3 +60,9 @@ nvim/lua/features_local.lua
 
 # ===== Claude Code マシンローカルメモ =====
 CLAUDE.local.md
+
+# SSH 秘密鍵は絶対に追跡しない (linux/.ssh には config だけ置く)
+linux/.ssh/id_*
+!linux/.ssh/*.pub
+linux/.ssh/known_hosts*
+linux/.ssh/authorized_keys

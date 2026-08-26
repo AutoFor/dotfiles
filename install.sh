@@ -64,6 +64,9 @@ link_file "$DOTFILES_DIR/linux/.zshrc"     "$HOME/.zshrc"
 link_file "$DOTFILES_DIR/linux/.bashrc"    "$HOME/.bashrc"
 link_file "$DOTFILES_DIR/linux/.gitconfig" "$HOME/.gitconfig"
 link_file "$DOTFILES_DIR/linux/.tmux.conf"  "$HOME/.tmux.conf"
+# rpa への ssh 設定 (#238)。秘密鍵は追跡しないので、鍵が無い環境では
+# ssh-keygen で作って rpa の administrators_authorized_keys に登録する
+link_file "$DOTFILES_DIR/linux/.ssh/config" "$HOME/.ssh/config"
 
 # --- .config 配下 ---
 link_file "$DOTFILES_DIR/linux/.config/gh/config.yml" "$HOME/.config/gh/config.yml"
