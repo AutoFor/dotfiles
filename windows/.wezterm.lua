@@ -95,6 +95,17 @@ local function is_tmux_client_pane(pane)
   return host ~= nil and host:lower() == DEVBOX_HOSTNAME
 end
 
+-- rpa (UiPath 用 Windows Server) のペインかどうか。LEADER+v のクリップボード転送を
+-- devbox だけでなく rpa にも効かせるために使う。rpa は local ドメインの pwsh から
+-- ssh で入るため、ドメイン名では判別できず OSC 7 が伝えるホスト名で見る。
+local function is_rpa_pane(pane)
+  local ok_cwd, cwd = pcall(function()
+    return pane:get_current_working_dir()
+  end)
+  local host = (ok_cwd and cwd and cwd.host) and cwd.host or nil
+  return host ~= nil and host:lower() == "rpa"
+end
+
 local TMUX_PREFIX = "\x02" -- C-b
 
 -- devbox の tmux クライアント上なら prefix+keys を tmux に送り、
@@ -806,7 +817,21 @@ end
 -- ※ Ctrl+V に割り当てないのは、devbox 側 nvim の矩形選択 (Ctrl+V) を潰さないため。
 local function paste_image_or_clipboard()
   return wezterm.action_callback(function(window, pane)
-    if not is_tmux_client_pane(pane) then
+    -- 転送先を決める。devbox (tmux ペイン) と rpa のどちらでもなければ
+    -- 素のテキストペーストに任せる (ローカル pwsh など)。
+    local clip_args
+    if is_tmux_client_pane(pane) then
+      clip_args = { "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", CLIP_PASTE_PS1 }
+    elseif is_rpa_pane(pane) then
+      -- rpa は Windows なので転送先パスと掃除コマンドを Windows 向けに切り替える
+      clip_args = {
+        "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", CLIP_PASTE_PS1,
+        "-RemoteHost", "rpa",
+        "-RemoteOS", "windows",
+        "-RemoteHome", "C:\\Users\\azureuser",
+        "-RemoteDir", ".cache\\clipboard",
+      }
+    else
       window:perform_action(act.PasteFrom("Clipboard"), pane)
       return
     end
@@ -821,9 +846,7 @@ local function paste_image_or_clipboard()
       { Text = wezterm.nerdfonts.md_clipboard_arrow_right .. " クリップボードを貼り付け中…  " },
     }))
     wezterm.time.call_after(0.1, function()
-      local ok, stdout, stderr = wezterm.run_child_process({
-        "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", CLIP_PASTE_PS1,
-      })
+      local ok, stdout, stderr = wezterm.run_child_process(clip_args)
       wezterm.GLOBAL.clip_transferring = false
       local out = (stdout or ""):gsub("%s+$", "")
       if ok and out == "NOCONTENT" then

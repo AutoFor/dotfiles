@@ -1,5 +1,5 @@
 # send-clipboard.ps1 -- Windows のクリップボードの内容 (画像 / ファイル / フォルダ /
-# フルパス文字列) を devbox へ転送する。WezTerm の LEADER+v (paste_image_or_clipboard)
+# フルパス文字列) を devbox または rpa へ転送する。WezTerm の LEADER+v (paste_image_or_clipboard)
 # から呼ばれ、tmux 内の Claude Code プロンプトへ「リモートパスの入力」という形で
 # 貼り付ける経路を作る。クリップボードの中身そのものは SSH を越えられないため、
 # 「ローカル実体 -> scp -> リモートパスを stdout に返す」で代替する。
@@ -18,6 +18,9 @@ param(
   [string]$RemoteHost = 'devbox',
   [string]$RemoteDir  = '.cache/clipboard',  # リモートホームからの相対パス
   [string]$RemoteHome = '/home/azureuser',
+  # 転送先の OS。rpa (Windows Server) は mkdir -p / find -delete が使えないため分ける
+  [ValidateSet('linux', 'windows')]
+  [string]$RemoteOS   = 'linux',
   [int]$MaxTotalMB    = 100                  # うっかり巨大フォルダを送って GUI が長時間固まるのを防ぐ
 )
 
@@ -96,21 +99,47 @@ if ($totalMB -gt $MaxTotalMB) {
 $sshDir = Join-Path $env:SystemRoot 'System32\OpenSSH'
 $sshOpts = @('-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5')
 
-# 転送先ディレクトリの用意 + 2 週間より古い転送済みエントリの掃除
-& (Join-Path $sshDir 'ssh.exe') @sshOpts $RemoteHost "mkdir -p ~/$RemoteDir && find ~/$RemoteDir -mindepth 1 -mtime +14 -delete"
+# 転送先ディレクトリの用意 + 2 週間より古い転送済みエントリの掃除。
+# rpa の既定シェルは pwsh 7 (OpenSSH の DefaultShell) なので PowerShell 構文で送る。
+# Windows 側は相対パスの起点が SSH セッションの作業ディレクトリ次第で変わるため、
+# ここでも scp でも $RemoteHome を前置した絶対パスで統一する。
+if ($RemoteOS -eq 'windows') {
+  $remoteFull = "$RemoteHome\$($RemoteDir -replace '/', '\')"
+  $prep = "New-Item -ItemType Directory -Force -Path '$remoteFull' | Out-Null; " +
+    "Get-ChildItem -LiteralPath '$remoteFull' -Force -ErrorAction SilentlyContinue | " +
+    "Where-Object { `$_.LastWriteTime -lt (Get-Date).AddDays(-14) } | " +
+    "Remove-Item -Recurse -Force -ErrorAction SilentlyContinue"
+}
+else {
+  $prep = "mkdir -p ~/$RemoteDir && find ~/$RemoteDir -mindepth 1 -mtime +14 -delete"
+}
+& (Join-Path $sshDir 'ssh.exe') @sshOpts $RemoteHost $prep
 if ($LASTEXITCODE -ne 0) {
-  [Console]::Error.WriteLine("ssh $RemoteHost に失敗 (VM 停止中? devbox.ps1 ensure を確認)")
+  [Console]::Error.WriteLine("ssh $RemoteHost に失敗 (VM 停止中? devbox.ps1 / rpa.ps1 ensure を確認)")
   exit 1
 }
 
 foreach ($s in $sources) {
   $scpArgs = @($sshOpts)
   if (Test-Path -LiteralPath $s.Local -PathType Container) { $scpArgs += '-r' }
-  & (Join-Path $sshDir 'scp.exe') @scpArgs -q $s.Local "${RemoteHost}:$RemoteDir/$($s.RemoteName)"
+  # 転送先も絶対パスにする (相対だとリモートの作業ディレクトリ次第で場所がずれる)
+  if ($RemoteOS -eq 'windows') {
+    $dest = "${RemoteHost}:$RemoteHome/$($RemoteDir -replace '\\', '/')/$($s.RemoteName)"
+  }
+  else {
+    $dest = "${RemoteHost}:$RemoteDir/$($s.RemoteName)"
+  }
+  & (Join-Path $sshDir 'scp.exe') @scpArgs -q $s.Local $dest
   if ($LASTEXITCODE -ne 0) {
     [Console]::Error.WriteLine("scp での転送に失敗: $($s.Local)")
     exit 1
   }
 }
 
-Write-Output (($sources | ForEach-Object { "$RemoteHome/$RemoteDir/$($_.RemoteName)" }) -join ' ')
+# Windows 側は区切りが \ なので、貼り付けたパスがそのまま使えるよう組み立てを分ける
+if ($RemoteOS -eq 'windows') {
+  Write-Output (($sources | ForEach-Object { "$RemoteHome\$($RemoteDir -replace '/', '\')\$($_.RemoteName)" }) -join ' ')
+}
+else {
+  Write-Output (($sources | ForEach-Object { "$RemoteHome/$RemoteDir/$($_.RemoteName)" }) -join ' ')
+}
