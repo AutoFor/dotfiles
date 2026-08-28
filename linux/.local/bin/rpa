@@ -91,6 +91,18 @@ connect)
   if [ -n "${TMUX:-}" ]; then
     tmux set-option -w allow-rename off 2>/dev/null || true
     tmux rename-window rpa 2>/dev/null || true
+
+    # このセッションで新しく作る窓・ペインも既定で rpa に繋ぐ。
+    # rpa 用のセッションに devbox のシェルが混ざると、どちらを触っているのか
+    # 分からなくなるため (Ctrl+T = tmux new-window もこれを通る)。
+    # セッション単位なので他のセッションには影響しない。設定は tmux サーバーが
+    # 保持するだけで永続しないが、復元時もこの connect を通るので毎回張り直される。
+    # devbox のシェルが要るときはペインの中で zsh を実行するか、
+    # tmux set-option -u default-command で一時的に外す。
+    _sess=$(tmux display-message -p '#{session_name}' 2>/dev/null) || _sess=""
+    if [ -n "$_sess" ]; then
+      tmux set-option -t "$_sess" default-command "exec $HOME/.local/bin/rpa connect" 2>/dev/null || true
+    fi
   fi
 
   # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
