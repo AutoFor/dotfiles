@@ -1103,8 +1103,11 @@ config.keys = {
   -- Pane (tmux ペイン)
   { key = "d", mods = "LEADER", action = tmux_bridge("-", act.Nop) }, -- 上下分割
   { key = "r", mods = "LEADER", action = tmux_bridge("|", act.Nop) }, -- 左右分割
-  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (確認なし)
-  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル)
+  -- 閉じる: tmux 側で x の 2 連打になっている (LEADER+x のあと素の x をもう一度)。
+  -- 隣の z (ズーム) との押し間違いで消えないようにするため (issue #242)
+  { key = "x", mods = "LEADER", action = tmux_bridge("x", act.Nop) }, -- 閉じる (もう一度 x)
+  { key = "X", mods = "LEADER", action = tmux_bridge("X", act.Nop) }, -- 閉じたペインを開き直す
+  { key = "z", mods = "LEADER", action = tmux_bridge("z", act.Nop) }, -- ズーム (トグル。Alt+z でも可)
   { key = "p", mods = "LEADER", action = tmux_bridge("T", act.Nop) }, -- ペイン名を付ける (空 Enter で解除)
   -- LEADER+q: 音声入力トグル (Ctrl+Space と同じ)。Ctrl を押しっぱなしの
   -- Ctrl+q → q / Ctrl+q → Ctrl+q 連打で始められるよう CTRL 付きも同じ動作にする。
@@ -1124,6 +1127,8 @@ config.keys = {
   -- Alt+f: nvim-tree のフロート表示切替。SendKey で明示送信しないと
   -- OS の文字合成に食われて Alt 抜きの "f" しか下流に届かない (hjkl と同じ理由)
   { key = "f", mods = "ALT", action = act.SendKey({ key = "f", mods = "ALT" }) },
+  -- Alt+z: ペインのズーム (トグル)。LEADER を挟む運指がしんどいので 1 打鍵版 (issue #242)
+  { key = "z", mods = "ALT", action = act.SendKey({ key = "z", mods = "ALT" }) },
 
   -- Session (tmux セッション。旧 workspace の代替。tm <名前> でも作成できる)
   { key = "s", mods = "LEADER", action = tmux_bridge("s", act.Nop) }, -- セッション一覧から選択
