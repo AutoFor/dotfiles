@@ -273,6 +273,13 @@ export DISABLE_AUTOUPDATER=1
 # claude -y / claude da: --dangerously-skip-permissions の短縮
 unalias claude 2>/dev/null || true
 claude() {
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "claude 実行ファイルが見つかりません。node のバージョンを確認してください:" >&2
+    echo "  node -v          # 22 以上が必要" >&2
+    echo "  nvm current      # system と出たら nvm alias default が壊れている" >&2
+    echo "  npm install -g @anthropic-ai/claude-code   # 再インストール" >&2
+    return 127
+  fi
   if [[ "$1" == "-y" || "$1" == "da" ]]; then
     shift
     if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1; then
@@ -419,3 +426,11 @@ if [ -f '/home/seiya-kawashima/google-cloud-sdk/completion.zsh.inc' ]; then . '/
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# nvm の default alias が lts/* のような未インストールバージョンを指すと、
+# 無言で system node (apt 版、古い) にフォールバックし、node>=22 を要求する
+# claude 等のグローバル npm パッケージが再インストールできなくなる事例があった (2026-09-01)。
+# default は具体的なインストール済みバージョンに固定すること (例: nvm alias default 24.18.0)。
+if command -v nvm >/dev/null 2>&1 && [[ "$(nvm current)" == "system" ]]; then
+  echo "⚠ nvm が system node にフォールバックしています。'nvm alias default <installed-version>' で固定してください" >&2
+fi
