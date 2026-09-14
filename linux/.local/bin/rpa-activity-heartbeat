@@ -1,0 +1,38 @@
+#!/bin/sh
+# devbox -> rpa の「使用中」ハートビート (#246)。cron が 5 分ごとに呼ぶ
+# (crontab は cloud/azure-devbox/bootstrap.sh が登録。cron-with-pull 経由なので常に最新版が動く)。
+#
+# なぜ要るか:
+#   rpa-idle-shutdown.ps1 は devbox からの常駐 SSH (tmux の rpa セッション) を
+#   稼働中と数えない (#244。数えると VM が永久に止まらないため)。しかしその SSH の
+#   向こうで実際に作業している間も CPU は 30% を下回ることが多く、作業中なのに
+#   60 分で deallocate される事故が起きた (2026-09-14、Claude 2 セッョンの作業中に停止)。
+#   そこで「tmux の rpa セッションに最近出力があった」ことを VM 側へファイルの
+#   タイムスタンプで伝え、idle-shutdown はそれが IdleMin 以内なら稼働中とみなす。
+#
+# 動作:
+#   - tmux に rpa セッション (NN-rpa) が無ければ何もしない
+#   - どのウィンドウにも直近 ACTIVE_WITHIN 秒の活動が無ければ何もしない
+#   - VM に ssh が届かなければ何もしない (止まっている VM をこれで起こさない)
+#   - 届けば C:\ProgramData\rpa-activity.heartbeat を touch する
+set -u
+
+IP=${RPA_IP:-100.118.192.14}   # Tailscale IP (ノード固有で不変)
+HOST=${RPA_HOST:-rpa}          # ~/.ssh/config の Host 名
+ACTIVE_WITHIN=600              # この秒数以内の出力があれば「使用中」
+
+sess=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '^([0-9]+-)?rpa$' | head -1)
+[ -n "$sess" ] || exit 0
+
+now=$(date +%s)
+recent=""
+for t in $(tmux list-windows -t "$sess" -F '#{window_activity}' 2>/dev/null); do
+  [ $((now - t)) -le "$ACTIVE_WITHIN" ] && recent=1
+done
+[ -n "$recent" ] || exit 0
+
+timeout 5 nc -z "$IP" 22 >/dev/null 2>&1 || exit 0
+
+# 既定シェルが cmd でも PowerShell でも通るよう cmd /c を明示する
+timeout 15 ssh -o BatchMode=yes -o ConnectTimeout=5 "$HOST" \
+  'cmd /c "type nul > C:\ProgramData\rpa-activity.heartbeat"' >/dev/null 2>&1

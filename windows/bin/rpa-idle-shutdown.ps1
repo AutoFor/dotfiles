@@ -11,8 +11,13 @@
 #      ※ devbox からの接続は除外する。devbox は tmux に rpa への SSH を
 #        keepalive 付きで常駐させているため (2026-08-27 b23a630)、これを
 #        稼働中と数えると永久に停止しなくなる (2026-08-26〜09-09 に 14 日間
-#        連続稼働した原因)。devbox 経由の実作業中は条件 3 の CPU が防波堤
-#   3) CPU 使用率が LoadMax を超えている
+#        連続稼働した原因)
+#   3) devbox からの利用ハートビートが IdleMin 分以内 (#246)。devbox の cron
+#      (rpa-activity-heartbeat) が、tmux の rpa セッションに直近の操作があるとき
+#      だけ heartbeat ファイルを touch する。条件 2 で devbox の SSH を除外した
+#      代わりの「実作業中」シグナル。CPU だけを防波堤にすると、rpa 上の Claude
+#      待機中など低負荷の作業中に停止してしまう (2026-09-14 に発生)
+#   4) CPU 使用率が LoadMax を超えている
 #
 # 認証はマネージド ID (az login --identity) を使うためログイン切れが起きない。
 #
@@ -28,6 +33,8 @@ $RG = "AUTOFOR-RG"
 $VM = "rpa"
 # devbox の Tailscale IP。ここからの SSH は tmux の常駐接続なので稼働中と数えない
 $DevboxIP = "100.126.96.27"
+# devbox の rpa-activity-heartbeat が touch する「使用中」シグナル
+$HeartbeatPath = "$env:ProgramData\rpa-activity.heartbeat"
 $LogPath = "$env:ProgramData\rpa-idle-shutdown.log"
 $StatePath = "$env:ProgramData\rpa-idle-shutdown.state"
 
@@ -89,7 +96,20 @@ try {
     Write-Log "SSH接続確認失敗: $_"
 }
 
-# 3) CPU 負荷
+# 3) devbox からの利用ハートビート (#246)
+try {
+    $hb = Get-Item $HeartbeatPath -ErrorAction SilentlyContinue
+    if ($hb) {
+        $ageMin = ((Get-Date) - $hb.LastWriteTime).TotalMinutes
+        if ($ageMin -lt $IdleMin) {
+            $busyReasons += "devbox からの利用ハートビートが $([math]::Round($ageMin)) 分前 (< ${IdleMin}分)"
+        }
+    }
+} catch {
+    Write-Log "ハートビート確認失敗: $_"
+}
+
+# 4) CPU 負荷
 try {
     $cpu = (Get-Counter '\Processor(_Total)\% Processor Time' -SampleInterval 2 -MaxSamples 3 -ErrorAction Stop).CounterSamples |
         Measure-Object -Property CookedValue -Average | Select-Object -ExpandProperty Average
