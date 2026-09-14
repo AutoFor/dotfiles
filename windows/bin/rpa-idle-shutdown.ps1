@@ -8,6 +8,10 @@
 #   1) RDP/コンソールセッションのアイドル時間が IdleMin 分未満 (quser)
 #      ※ rpa は NSG で 3389 を Deny しているため通常は成立しない
 #   2) SSH の ESTABLISHED 接続がある (22番ポート)
+#      ※ devbox からの接続は除外する。devbox は tmux に rpa への SSH を
+#        keepalive 付きで常駐させているため (2026-08-27 b23a630)、これを
+#        稼働中と数えると永久に停止しなくなる (2026-08-26〜09-09 に 14 日間
+#        連続稼働した原因)。devbox 経由の実作業中は条件 3 の CPU が防波堤
 #   3) CPU 使用率が LoadMax を超えている
 #
 # 認証はマネージド ID (az login --identity) を使うためログイン切れが起きない。
@@ -22,6 +26,8 @@ $LoadMax = 30
 $IdleTicksRequired = 6
 $RG = "AUTOFOR-RG"
 $VM = "rpa"
+# devbox の Tailscale IP。ここからの SSH は tmux の常駐接続なので稼働中と数えない
+$DevboxIP = "100.126.96.27"
 $LogPath = "$env:ProgramData\rpa-idle-shutdown.log"
 $StatePath = "$env:ProgramData\rpa-idle-shutdown.state"
 
@@ -67,11 +73,17 @@ try {
     Write-Log "quser 確認失敗: $_"
 }
 
-# 2) SSH の ESTABLISHED 接続
+# 2) SSH の ESTABLISHED 接続 (devbox の tmux 常駐 SSH は除外)
 try {
-    $sshConns = Get-NetTCPConnection -LocalPort 22 -State Established -ErrorAction SilentlyContinue
-    if ($sshConns) {
-        $busyReasons += "SSH接続が$(@($sshConns).Count)件確立中"
+    $allConns = @(Get-NetTCPConnection -LocalPort 22 -State Established -ErrorAction SilentlyContinue)
+    $sshConns = @($allConns | Where-Object { $_.RemoteAddress -ne $DevboxIP })
+    $excluded = $allConns.Count - $sshConns.Count
+    if ($sshConns.Count -gt 0) {
+        $msg = "SSH接続が$($sshConns.Count)件確立中"
+        if ($excluded -gt 0) { $msg += " (devbox 常駐 ${excluded}件は除外済み)" }
+        $busyReasons += $msg
+    } elseif ($excluded -gt 0) {
+        Write-Log "devbox 常駐 SSH ${excluded}件のみ -> 稼働中とみなさない"
     }
 } catch {
     Write-Log "SSH接続確認失敗: $_"
