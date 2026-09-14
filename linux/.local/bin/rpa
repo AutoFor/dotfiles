@@ -10,12 +10,16 @@
 #   「また復元されていない」状態になる。
 #   そこで ssh が切れてもペインを終わらせず、理由を表示して再接続を待つ。
 #
-# 使い方: rpa [connect|ensure|up|down|status]
-#   connect : VM 起動を担保して ssh。切れても終了せず Enter で再接続 (既定)
-#   ensure  : VM 起動の担保だけ行う
-#   up      : VM を起動する
-#   down    : VM を停止 (deallocate) して課金をディスク代だけにする
-#   status  : 電源状態と ssh 到達性を表示
+# 使い方: rpa [connect|standby|fix-session|ensure|up|down|status]
+#   connect     : VM 起動を担保して ssh。切れても終了せず Enter で再接続 (既定)
+#   standby     : 復元・修復用の入口。VM 停止中は自動起動せず Enter を待ち、
+#                 届くならそのまま connect と同じループに入る (#245)
+#   fix-session : tmux セッション rpa が素の devbox シェルに化けていたら
+#                 standby に置き換えて修復する (resurrect の復元後フック用)
+#   ensure      : VM 起動の担保だけ行う
+#   up          : VM を起動する
+#   down        : VM を停止 (deallocate) して課金をディスク代だけにする
+#   status      : 電源状態と ssh 到達性を表示
 #
 # 環境変数で上書き可: RPA_RG / RPA_VM / RPA_HOST / RPA_IP
 set -u
@@ -63,6 +67,30 @@ ensure() {
   return 1
 }
 
+# tmux ウィンドウ側の設定 (connect / standby の入口で毎回行う。冪等)。
+# 接続先は Windows で、リモートが端末タイトルに
+# "Administrator: C:\\Windows\\system32\\conhost.exe" を書き込んでくる。
+# 放っておくとウィンドウ名がこれに乗っ取られてステータスバーが読めなくなる。
+# allow-rename はグローバルに切ると claude がタイトルに書く会話名 (✳ ...) まで
+# 止まってしまうため、この窓だけ切る。ここに置けば復元後も自動で効く。
+setup_tmux_window() {
+  [ -n "${TMUX:-}" ] || return 0
+  tmux set-option -w allow-rename off 2>/dev/null || true
+  tmux rename-window rpa 2>/dev/null || true
+
+  # このセッションで新しく作る窓・ペインも既定で rpa に繋ぐ。
+  # rpa 用のセッションに devbox のシェルが混ざると、どちらを触っているのか
+  # 分からなくなるため (Ctrl+T = tmux new-window もこれを通る)。
+  # セッション単位なので他のセッションには影響しない。設定は tmux サーバーが
+  # 保持するだけで永続しないが、復元時もここを通るので毎回張り直される。
+  # devbox のシェルが要るときはペインの中で zsh を実行するか、
+  # tmux set-option -u default-command で一時的に外す。
+  _sess=$(tmux display-message -p '#{session_name}' 2>/dev/null) || _sess=""
+  if [ -n "$_sess" ]; then
+    tmux set-option -t "$_sess" default-command "exec $HOME/.local/bin/rpa connect" 2>/dev/null || true
+  fi
+}
+
 case "${1:-connect}" in
 status)
   echo "rpa: $(vm_state || echo unknown)  (ssh到達: $(ssh_reachable && echo OK || echo NG))"
@@ -83,27 +111,7 @@ ensure)
   ;;
 
 connect)
-  # 接続先は Windows で、リモートが端末タイトルに
-  # "Administrator: C:\\Windows\\system32\\conhost.exe" を書き込んでくる。
-  # 放っておくとウィンドウ名がこれに乗っ取られてステータスバーが読めなくなる。
-  # allow-rename はグローバルに切ると claude がタイトルに書く会話名 (✳ ...) まで
-  # 止まってしまうため、この窓だけ切る。ここに置けば復元後も自動で効く。
-  if [ -n "${TMUX:-}" ]; then
-    tmux set-option -w allow-rename off 2>/dev/null || true
-    tmux rename-window rpa 2>/dev/null || true
-
-    # このセッションで新しく作る窓・ペインも既定で rpa に繋ぐ。
-    # rpa 用のセッションに devbox のシェルが混ざると、どちらを触っているのか
-    # 分からなくなるため (Ctrl+T = tmux new-window もこれを通る)。
-    # セッション単位なので他のセッションには影響しない。設定は tmux サーバーが
-    # 保持するだけで永続しないが、復元時もこの connect を通るので毎回張り直される。
-    # devbox のシェルが要るときはペインの中で zsh を実行するか、
-    # tmux set-option -u default-command で一時的に外す。
-    _sess=$(tmux display-message -p '#{session_name}' 2>/dev/null) || _sess=""
-    if [ -n "$_sess" ]; then
-      tmux set-option -t "$_sess" default-command "exec $HOME/.local/bin/rpa connect" 2>/dev/null || true
-    fi
-  fi
+  setup_tmux_window
 
   # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
   while :; do
@@ -128,8 +136,62 @@ connect)
   done
   ;;
 
+standby)
+  # 復元・修復の入口 (#245)。connect と違い VM が止まっていても勝手に起動しない。
+  # resurrect の復元は devbox が起動するたびに走るため、connect のまま戻すと
+  # rpa VM がそのたびに自動起動してしまう (コスト対策と逆行する)。
+  # 届く (= 既に動いている) なら待たせる理由がないので、そのまま接続する。
+  setup_tmux_window
+  if ! ssh_reachable; then
+    echo "rpa は停止中です (復元では自動起動しません)。"
+    printf 'Enter で起動して接続 / Ctrl-C で抜ける > '
+    read -r _ || exit 0
+  fi
+  exec "$0" connect
+  ;;
+
+fix-session)
+  # tmux セッション rpa の修復 (#245)。resurrect は「ssh 切断待ちのラッパー」を
+  # 保存できない (ペインに子プロセスが無くコマンドが空で保存される) ため、
+  # その状態で保存→復元されるとセッションが素の devbox シェルに化けて固定される。
+  # 復元後フック (@resurrect-hook-post-restore-all) からこれを呼んで直す。
+  #   - ラッパー (rpa connect/standby) か ssh が動いていれば何もしない
+  #   - 子プロセスの無い素のシェルのペインは standby で respawn する
+  #   - claude 等が動いているペインは殺さず、新しい窓で standby を開く
+  sess=$(tmux list-sessions -F '#{session_name}' 2>/dev/null | grep -E '^([0-9]+-)?rpa$' | head -1)
+  [ -n "$sess" ] || exit 0
+
+  healthy=""
+  bare_pane=""
+  for entry in $(tmux list-panes -s -t "$sess" -F '#{pane_id}:#{pane_pid}:#{pane_current_command}'); do
+    pane=${entry%%:*}
+    rest=${entry#*:}
+    pid=${rest%%:*}
+    cmd=${rest#*:}
+    # ペイン自身がラッパー (exec 起動だと comm は rpa、sh 経由だと sh になる)
+    if ps -o args= -p "$pid" 2>/dev/null | grep -q '\.local/bin/rpa'; then healthy=1; fi
+    # 直下の子にラッパーか ssh がいる (resurrect がシェル越しに起動した形)
+    if pgrep -P "$pid" -f '\.local/bin/rpa' >/dev/null 2>&1; then healthy=1; fi
+    if pgrep -P "$pid" -x ssh >/dev/null 2>&1; then healthy=1; fi
+    if [ -z "$bare_pane" ]; then
+      case "$cmd" in
+        zsh|bash|sh) pgrep -P "$pid" >/dev/null 2>&1 || bare_pane=$pane ;;
+      esac
+    fi
+  done
+  [ -n "$healthy" ] && exit 0
+
+  if [ -n "$bare_pane" ]; then
+    tmux respawn-pane -k -t "$bare_pane" "exec $HOME/.local/bin/rpa standby"
+    echo "セッション $sess の素のシェルを standby に置き換えました"
+  else
+    tmux new-window -t "$sess" -n rpa "exec $HOME/.local/bin/rpa standby"
+    echo "セッション $sess に standby の窓を追加しました"
+  fi
+  ;;
+
 *)
-  echo "usage: rpa {connect|ensure|up|down|status}" >&2
+  echo "usage: rpa {connect|standby|fix-session|ensure|up|down|status}" >&2
   exit 2
   ;;
 esac
