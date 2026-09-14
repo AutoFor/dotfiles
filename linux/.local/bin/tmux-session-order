@@ -206,7 +206,15 @@ attach)
   want="${2:-main}"
   found=$(sh "$0" resolve "$want" || true)
   [ -n "$found" ] || found="$want"
-  # 既にあれば attach、無ければ作成 (採番は session-created フックの renumber が行う)
+  # 既にあれば attach、無ければ作成 (採番は session-created フックの renumber が行う)。
+  # rpa は素のシェルではなくラッパー入りで作る (#246)。素で作ると ctrl+l の
+  # Windows Server が devbox のシェルに落ちる。-A で既存に attach する場合は
+  # コマンド引数が無視されるので、付けたままで安全。
+  case "$found" in
+  rpa|*-rpa)
+    exec tmux new-session -A -s "$found" "exec $HOME/.local/bin/rpa connect"
+    ;;
+  esac
   exec tmux new-session -A -s "$found"
   ;;
 

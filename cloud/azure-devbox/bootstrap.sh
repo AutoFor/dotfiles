@@ -155,10 +155,11 @@ fi
 # 修正が pull されないまま古いスクリプトが動き続けるのを防ぐ。
 # 注意: 既存エントリが全部フィルタされると grep が exit 1 になり、set -e で
 # サブシェルが echo 前に中断して crontab が空で登録されてしまう。|| true で防ぐ
-( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown || true; \
+( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown -e rpa-activity-heartbeat || true; \
   echo '*/15 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
   echo '59 21 * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
-  echo '*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1' ) | crontab -
+  echo '*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1'; \
+  echo '*/5 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/rpa-activity-heartbeat >/dev/null 2>&1' ) | crontab -
 echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 
 echo "########## 6) デフォルトシェルを zsh に ##########"
