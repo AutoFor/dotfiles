@@ -1157,6 +1157,11 @@ config.keys = {
 
   -- コピーモード (tmux 内は tmux copy-mode、ローカルペインは WezTerm copy mode)
   { key = "[", mods = "LEADER", action = tmux_bridge("[", act.ActivateCopyMode) },
+  -- LEADER+Ctrl+u / Ctrl+d: [ を挟まずに履歴を半ページ上/下へスクロール
+  -- (tmux 内は prefix C-u/C-d → copy-mode -e + halfpage、ローカルペインは WezTerm の
+  -- スクロール)。Ctrl+q の Ctrl を押しっぱなしのまま u/d を押す運指。
+  { key = "u", mods = "LEADER|CTRL", action = tmux_send_raw(TMUX_PREFIX .. "\x15", "C-u", act.ScrollByPage(-0.5)) },
+  { key = "d", mods = "LEADER|CTRL", action = tmux_send_raw(TMUX_PREFIX .. "\x04", "C-d", act.ScrollByPage(0.5)) },
   -- クリップボード
   { key = "c", mods = "CTRL|SHIFT", action = act.CopyTo("Clipboard") },
   { key = "v", mods = "CTRL|SHIFT", action = act.PasteFrom("Clipboard") },
