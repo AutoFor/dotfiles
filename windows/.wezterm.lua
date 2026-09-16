@@ -1120,6 +1120,11 @@ config.keys = {
   -- SendKey で明示送信しないと OS の文字合成に食われるため常に tmux へ透過する
   { key = "k", mods = "ALT", action = act.SendKey({ key = "k", mods = "ALT" }) },
   { key = "j", mods = "ALT", action = act.SendKey({ key = "j", mods = "ALT" }) },
+  -- Alt+u / Alt+i: 履歴を半ページ下/上へスクロール (tmux 側の bind -n M-u/M-i が
+  -- copy-mode -e + halfpage)。u=下 / i=上 は j/k と同じ空間配置。SendKey で明示送信
+  -- しないと OS の文字合成に食われるため常に tmux へ透過する
+  { key = "u", mods = "ALT", action = act.SendKey({ key = "u", mods = "ALT" }) },
+  { key = "i", mods = "ALT", action = act.SendKey({ key = "i", mods = "ALT" }) },
   -- ペインサイズ調整は tmux 側 (prefix + H/J/K/L、またはマウスドラッグ)
   -- Alt+f: nvim-tree のフロート表示切替。SendKey で明示送信しないと
   -- OS の文字合成に食われて Alt 抜きの "f" しか下流に届かない (hjkl と同じ理由)
