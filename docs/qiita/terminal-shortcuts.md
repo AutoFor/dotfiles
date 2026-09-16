@@ -126,6 +126,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | `<leader> →x` → `x` | **現在のペインを閉じる（`x` の 2 連打）**。1 回目は「閉じるモード」に入るだけで、続けて `x` を押したときだけ閉じる（他のキーを押せば取消）。隣の `z`（ズーム）との押し間違いでペインが消えないようにするための 2 段構え | × 印（消す） |
 | `<leader> →X` | **閉じたペインを開き直す**（`Ctrl+q → Shift+X`）。cwd・ペイン名・claude の会話・分割レイアウトごと元の位置に戻る。連打で閉じた順に遡れる。ウィンドウ版が `<leader> →W` なのと対 | e**X**hume（掘り起こす） |
 | `Alt+h/j/k/l` | ペイン移動（vim の hjkl）。**端で止まらず、横はタブ・縦はセッションを跨ぐ**: 一番左で `Alt+h` → 前のタブの一番右のペイン / 一番右で `Alt+l` → 次のタブの一番左のペイン / 一番上で `Alt+k` → 前のセッションの一番下のペイン / 一番下で `Alt+j` → 次のセッションの一番上のペイン。タブもセッションも端で巻き戻るので、押し続ければ全部を一周できる。**横軸＝タブ、縦軸＝セッション**と覚える。右列が上下分割されたタブに左から入ると下側のペインに着く（tmux が指定できる角が `{bottom-right}` のため） | vim の hjkl |
+| `Alt+u` / `Alt+i` | 履歴を半ページ**下 / 上**にスクロール（prefix も `[` も不要）。copy-mode に入った後もそのまま連打できる。下へ戻して最下行に着くと自動で抜ける（見るだけ用。選択・コピーするなら `<leader> →[` から入る） | j/k と同じ空間配置（左のキー=下、右のキー=上） |
 | `Ctrl+←/→/↑/↓` | 同じ挙動（Termius 等 Alt が届かないクライアント用）。**WezTerm では `Alt+矢印` は tmux まで届かない**ので、WezTerm からは `Alt+h/j/k/l` を使う | 矢印キー = 方向 |
 | `Alt+p` | 現在のペインに名前を付ける（空 Enter で解除して自動表示に戻る。`<leader> →p` / `Ctrl+b → Shift+T` でも可。名前は 15 分ごとに保存され、VM 再起動後も tmux-resurrect の復元と一緒に戻る） | **p**ane name |
 | `Alt+r` / `Alt+Shift+r` | ペインを次/前に回転して入れ替え | **r**otate |
@@ -217,11 +218,59 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | このウィンドウを丸ごと別のセッションへ移動して追従 | `M`（Shift+m）→ 一覧からセッションを選択（タブ名・ペイン名は維持） |
 | このペインを独立したウィンドウに切り出す | `!` |
 | コピーモード | `[` |
-| 履歴を半ページ上/下にスクロール（`[` 不要） | `Ctrl+u` / `Ctrl+d`（Ctrl を押しっぱなしで OK） |
+| 履歴を半ページ上/下にスクロール（`[` 不要） | `Ctrl+u` / `Ctrl+d`（Ctrl を押しっぱなしで OK。prefix なしなら `Alt+i` / `Alt+u`） |
 | 切断（セッションは残る） | `d` |
 
-> **注意**: devbox は毎日 22:00 に自動停止する。モバイルから VM を起こす手段は未整備なので、
-> 停止中は PC 側で WezTerm を開くか `devbox.ps1 up` で起動する（issue #214 Phase 4 の残タスク）。
+#### iPhone のショートカットで起動から接続まで（1 タップ）
+
+devbox は毎日 22:00 に自動停止する。停止中に iPhone/iPad から入るには VM を起こす必要があるが、
+Termius は接続先ホスト上のコマンドしか実行できないので、VM の起動は **iOS の「ショートカット」アプリ**に
+任せる。WezTerm 起動時の `devbox.ps1 ensure`（VM 起動担保 → Tailscale 経由で SSH）と同じ流れを
+ショートカット 1 本で再現する:
+
+```
+Tailscale 接続 → GitHub Actions で VM 起動 → 起動完了を待つ → Termius で接続
+```
+
+VM の起動は private リポジトリ `AutoFor/devbox-ops` の `start-devbox.yml`（workflow_dispatch）が行う。
+既に起動中なら即終了し、停止中なら `az vm start` して OS が立ち上がる（VM Agent が Ready になる）まで
+待ってから終了するので、ショートカット側は「この run が completed になるまで待つ」だけでよい。
+
+**事前準備（1 回だけ）**
+
+1. **GitHub PAT の発行**: GitHub → Settings → Developer settings → Personal access tokens →
+   **Fine-grained tokens** → Generate new token
+   - Resource owner: `AutoFor` / Repository access: Only select repositories → `devbox-ops`
+   - Permissions: Repository permissions → **Actions: Read and write**（Metadata: Read は自動で付く）
+   - 有効期限は最長（1 年）にし、切れたら作り直してショートカットの 2 か所を差し替える
+2. **Termius のホストに alias を付ける**: devbox のホスト設定で Alias を `devbox` にする。
+   alias が空だと Termius の「ホストに接続」アクションがショートカットに出てこない
+3. Tailscale アプリと Termius アプリは導入・ログイン済みであること（上の表のとおり）
+
+**ショートカットの中身（アクションを上から順に追加）**
+
+| # | アクション | 設定 |
+|---|-----------|------|
+| 1 | Tailscale「接続」（Connect） | VPN トグルを ON にする。VM の起動待ちの間に張り終わる |
+| 2 | 「URLの内容を取得」 | URL: `https://api.github.com/repos/AutoFor/devbox-ops/actions/workflows/start-devbox.yml/dispatches`<br>方法: **POST** / 本文: JSON → `ref` = `main`<br>ヘッダ: `Authorization` = `Bearer <PAT>`、`Accept` = `application/vnd.github+json` |
+| 3 | 「待機」 | 10 秒（dispatch 直後は run がまだ一覧に出ないため） |
+| 4 | 「変数を設定」 | `done` = `0` |
+| 5 | 「繰り返し」 20 回 | 以下 6〜10 をこの中に入れる |
+| 6 | 　「もし」 | `done` が `0` と等しい |
+| 7 | 　　「URLの内容を取得」 | URL: `https://api.github.com/repos/AutoFor/devbox-ops/actions/workflows/start-devbox.yml/runs?per_page=1`<br>方法: GET / ヘッダは 2 と同じ |
+| 8 | 　　「辞書の値を取得」→「リストから項目を取得」→「辞書の値を取得」 | `workflow_runs` のキー → 最初の項目 → `status` のキー |
+| 9 | 　　「もし」 | 8 の結果が `completed` と等しい → 「変数を設定」`done` = `1`<br>そうでなければ → 「待機」10 秒 |
+| 10 | 　「もし」の終了 ×2 / 繰り返しの終了 | |
+| 11 | Termius「ホストに接続」（Connect to Host） | ホスト: `devbox` |
+
+- 起動済みなら約 20 秒、停止中なら 1〜2 分で Termius が開く。接続したら `tm` で main セッションに入る
+- 8 の `status` が `completed` でも `conclusion` が `failure` のことがある（Azure 側の失敗）。
+  その場合は Termius の接続が失敗するので、https://github.com/AutoFor/devbox-ops/actions のログを見る
+- PAT は端末内（iCloud 同期あり）に平文で入る。権限を `devbox-ops` の Actions だけに絞っているのはそのため
+- 手動で起こしたいだけなら Azure 公式モバイルアプリで VM を Start しても同じ（ショートカット不要）
+
+> **設計メモ**: devbox-ops のサービスプリンシパル `sp-devbox-disk-resize` は rg-devbox 限定 Contributor
+> （OS ディスク拡張 2026-08-22 の流用）。VM の start だけに絞るならカスタムロールに差し替える。
 
 ### コピーモード（tmux copy-mode / vi ライク）
 
@@ -233,6 +282,7 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 |--------------|------|------|
 | `<leader> →[` | コピーモードを起動 | vim の `[` ブラケット慣習 |
 | `<leader> →Ctrl+u` / `<leader> →Ctrl+d` | **`[` を挟まずに**コピーモードに入って半ページ上/下へスクロール。以降は `Ctrl+u / Ctrl+d` を連打。下へ戻して最下行に着くと自動で抜ける（見るだけ用。選択・コピーするなら `[` から入る） | vim の **u**p / **d**own |
+| `Alt+i` / `Alt+u` | 上と同じだが **prefix も不要**の 1 打鍵版。copy-mode の中でもそのまま効く | j/k と同じ空間配置 |
 | `h/j/k/l` `w/b/e` `0/^/$` `gg/G` | vi と同じカーソル移動 | vim 由来 |
 | `Ctrl+f / Ctrl+b`、`Ctrl+d / Ctrl+u` | 1ページ/半ページ スクロール | **f**orward / **b**ack / **d**own / **u**p |
 | `/キーワード` `?キーワード` → `n/N` | 前方/後方検索 → 次/前のマッチ | vim 由来 |
