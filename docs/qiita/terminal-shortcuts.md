@@ -219,8 +219,56 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | 履歴を半ページ上/下にスクロール（`[` 不要） | `Ctrl+u` / `Ctrl+d`（Ctrl を押しっぱなしで OK） |
 | 切断（セッションは残る） | `d` |
 
-> **注意**: devbox は毎日 22:00 に自動停止する。モバイルから VM を起こす手段は未整備なので、
-> 停止中は PC 側で WezTerm を開くか `devbox.ps1 up` で起動する（issue #214 Phase 4 の残タスク）。
+#### iPhone のショートカットで起動から接続まで（1 タップ）
+
+devbox は毎日 22:00 に自動停止する。停止中に iPhone/iPad から入るには VM を起こす必要があるが、
+Termius は接続先ホスト上のコマンドしか実行できないので、VM の起動は **iOS の「ショートカット」アプリ**に
+任せる。WezTerm 起動時の `devbox.ps1 ensure`（VM 起動担保 → Tailscale 経由で SSH）と同じ流れを
+ショートカット 1 本で再現する:
+
+```
+Tailscale 接続 → GitHub Actions で VM 起動 → 起動完了を待つ → Termius で接続
+```
+
+VM の起動は private リポジトリ `AutoFor/devbox-ops` の `start-devbox.yml`（workflow_dispatch）が行う。
+既に起動中なら即終了し、停止中なら `az vm start` して OS が立ち上がる（VM Agent が Ready になる）まで
+待ってから終了するので、ショートカット側は「この run が completed になるまで待つ」だけでよい。
+
+**事前準備（1 回だけ）**
+
+1. **GitHub PAT の発行**: GitHub → Settings → Developer settings → Personal access tokens →
+   **Fine-grained tokens** → Generate new token
+   - Resource owner: `AutoFor` / Repository access: Only select repositories → `devbox-ops`
+   - Permissions: Repository permissions → **Actions: Read and write**（Metadata: Read は自動で付く）
+   - 有効期限は最長（1 年）にし、切れたら作り直してショートカットの 2 か所を差し替える
+2. **Termius のホストに alias を付ける**: devbox のホスト設定で Alias を `devbox` にする。
+   alias が空だと Termius の「ホストに接続」アクションがショートカットに出てこない
+3. Tailscale アプリと Termius アプリは導入・ログイン済みであること（上の表のとおり）
+
+**ショートカットの中身（アクションを上から順に追加）**
+
+| # | アクション | 設定 |
+|---|-----------|------|
+| 1 | Tailscale「接続」（Connect） | VPN トグルを ON にする。VM の起動待ちの間に張り終わる |
+| 2 | 「URLの内容を取得」 | URL: `https://api.github.com/repos/AutoFor/devbox-ops/actions/workflows/start-devbox.yml/dispatches`<br>方法: **POST** / 本文: JSON → `ref` = `main`<br>ヘッダ: `Authorization` = `Bearer <PAT>`、`Accept` = `application/vnd.github+json` |
+| 3 | 「待機」 | 10 秒（dispatch 直後は run がまだ一覧に出ないため） |
+| 4 | 「変数を設定」 | `done` = `0` |
+| 5 | 「繰り返し」 20 回 | 以下 6〜10 をこの中に入れる |
+| 6 | 　「もし」 | `done` が `0` と等しい |
+| 7 | 　　「URLの内容を取得」 | URL: `https://api.github.com/repos/AutoFor/devbox-ops/actions/workflows/start-devbox.yml/runs?per_page=1`<br>方法: GET / ヘッダは 2 と同じ |
+| 8 | 　　「辞書の値を取得」→「リストから項目を取得」→「辞書の値を取得」 | `workflow_runs` のキー → 最初の項目 → `status` のキー |
+| 9 | 　　「もし」 | 8 の結果が `completed` と等しい → 「変数を設定」`done` = `1`<br>そうでなければ → 「待機」10 秒 |
+| 10 | 　「もし」の終了 ×2 / 繰り返しの終了 | |
+| 11 | Termius「ホストに接続」（Connect to Host） | ホスト: `devbox` |
+
+- 起動済みなら約 20 秒、停止中なら 1〜2 分で Termius が開く。接続したら `tm` で main セッションに入る
+- 8 の `status` が `completed` でも `conclusion` が `failure` のことがある（Azure 側の失敗）。
+  その場合は Termius の接続が失敗するので、https://github.com/AutoFor/devbox-ops/actions のログを見る
+- PAT は端末内（iCloud 同期あり）に平文で入る。権限を `devbox-ops` の Actions だけに絞っているのはそのため
+- 手動で起こしたいだけなら Azure 公式モバイルアプリで VM を Start しても同じ（ショートカット不要）
+
+> **設計メモ**: devbox-ops のサービスプリンシパル `sp-devbox-disk-resize` は rg-devbox 限定 Contributor
+> （OS ディスク拡張 2026-08-22 の流用）。VM の start だけに絞るならカスタムロールに差し替える。
 
 ### コピーモード（tmux copy-mode / vi ライク）
 
