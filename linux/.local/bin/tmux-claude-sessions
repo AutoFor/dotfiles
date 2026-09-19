@@ -12,6 +12,16 @@
 #         閉じる / prefix+M で別セッションへ移動する等) と全ズレするため主キーにしない。
 # resume: resurrect の復元コマンド (@resurrect-processes) として claude ペイン内で
 #         実行される。TSV に自ペインの記録があれば --resume、なければ新規で開く
+# command: 記録 (下記の spec) から「同じ会話で開き直すコマンド」を出力する。会話の実体が
+#         無ければ何も出さない。tmux-close-pane / tmux-close-window の undo が使う
+#
+# codex / kimi も同じ仕組みに載せている (issue #249)。どちらも SessionStart hook が
+# stdin に session_id を渡すので、hook から `track codex` / `track kimi` を呼ぶ
+# (codex: ~/.codex/hooks.json、kimi: ~/.kimi-code/config.toml の [[hooks]])。
+# 記録 1 件 (spec) の書式:
+#   claude: <会話ID>                 (従来どおり。既存の記録・TSV とそのまま互換)
+#   他:     <agent>:<mode>:<会話ID>   mode は起動時の権限フラグの記号 (空 = 既定)
+# 会話 ID は常に最後の ":" より後ろ。予約 (claim) と重複排除はこの ID だけをキーにする
 set -eu
 
 PANE_DIR="$HOME/.local/share/tmux/claude-panes"
@@ -24,6 +34,75 @@ FILE="$HOME/.local/share/tmux/resurrect/claude-sessions.tsv"
 CLAIM_DIR="$HOME/.local/share/tmux/claude-claims"
 TAB=$(printf '\t')
 
+# spec を AGENT / MODE / SID に分解する
+parse_spec() {
+  case "$1" in
+  *:*:*) AGENT=${1%%:*}; SID=${1##*:}; MODE=${1#*:}; MODE=${MODE%%:*} ;;
+  *)     AGENT=claude; MODE=""; SID=$1 ;;
+  esac
+}
+
+# 起動時の権限フラグ。claude は従来どおり常に skip-permissions で開く。
+# codex / kimi は「閉じる前と同じモード」に戻す (勝手に権限を緩めない) ため、
+# track が記録した記号を実フラグに戻す。記号以外の文字列はコマンドに混ぜない
+mode_flag() {
+  case "$1:$2" in
+  claude:*)     echo "--dangerously-skip-permissions" ;;
+  codex:bypass) echo "--dangerously-bypass-approvals-and-sandbox" ;;
+  kimi:yolo)    echo "--yolo" ;;
+  kimi:auto)    echo "--auto" ;;
+  esac
+}
+
+# 会話の実体 (transcript) があるか。記録が古い等で無ければ記録は無かったことにする
+has_transcript() {
+  case "$1" in
+  claude) ls "$HOME"/.claude/projects/*/"$2".jsonl >/dev/null 2>&1 ;;
+  codex)  ls "$HOME"/.codex/sessions/*/*/*/rollout-*-"$2".jsonl >/dev/null 2>&1 ;;
+  kimi)   ls -d "${KIMI_CODE_HOME:-$HOME/.kimi-code}"/sessions/*/"$2" >/dev/null 2>&1 ;;
+  *)      return 1 ;;
+  esac
+}
+
+# 同じ会話で開き直すコマンド / 会話を引き継がず新規で開くコマンド
+resume_cmd() {
+  f=$(mode_flag "$1" "$2")
+  case "$1" in
+  claude) echo "claude --resume $3 $f" ;;
+  codex)  echo "codex resume${f:+ $f} $3" ;;
+  kimi)   echo "kimi --session $3${f:+ $f}" ;;
+  esac
+}
+fresh_cmd() {
+  f=$(mode_flag "$1" "$2")
+  echo "$1${f:+ $f}"
+}
+
+# hook を起動した agent プロセスのコマンドラインから権限フラグを読み取る。
+# hook → (sh -c) → agent 本体 → ログインシェル の順に親を辿り、シェルに着いたら止める
+detect_mode() {
+  pid=$PPID
+  n=0
+  while [ "${pid:-0}" -gt 1 ] && [ "$n" -lt 8 ]; do
+    case "$(cat "/proc/$pid/comm" 2>/dev/null)" in
+    zsh|bash|fish|tmux*|systemd) break ;;
+    esac
+    args=$(tr '\0' '\n' < "/proc/$pid/cmdline" 2>/dev/null) || args=""
+    case "$1" in
+    codex)
+      if printf '%s\n' "$args" | grep -qx -e '--dangerously-bypass-approvals-and-sandbox' -e '--yolo'; then
+        echo bypass; return 0
+      fi ;;
+    kimi)
+      if printf '%s\n' "$args" | grep -qx -e '--auto'; then echo auto; return 0; fi
+      if printf '%s\n' "$args" | grep -qx -e '-y' -e '--yolo'; then echo yolo; return 0; fi ;;
+    esac
+    pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    n=$((n + 1))
+  done
+  return 0
+}
+
 case "${1:-}" in
 track)
   # tmux 外 (Windows や wezterm mux 直下) では何もしない
@@ -34,8 +113,16 @@ track)
     SID=$(sed -n 's/.*"session_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)
   fi
   [ -n "$SID" ] || exit 0
+  # 会話 ID は後でコマンドラインに載るので、想定外の文字を含むものは記録しない
+  case "$SID" in *[!A-Za-z0-9_-]*) exit 0 ;; esac
+  AGENT=${2:-claude}
+  case "$AGENT" in
+  claude)     SPEC=$SID ;;
+  codex|kimi) SPEC="$AGENT:$(detect_mode "$AGENT"):$SID" ;;
+  *)          exit 0 ;;
+  esac
   mkdir -p "$PANE_DIR"
-  printf '%s\n' "$SID" > "$PANE_DIR/${TMUX_PANE#%}"
+  printf '%s\n' "$SPEC" > "$PANE_DIR/${TMUX_PANE#%}"
   ;;
 save)
   mkdir -p "$(dirname "$FILE")" "$PANE_DIR"
@@ -43,9 +130,19 @@ save)
   PANES=$(tmux list-panes -a -F "#{session_name}${TAB}#{window_index}${TAB}#{window_name}${TAB}#{pane_index}${TAB}#{pane_id}")
   # 閉じたペインの記録を掃除 (ペイン ID はサーバー再起動で振り直されるため、
   # 残しておくと無関係な新ペインの記録として誤読される)
+  # サーバー起動より前の記録も同じ理由で捨てる。再起動後に同じ番号を引いた別ペインが
+  # 生きていると上の掃除をすり抜け、下の重複排除で本来の持ち主の行を奪う
+  # (2026-09-20: 前日の %11 の記録が復元後の kimi ペイン %11 に残り、その会話を
+  #  実際に開いていた claude ペインが TSV から落ちた。kimi は最初の発言まで
+  #  SessionStart が来ないので、起動しただけでは記録が上書きされない)
+  SERVER_START=$(tmux display-message -p '#{start_time}' 2>/dev/null) || SERVER_START=0
   for f in "$PANE_DIR"/*; do
     [ -e "$f" ] || continue
-    printf '%s\n' "$PANES" | cut -f5 | grep -qx "%$(basename "$f")" || rm -f "$f"
+    if ! printf '%s\n' "$PANES" | cut -f5 | grep -qx "%$(basename "$f")"; then
+      rm -f "$f"
+    elif [ "$(stat -c %Y "$f" 2>/dev/null || echo "$SERVER_START")" -lt "${SERVER_START:-0}" ]; then
+      rm -f "$f"
+    fi
   done
   # 同じ会話 ID が複数ペインに紐づいていたら最初の 1 ペインだけ残す。
   # 一度でも複数ペインが同じ会話を開いてしまうと (下の resume のフォールバック参照)
@@ -71,7 +168,7 @@ save)
       }
       close(f)
     }
-  ' | awk -F '\t' '!seen[$5]++' > "$FILE.tmp"
+  ' | awk -F '\t' '{ k = $5; sub(/.*:/, "", k) } !seen[k]++' > "$FILE.tmp"
   # 上書き前に旧版を 3 世代残す (claude-sessions.tsv.1 〜 .3)。
   # 一点物のまま復元失敗直後の保存に空で潰されると、どのペインがどの会話だったか
   # 永久に分からなくなる (2026-08-01 に実際に発生)
@@ -84,6 +181,9 @@ save)
   mv "$FILE.tmp" "$FILE"
   ;;
 resume)
+  # 第 2 引数 = 復元対象の agent (@resurrect-processes が渡す。省略時は claude)
+  WANT=${2:-claude}
+  case "$WANT" in claude|codex|kimi) ;; *) WANT=claude ;; esac
   ME="?"
   SID=""
   if [ -n "${TMUX_PANE:-}" ]; then
@@ -127,12 +227,26 @@ resume)
     [ "$(cat "$d/owner" 2>/dev/null)" = "$ME" ]
   }
 
+  # ここまでの SID は TSV の記録 (spec) そのもの。agent / mode / 会話 ID に分解する
+  SPEC=$SID
+  AGENT=$WANT; MODE=""; SID=""
+  if [ -n "$SPEC" ]; then
+    parse_spec "$SPEC"
+    # 記録が別の agent のもの (同じペインで claude をやめて codex を起動した後、
+    # hook が効かず古い記録が残った等) なら使わない
+    if [ "$AGENT" != "$WANT" ]; then
+      AGENT=$WANT; MODE=""; SID=""
+    fi
+  fi
+  # 下で eval に渡すので、TSV を手で触った等で想定外の文字が入っていたら捨てる
+  case "$SID" in *[!A-Za-z0-9_-]*) SID="" ;; esac
   # 記録が古い等で会話の実体 (transcript) が無ければ記録は無かったことにする
-  if [ -n "$SID" ] && ! ls "$HOME"/.claude/projects/*/"$SID".jsonl >/dev/null 2>&1; then
+  if [ -n "$SID" ] && ! has_transcript "$AGENT" "$SID"; then
     SID=""
   fi
   if [ -n "$SID" ] && claim "$SID"; then
-    exec claude --resume "$SID" --dangerously-skip-permissions
+    # コマンドは固定の語と検証済みの会話 ID だけで組み立てている (resume_cmd)
+    eval "exec $(resume_cmd "$AGENT" "$MODE" "$SID")"
   fi
 
   # --- 記録が無い / 会話を他ペインに取られたペインのフォールバック ---
@@ -145,10 +259,17 @@ resume)
   # そちらを横取りしてしまう。transcript は開きっぱなしにならないので fuser でも
   # 使用中か判定できない。当てずっぽうで拾うより、会話を引き継がず新規で開く。
   # 元の会話に戻したいときはそのペインで /resume から選び直す
-  exec claude --dangerously-skip-permissions
+  eval "exec $(fresh_cmd "$AGENT" "$MODE")"
+  ;;
+command)
+  [ -n "${2:-}" ] || exit 0
+  parse_spec "$2"
+  case "$SID" in ""|*[!A-Za-z0-9_-]*) exit 0 ;; esac
+  has_transcript "$AGENT" "$SID" || exit 0
+  resume_cmd "$AGENT" "$MODE" "$SID"
   ;;
 *)
-  echo "usage: tmux-claude-sessions track|save|resume" >&2
+  echo "usage: tmux-claude-sessions track [agent]|save|resume [agent]|command <spec>" >&2
   exit 1
   ;;
 esac

@@ -109,8 +109,34 @@ CODEX_DIR="$HOME/.codex"
 mkdir -p "$CODEX_DIR/skills"
 
 link_file "$DOTFILES_DIR/codex/config.toml" "$CODEX_DIR/config.toml"
+# SessionStart hook: tmux ペイン → 会話 ID の記録 (tmux-claude-sessions track codex)
+link_file "$DOTFILES_DIR/codex/hooks.json" "$CODEX_DIR/hooks.json"
 
 sync_dir_links "$DOTFILES_DIR/codex/skills" "$CODEX_DIR/skills"
+
+echo ""
+echo "=== Kimi Code の SessionStart hook ==="
+
+# ~/.kimi-code/config.toml は認証情報を含むためリポジトリ管理にしない。
+# tmux ペイン → 会話 ID の記録用 hook だけを、無ければ追記する
+KIMI_CONFIG="${KIMI_CODE_HOME:-$HOME/.kimi-code}/config.toml"
+if [ -f "$KIMI_CONFIG" ]; then
+  if grep -q "tmux-claude-sessions" "$KIMI_CONFIG"; then
+    echo "  設定済み: $KIMI_CONFIG"
+  else
+    cat >> "$KIMI_CONFIG" <<'KIMI_HOOK'
+
+# tmux ペイン → 会話 ID の記録 (dotfiles の install.sh が追記。tmux-claude-sessions 参照)
+[[hooks]]
+event = "SessionStart"
+command = "sh \"$HOME/.local/bin/tmux-claude-sessions\" track kimi"
+timeout = 5
+KIMI_HOOK
+    echo "  追記: $KIMI_CONFIG"
+  fi
+else
+  echo "  スキップ: $KIMI_CONFIG が無い (kimi 未導入)"
+fi
 
 echo ""
 echo "=== 完了 ==="
