@@ -130,9 +130,19 @@ save)
   PANES=$(tmux list-panes -a -F "#{session_name}${TAB}#{window_index}${TAB}#{window_name}${TAB}#{pane_index}${TAB}#{pane_id}")
   # 閉じたペインの記録を掃除 (ペイン ID はサーバー再起動で振り直されるため、
   # 残しておくと無関係な新ペインの記録として誤読される)
+  # サーバー起動より前の記録も同じ理由で捨てる。再起動後に同じ番号を引いた別ペインが
+  # 生きていると上の掃除をすり抜け、下の重複排除で本来の持ち主の行を奪う
+  # (2026-09-20: 前日の %11 の記録が復元後の kimi ペイン %11 に残り、その会話を
+  #  実際に開いていた claude ペインが TSV から落ちた。kimi は最初の発言まで
+  #  SessionStart が来ないので、起動しただけでは記録が上書きされない)
+  SERVER_START=$(tmux display-message -p '#{start_time}' 2>/dev/null) || SERVER_START=0
   for f in "$PANE_DIR"/*; do
     [ -e "$f" ] || continue
-    printf '%s\n' "$PANES" | cut -f5 | grep -qx "%$(basename "$f")" || rm -f "$f"
+    if ! printf '%s\n' "$PANES" | cut -f5 | grep -qx "%$(basename "$f")"; then
+      rm -f "$f"
+    elif [ "$(stat -c %Y "$f" 2>/dev/null || echo "$SERVER_START")" -lt "${SERVER_START:-0}" ]; then
+      rm -f "$f"
+    fi
   done
   # 同じ会話 ID が複数ペインに紐づいていたら最初の 1 ペインだけ残す。
   # 一度でも複数ペインが同じ会話を開いてしまうと (下の resume のフォールバック参照)
