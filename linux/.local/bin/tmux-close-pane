@@ -13,11 +13,12 @@
 #
 # 復元できるのは「構成」まで。動いていたコマンドは自動実行しない
 # (プロンプトに打ちかけの危険なコマンドが残っていることがあるため)。
-# 例外は claude で、記録した会話 ID があれば --resume で同じ会話に戻す。
+# 例外は claude / codex / kimi で、記録した会話 ID があれば同じ会話に戻す
+# (コマンドの組み立ては tmux-claude-sessions command)。
 set -eu
 
 DIR="$HOME/.local/share/tmux/closed-panes"
-PANE_DIR="$HOME/.local/share/tmux/claude-panes"   # ペイン ID → claude 会話 ID (tmux-claude-sessions track)
+PANE_DIR="$HOME/.local/share/tmux/claude-panes"   # ペイン ID → claude/codex/kimi の会話 ID (tmux-claude-sessions track)
 KEEP=20                                            # 保持する記録の数 (これより古いものから捨てる)
 TAB=$(printf '\t')
 
@@ -111,9 +112,10 @@ do_undo() {
   [ -n "$layout" ] && tmux select-layout -t "$win" "$layout" >/dev/null 2>&1 || true
 
   [ -n "$pname" ] && tmux set -p -t "$new" @name "$pname"
-  if [ -n "$sid" ] && ls "$HOME"/.claude/projects/*/"$sid".jsonl >/dev/null 2>&1; then
-    tmux send-keys -t "$new" "claude --resume $sid --dangerously-skip-permissions" Enter
-  fi
+  # 会話の実体が残っていれば開き直すコマンドが返る (claude / codex / kimi)
+  cmd=""
+  [ -n "$sid" ] && cmd=$(sh "$HOME/.local/bin/tmux-claude-sessions" command "$sid" 2>/dev/null) || true
+  [ -n "$cmd" ] && tmux send-keys -t "$new" "$cmd" Enter
 
   rm -f "$file"
   tmux select-window -t "$win"
