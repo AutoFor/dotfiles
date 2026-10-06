@@ -62,17 +62,29 @@ $busyReasons = @()
 try {
     $quserOutput = quser 2>$null
     foreach ($line in ($quserOutput | Select-Object -Skip 1)) {
-        $cols = ($line.Trim() -replace '\s{2,}', ' ') -split ' '
-        $idleRaw = $cols | Where-Object { $_ -match '^\d+(\+\d{2}:\d{2})?$|^\.$|^none$' } | Select-Object -First 1
-        $idleMinutes = 0
-        if ($idleRaw -and $idleRaw -ne '.' -and $idleRaw -ne 'none') {
-            if ($idleRaw -match '^(\d+)\+(\d{2}):(\d{2})$') {
+        if (-not $line.Trim()) { continue }
+        # IDLE TIME は STATE (Active/Disc) の直後の列として読む。切断中 (Disc) は
+        # SESSIONNAME が空で列数が変わるため位置では決め打ちできない。
+        # 「最初に数字に見える列」を拾うとセッション ID を分と誤読し、セッションが
+        # 残っている限り永久に停止しなくなる (#248、2026-09-16〜19 に 3 日間連続稼働)
+        $idleMinutes = $null
+        if ($line -match '\s(?:Active|Disc)\s+(\S+)') {
+            $idleRaw = $matches[1]
+            # 形式: "." / "none" (操作直後), "N" (分), "H:MM", "D+HH:MM"
+            if ($idleRaw -match '^(\d+)\+(\d{1,2}):(\d{2})$') {
                 $idleMinutes = ([int]$matches[1] * 24 * 60) + ([int]$matches[2] * 60) + [int]$matches[3]
-            } else {
+            } elseif ($idleRaw -match '^(\d{1,2}):(\d{2})$') {
+                $idleMinutes = ([int]$matches[1] * 60) + [int]$matches[2]
+            } elseif ($idleRaw -match '^\d+$') {
                 $idleMinutes = [int]$idleRaw
+            } elseif ($idleRaw -match '^(\.|none)$') {
+                $idleMinutes = 0
             }
         }
-        if ($idleMinutes -lt $IdleMin) {
+        if ($null -eq $idleMinutes) {
+            # 読めないときは安全側 (停止しない) に倒すが、黙って居座らないよう理由に出す
+            $busyReasons += "quser の行を解析できない: $($line.Trim())"
+        } elseif ($idleMinutes -lt $IdleMin) {
             $busyReasons += "RDPセッションのアイドルが${idleMinutes}分 (< ${IdleMin}分)"
         }
     }
