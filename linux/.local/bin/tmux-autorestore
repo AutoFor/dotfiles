@@ -66,6 +66,8 @@ if [ -r "$SESSIONS_TSV" ]; then
       sid=$c4                 # 旧形式: c2=window_index, c3=pane_index
     fi
     [ -n "${sid:-}" ] || continue
+    # codex / kimi の記録は "<agent>:<mode>:<会話ID>"。予約キーは会話 ID だけ
+    sid=${sid##*:}
     mkdir -p "$CLAIM_DIR/$sid"
     printf '%s:%s.%s\n' "$c1" "$c2" "$c3" > "$CLAIM_DIR/$sid/owner"
   done < "$SESSIONS_TSV"

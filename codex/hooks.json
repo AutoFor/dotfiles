@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"$HOME/.local/bin/tmux-claude-sessions\" track codex"
+          }
+        ]
+      }
+    ]
+  }
+}
