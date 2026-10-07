@@ -8,6 +8,8 @@
 #   2) 既に WezTerm が開いていれば前面化するだけ (二重起動しない)
 #   3) このコンソールに進捗を出しながら devbox の起動を担保してから
 #      wezterm-gui を起動する (ensure 済みなので gui-startup 側は即座に通る)
+#      その前にローカル mux サーバー (wezterm-mux-server) の常駐も担保する (#251)。
+#      ローカル PowerShell タブはこのサーバー配下で動くので、WezTerm を閉じても残る
 #   4) WezTerm のウィンドウが実際に表示されるまでコンソールを閉じない
 # 事前に register-wezterm-launch.ps1 でショートカットを作成し、
 # タスクバーには従来の WezTerm の代わりにそれをピン留めして使う。
@@ -20,6 +22,23 @@ if (-not (Test-Path $wezterm)) {
     Write-Warning "wezterm-gui.exe が見つかりません: $wezterm"
     Start-Sleep -Seconds 5
     exit 1
+}
+# ローカル PowerShell タブを載せる mux サーバー (.wezterm.lua の unix_domains "local-mux")。
+# GUI とは別プロセスなので WezTerm を閉じてもタブの中身 (pwsh・claude) が残る (#251)
+$muxServer = Join-Path $env:ProgramFiles "WezTerm\wezterm-mux-server.exe"
+
+# mux サーバーが居なければ hidden で起動する。Start-Process は独立したプロセスを作るので、
+# このランチャーのコンソールが閉じても (WezTerm を閉じても) 生き続ける。
+# 既に動いていれば何もしない (二重起動すると 2 つ目がソケット取得に失敗して終わるだけだが、
+# 無駄なログを残さないため)
+function Ensure-MuxServer {
+    if (Get-Process wezterm-mux-server -ErrorAction SilentlyContinue) { return }
+    if (-not (Test-Path $muxServer)) {
+        Write-Warning "wezterm-mux-server.exe が見つかりません: $muxServer (ローカル PowerShell タブは WezTerm を閉じると消えます)"
+        return
+    }
+    Write-Host "ローカル mux サーバーを起動しています..."
+    Start-Process $muxServer -WindowStyle Hidden
 }
 
 # 前面化まわりの Win32 API (wezterm-jump.ps1 と同じ手口)
@@ -63,6 +82,9 @@ if (-not $created) {
 }
 
 try {
+    # --- ローカル mux サーバーの常駐を担保 (前面化だけの経路でも、落ちていれば立て直す) ---
+    Ensure-MuxServer
+
     # --- 2) 既に開いていれば前面化だけ ---
     $hwnd = Get-WezWindow
     if ($hwnd) {

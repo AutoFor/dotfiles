@@ -8,6 +8,8 @@ local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
 local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
 local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
+-- ローカル PowerShell タブを載せる Windows 上の wezterm-mux-server のドメイン (#251)
+local LOCAL_MUX_DOMAIN = "local-mux"
 -- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
 -- 注意: 候補テーブルに os.getenv() を直接並べると、未設定時に nil が混ざって
 -- ipairs がそこで走査を打ち切り、後続の候補が一切見られなくなる (Lua の配列は
@@ -85,6 +87,7 @@ local function is_tmux_client_pane(pane)
   if ok_domain and domain == DEVBOX_TMUX_DOMAIN then
     return true
   end
+  -- local 以外 (devbox-tmux 以外の ssh ドメイン、ローカル mux の local-mux 等) は tmux ではない
   if ok_domain and domain ~= "local" then
     return false
   end
@@ -196,8 +199,8 @@ config.automatically_reload_config = true
 -- 実際の声にほぼリアルタイムで追従させるため短めにする
 config.status_update_interval = 250
 -- ウィンドウを閉じるときの確認を出さない。
--- セッションの実体は devbox の tmux が保持しているので (#214)、
--- WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
+-- セッションの実体は devbox の tmux (#214) とローカルの wezterm-mux-server (#251) が
+-- 保持しているので、WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
 config.window_close_confirmation = "NeverPrompt"
 -- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
 -- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
@@ -304,6 +307,30 @@ config.ssh_domains = {
   },
 }
 
+-- ローカル PowerShell 用の mux ドメイン (#251)。
+-- ローカルタブを素の "local" ドメインで開くと pwsh もその中の claude も wezterm-gui の
+-- 子プロセスになり、WezTerm を閉じた時点で全部消える。Windows 上で wezterm-mux-server
+-- を常駐させ、ローカルタブはその配下に生成することで、devbox の tmux と同じく
+-- 「閉じても残る・次に開くと戻る」にする (claude は --resume ではなくそのまま継続)。
+-- Windows 再起動や mux サーバー自体の落ちには効かないので、その場合は claude --resume。
+--
+-- - socket_path は既定 (%USERPROFILE%\.local\share\wezterm\sock)。GUI もサーバーも
+--   同じユーザーで動くので揃う
+-- - mux サーバーの起動担保は wezterm-launch.ps1 が行う (hidden で起動)。ランチャーを
+--   経由せず起動した場合は connect_automatically の接続失敗時に既定の serve_command
+--   (wezterm-mux-server --daemonize) が走る。こちらはコンソールが一瞬出るだけで同じ結果
+-- - connect_automatically で GUI 起動時に attach し、サーバーに残っているタブを
+--   別ウィンドウとして開き直す。残っていなければ何も開かない (attach はウィンドウを
+--   生成しない)。Shift+P 等で未 attach のまま spawn しても mux 側が自動 attach する
+-- - skip_permissions_check: ソケットの所有者/権限チェックは NTFS では意味を持たないため外す
+config.unix_domains = {
+  {
+    name = LOCAL_MUX_DOMAIN,
+    connect_automatically = true,
+    skip_permissions_check = true,
+  },
+}
+
 -- 既定ドメインはネイティブ SSH + tmux (#214)。起動時のウィンドウはここに生成される。
 -- VM 停止中に接続失敗した場合はウィンドウにエラーが表示されるので、
 -- LEADER+l のランチャーから PowerShell を開いて切り分けする。
@@ -337,8 +364,10 @@ config.launch_menu = {
     },
   },
   {
+    -- ローカル PowerShell。wezterm-mux-server 配下 (local-mux) で動かし、
+    -- WezTerm を閉じても残す (#251)
     label = "PowerShell",
-    domain = { DomainName = "local" },
+    domain = { DomainName = LOCAL_MUX_DOMAIN },
     args = { "pwsh.exe", "-NoLogo" },
   },
 }
@@ -760,9 +789,10 @@ local function show_session_launcher()
             ensure_devbox()
             win:perform_action(switch_to_tmux_session("rpa"), p)
           elseif id == "pwsh" then
+            -- ローカル mux 配下で開く (#251)。WezTerm を閉じても残る
             win:perform_action(
               act.SpawnCommandInNewTab({
-                domain = { DomainName = "local" },
+                domain = { DomainName = LOCAL_MUX_DOMAIN },
                 args = { "pwsh.exe", "-NoLogo" },
               }),
               p
@@ -1236,11 +1266,12 @@ config.keys = {
   -- 画面に見えているペイン全体をまるごとコピー (tmux の prefix+Y にブリッジ)
   { key = "y", mods = "LEADER", action = tmux_bridge("Y", act.Nop) },
   {
-    -- PowerShell を新規タブで開く
+    -- PowerShell を新規タブで開く。ローカル mux (wezterm-mux-server) 配下なので
+    -- WezTerm を閉じても pwsh も中の claude も残り、次に開くと戻る (#251)
     key = "P",
     mods = "LEADER|SHIFT",
     action = act.SpawnCommandInNewTab({
-      domain = { DomainName = "local" },
+      domain = { DomainName = LOCAL_MUX_DOMAIN },
       args = { "pwsh.exe", "-NoLogo" },
     }),
   },
