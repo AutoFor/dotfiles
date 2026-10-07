@@ -1201,6 +1201,7 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
 | `claude -y` / `claude da` | 権限確認をスキップして起動（`--dangerously-skip-permissions`） | **y**es（`codex -y` と統一）/ **da**nger の略 |
+| `glm` / `glm -y` | Z.ai の **GLM-5.3** で Claude Code を起動（`ANTHROPIC_BASE_URL` を Z.ai に向ける。API キーは `~/.config/zai/api_key`） | モデル名そのまま |
 
 #### トークン使用量・コスト集計（ccusage）
 

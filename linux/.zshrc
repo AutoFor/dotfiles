@@ -307,6 +307,32 @@ codex() {
   fi
 }
 
+# glm: Z.ai の GLM-5.3 で Claude Code を起動する (Anthropic 互換エンドポイント経由)。
+# API キーは ~/.config/zai/api_key に置く (リポジトリ管理外。Z.ai の GLM Coding Plan で発行)。
+# glm -y / glm da は claude -y / claude da と同じ。settings.json の model (fable 等) は
+# Z.ai に無いので --model glm-5.3 を明示して上書きする
+glm() {
+  local keyfile="${ZAI_API_KEY_FILE:-$HOME/.config/zai/api_key}" key="$ZAI_API_KEY"
+  if [[ -z "$key" ]]; then
+    if [[ ! -r "$keyfile" ]]; then
+      echo "Z.ai の API キーがありません。https://z.ai/manage-apikey/apikey-list で発行して保存してください:" >&2
+      echo "  mkdir -p ~/.config/zai && (umask 077; echo '<API キー>' > ~/.config/zai/api_key)" >&2
+      return 1
+    fi
+    key="$(<"$keyfile")"
+  fi
+  local -a mode=()
+  if [[ "$1" == "-y" || "$1" == "da" ]]; then mode=("$1"); shift; fi
+  ANTHROPIC_AUTH_TOKEN="$key" \
+  ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5.3" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5.3" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.3-flash" \
+  API_TIMEOUT_MS=3000000 \
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+  claude "${mode[@]}" --model glm-5.3 "$@"
+}
+
 # ccusage: Claude Code / Codex のトークン使用量・コストを集計
 # ccusage daily / weekly / monthly / session / blocks --live など
 alias ccusage='npx ccusage@latest'
