@@ -12,8 +12,10 @@
 #   4) devbox の公開鍵を登録する。管理者ユーザーは ~/.ssh/authorized_keys ではなく
 #      C:\ProgramData\ssh\administrators_authorized_keys を見る決まりで、ACL も
 #      Administrators と SYSTEM だけにしないと sshd が読んでくれない
-#   5) ログインシェルを pwsh にする。ストア版 pwsh の実体パスは版数入りで更新のたびに
-#      変わるため、安定した実行エイリアス (WindowsApps\pwsh.exe) を指す
+#   5) ログインシェルを pwsh にする。ストア版 pwsh は sshd から起動できない
+#      (実行エイリアス WindowsApps\pwsh.exe も、版数入りの実体パスも "exec request
+#      failed" になる) ため、MSI 版 (C:\Program Files\PowerShell\7\pwsh.exe) を
+#      winget で入れてそれを指す。ストア版とは共存する
 $ErrorActionPreference = "Stop"
 
 $devboxKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOUiZ6RmlUXUT3GTJ5HLfqpchV4P7/oDVEHFQjIvIr69 devbox->rpa"
@@ -51,9 +53,15 @@ if (-not (Test-Path $ak) -or -not (Select-String -Path $ak -SimpleMatch $devboxK
 }
 icacls $ak /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F" | Out-Null
 
-# --- 5) ログインシェル ---
-$shell = Join-Path $env:LOCALAPPDATA "Microsoft\WindowsApps\pwsh.exe"
-if (-not (Test-Path $shell)) { $shell = (Get-Command pwsh.exe).Source }
+# --- 5) ログインシェル (MSI 版 pwsh) ---
+$shell = Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
+if (-not (Test-Path $shell)) {
+    Write-Host "MSI 版 PowerShell 7 を winget で入れています (sshd のログインシェル用。ストア版とは別物)..."
+    winget install --id Microsoft.PowerShell --scope machine --accept-source-agreements --accept-package-agreements
+    if (-not (Test-Path $shell)) {
+        Write-Error "MSI 版 pwsh が見つかりません: $shell"
+    }
+}
 New-ItemProperty -Path "HKLM:\SOFTWARE\OpenSSH" -Name DefaultShell -Value $shell -PropertyType String -Force | Out-Null
 Restart-Service sshd
 
