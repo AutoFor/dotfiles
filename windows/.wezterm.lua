@@ -198,13 +198,19 @@ wezterm.on("mux-startup", function()
   })
 end)
 
--- local-mux から復元されたタブを 1 つのウィンドウにまとめる (#251)。
+-- local-mux から復元されたタブを devbox と同じウィンドウにまとめる (#251)。
 -- GUI 起動時の connect_automatically は、サーバーに残っていたウィンドウを「別々の
 -- GUI ウィンドウ」として開き直す。devbox ウィンドウと同サイズで真後ろに重なるため
--- 「タブが消えた」ように見える。ここで devbox タブを先頭にしたウィンドウを 1 つ作り、
--- 復元されたペインを全部そこへタブとして移す。devbox のペインがこの時点で存在するため、
--- WezTerm 側の既定ウィンドウ生成 (default_domain にペインが無いときだけ) はスキップされる。
--- 分割されていたペインはタブ 1 つずつにばらける (move-pane-to-new-tab の仕様)
+-- 「タブが消えた」ように見える。そこで復元されたウィンドウの中へ devbox タブを spawn し、
+-- 復元ペインを同じウィンドウ内の新しいタブへ移して devbox タブの後ろに並べる。
+-- devbox のペインがこの時点で存在するため、WezTerm 側の既定ウィンドウ生成
+-- (default_domain にペインが無いときだけ) はスキップされる。
+--
+-- 注意: 逆向き (devbox ウィンドウを新規に作って復元ペインをそこへ移す) は駄目。
+-- リモート (mux) のペインの移動はサーバー側で行われ、移動先のローカルウィンドウに
+-- 対応するリモートウィンドウが無いとサーバーが新しいウィンドウを作ってしまい、
+-- 結果として別ウィンドウが増える。復元ウィンドウは対応付けを持っているので、
+-- その中で完結させる。分割されていたペインはタブ 1 つずつにばらける
 local function gather_restored_tabs()
   local restored = {}
   for _, w in ipairs(wezterm.mux.all_windows()) do
@@ -215,27 +221,23 @@ local function gather_restored_tabs()
   if #restored == 0 then
     return false
   end
-  local tab, _, win = wezterm.mux.spawn_window({
-    domain = { DomainName = DEVBOX_TMUX_DOMAIN },
-    workspace = DEFAULT_WORKSPACE,
-  })
-  local cli = wezterm.executable_dir .. "\\wezterm.exe"
-  for _, w in ipairs(restored) do
-    for _, t in ipairs(w:tabs()) do
+  -- 複数残っていた場合は先頭だけ devbox と同居させ、残りは別ウィンドウのまま
+  local primary = restored[1]
+  local tab = primary:spawn_tab({ domain = { DomainName = DEVBOX_TMUX_DOMAIN } })
+  -- 復元ペインを同じウィンドウ内の新しいタブ (末尾) へ移し、devbox タブを先頭にする。
+  -- 失敗しても並び順が [pwsh, devbox] になるだけなので止めない
+  for _, t in ipairs(primary:tabs()) do
+    if t:tab_id() ~= tab:tab_id() then
       for _, p in ipairs(t:panes()) do
-        -- WEZTERM_UNIX_SOCKET は GUI 自身のソケットを指しているので、cli はこの GUI の mux に届く
-        local ok, _, stderr = wezterm.run_child_process({
-          cli, "cli", "move-pane-to-new-tab",
-          "--pane-id", tostring(p:pane_id()),
-          "--window-id", tostring(win:window_id()),
-        })
+        local ok, err = pcall(function()
+          p:move_to_new_tab()
+        end)
         if not ok then
-          wezterm.log_error("local-mux の復元タブの移動に失敗: " .. tostring(stderr))
+          wezterm.log_error("local-mux の復元タブの並べ替えに失敗: " .. tostring(err))
         end
       end
     end
   end
-  -- 移動のたびに移動先タブがアクティブになるので、devbox タブに戻す
   tab:activate()
   return true
 end
@@ -244,8 +246,8 @@ end
 -- 通常は実際のウィンドウ生成を default_domain (devbox-tmux) に任せる。
 -- 以前ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
 -- 二重に開くレースがあったため、gui-startup では VM の起動担保だけ行っていた。
--- local-mux に復元タブがあるときだけ例外で、devbox タブを含むウィンドウをここで作って
--- 復元タブをまとめる (gather_restored_tabs 参照)。
+-- local-mux に復元タブがあるときだけ例外で、復元ウィンドウの中に devbox タブを spawn して
+-- まとめる (gather_restored_tabs 参照)。
 -- 接続前に devbox.ps1 ensure で VM の起動を担保する（接続は Tailscale 経由なので NSG 操作は不要）。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
