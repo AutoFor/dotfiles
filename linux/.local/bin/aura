@@ -34,11 +34,14 @@ ssh_reachable() {
 # tmux の窓に印を付ける。ステータス行 (status-left) は @host を見て
 # 「devbox + cwd + ブランチ」の代わりに「pwsh @aura」を出す (中身は Windows なので
 # devbox 側の cwd やブランチを出しても意味が無い)。窓名も pwsh に固定する
+# 対象は必ず $TMUX_PANE で指定する。省略すると tmux は「クライアントが今見ているペイン」を
+# 対象にするため、この窓が裏で作られた (resurrect の復元や new-window -d) ときに
+# 別の窓に印が付いたり別の窓が pwsh に改名されたりする
 setup_tmux_window() {
-  [ -n "${TMUX:-}" ] || return 0
-  tmux set-option -p @host aura 2>/dev/null || true
-  tmux set-option -w allow-rename off 2>/dev/null || true
-  tmux rename-window pwsh 2>/dev/null || true
+  [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ] || return 0
+  tmux set-option -p -t "$TMUX_PANE" @host aura 2>/dev/null || true
+  tmux set-option -w -t "$TMUX_PANE" allow-rename off 2>/dev/null || true
+  tmux rename-window -t "$TMUX_PANE" pwsh 2>/dev/null || true
 }
 
 case "${1:-connect}" in
