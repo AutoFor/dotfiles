@@ -22,5 +22,9 @@ function global:prompt {
         $p = '~' + $p.Substring($h.Length)
     }
     $Host.UI.RawUI.WindowTitle = $p
+    # フォーカス通知 (ESC[I / ESC[O) を受け取らないようにする。claude 等の TUI が有効化した
+    # まま終了すると、WezTerm の切り替えのたびに "[I[O" がプロンプトに文字として残るため、
+    # プロンプトに戻るたびに切る (TUI は起動時に自分で有効化し直すので支障なし)
+    [Console]::Write("`e[?1004l")
     & $global:__tmuxTitlePrevPrompt
 }
