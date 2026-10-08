@@ -476,8 +476,14 @@ config.show_tabs_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 -- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
 config.tab_max_width = 999
--- falseにするとタブバーの透過が効かなくなる
--- config.use_fancy_tab_bar = false
+-- レトロ (テキスト描画) のタブバーを使う (#251)。
+-- fancy タブバーは WezTerm タブごとに × (閉じるボタン) を描き、20240203 安定版では
+-- それを消す設定が無い (show_close_tab_button_in_tabs は Nightly 限定)。ローカル
+-- PowerShell タブを tmux ウィンドウ帯と同じ見た目で並べたいので、× の無いレトロにする。
+-- 以前「false にするとタブバーの透過が効かなくなる」と避けていたが、今は
+-- window_background_opacity = 1.0 で透過していないので問題ない。
+-- 背景色は下の colors.tab_bar.background で本体の黒に合わせる
+config.use_fancy_tab_bar = false
 
 -- タブバーの透過
 config.window_frame = {
@@ -496,6 +502,8 @@ config.show_new_tab_button_in_tab_bar = false
 -- タブ同士の境界線を非表示
 config.colors = {
   tab_bar = {
+    -- レトロタブバーの地色。本体の背景 (#000000) と揃えて一続きに見せる
+    background = "#000000",
     inactive_tab_edge = "none",
   },
 }
@@ -643,7 +651,10 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       tmux_overflow_segment(items, "+" .. hidden_left)
     end
     for i = first, last do
-      tmux_tab_segment(items, windows[i].disp, windows[i].is_active)
+      -- WezTerm タブとして非アクティブ (PowerShell 側を見ている) なら、tmux 側の
+      -- アクティブ窓の金色を落として「今どこを見ているか」を 1 か所にする
+      local color = (windows[i].is_active and not tab.is_active) and "#7d6a2b" or nil
+      tmux_tab_segment(items, windows[i].disp, windows[i].is_active, color)
     end
     if hidden_right > 0 then
       tmux_overflow_segment(items, "+" .. hidden_right)
@@ -651,27 +662,12 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
     return items
   end
 
-  local background = "#5c6d74"
-  local foreground = "#FFFFFF"
-  local edge_background = "none"
-  if tab.is_active then
-    background = "#ae8b2d"
-    foreground = "#FFFFFF"
-  end
-  local edge_foreground = background
+  -- ローカルタブ (PowerShell 等) は tmux ウィンドウ帯と同じセグメントで描き、
+  -- devbox のウィンドウ列の続きに見せる (#251)。幅も同じ上限で切る
   local raw = (tab.tab_title and #tab.tab_title > 0) and tab.tab_title or tab.active_pane.title
-  local title = "   " .. wezterm.truncate_right(raw, max_width - 1) .. "   "
-  return {
-    { Background = { Color = edge_background } },
-    { Foreground = { Color = edge_foreground } },
-    { Text = SOLID_LEFT_ARROW },
-    { Background = { Color = background } },
-    { Foreground = { Color = foreground } },
-    { Text = title },
-    { Background = { Color = edge_background } },
-    { Foreground = { Color = edge_foreground } },
-    { Text = SOLID_RIGHT_ARROW },
-  }
+  local items = {}
+  tmux_tab_segment(items, wezterm.truncate_right(raw, TMUX_TAB_TEXT_MAX_WIDTH), tab.is_active)
+  return items
 end)
 
 
