@@ -476,12 +476,17 @@ config.show_tabs_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 -- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
 config.tab_max_width = 999
--- falseにするとタブバーの透過が効かなくなる
--- config.use_fancy_tab_bar = false
--- WezTerm タブごとの × (閉じるボタン) を消す (#251)。ローカル PowerShell タブを
--- tmux ウィンドウ帯の続きに見せるため。この設定は 20240203 安定版には無く Nightly 限定
--- なので、Windows の WezTerm は Nightly を入れる。安定版に戻しても警告が出ないよう
--- バージョン文字列 (日付始まり) で判定する
+-- レトロ (テキスト描画) のタブバーを使う (#251)。
+-- fancy タブバーは各タブの最大幅を「ウィンドウ幅 ÷ タブ数」に固定する
+-- (wezterm-gui/src/termwindow/render/fancy_tab_bar.rs の max_tab_width。設定不可)。
+-- ローカル PowerShell タブが常に 1 つある構成だと devbox タブは画面の半分までしか
+-- 使えず、tmux ウィンドウ帯が途中で切れて "+N" になる。レトロは幅に収まる限り各タブを
+-- 実幅で描くので、帯を全部出せる。× (閉じるボタン) も無い。
+-- 以前「false にするとタブバーの透過が効かなくなる」と避けていたが、今は
+-- window_background_opacity = 1.0 で透過していないので問題ない。
+-- 背景色は下の colors.tab_bar.background で本体の黒に合わせる
+config.use_fancy_tab_bar = false
+-- fancy に戻したときのために残す (Nightly 限定。安定版では警告になるので版で判定)
 if wezterm.version > "20240203-110809-5046fc22" then
   config.show_close_tab_button_in_tabs = false
 end
@@ -503,6 +508,8 @@ config.show_new_tab_button_in_tab_bar = false
 -- タブ同士の境界線を非表示
 config.colors = {
   tab_bar = {
+    -- レトロタブバーの地色。本体の背景 (#000000) と揃えて一続きに見せる
+    background = "#000000",
     inactive_tab_edge = "none",
   },
 }
@@ -530,7 +537,7 @@ local function tmux_tab_segment(items, text, is_active, color)
   table.insert(items, { Text = " " })
 end
 
--- タブの末尾の隙間 (tmux_tab_segment が付ける " ") を取り除く。fancy タブバーが
+-- タブの末尾の隙間 (tmux_tab_segment が付ける " ") を取り除く。タブバーが
 -- タブ同士の間に自前の余白を入れるため、残すと PowerShell タブとの間だけ広く空く (#251)
 local function trim_trailing_gap(items)
   local last = items[#items]
