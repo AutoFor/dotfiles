@@ -1,0 +1,57 @@
+#!/bin/sh
+# Windows PC (aura) の PowerShell を devbox の tmux ウィンドウとして開く (#253)。
+# Tailscale 経由で Windows の OpenSSH Server に入る (linux/.ssh/config の Host aura、
+# Windows 側は windows/bin/setup-sshd.ps1 で構築)。
+#
+# なぜ WezTerm のタブではなく tmux の窓にするか:
+#   ローカル PowerShell を WezTerm のタブにすると、セッション層が Windows と Linux で
+#   分かれ、タブバー・キー操作・復元が二重になる。tmux の窓にすれば他の窓と同じく
+#   Ctrl+Tab / Alt+, で扱え、WezTerm を閉じても tmux が持ち、resurrect で戻る。
+#
+# なぜラッパーが要るか (~/.local/bin/rpa と同じ理由):
+#   Windows PC のスリープや再起動で ssh が切れると、素の ssh ではペインごと窓が消え、
+#   resurrect の保存対象からも落ちる。切れてもペインを終わらせず、Enter で再接続する。
+#
+# 使い方: aura [connect|status]
+#   connect : ssh で入る。切れても終了せず Enter で再接続 (既定)
+#   status  : ssh 到達性を表示
+set -u
+
+HOST=${AURA_HOST:-aura}        # ~/.ssh/config の Host 名
+IP=${AURA_IP:-100.119.138.119} # Tailscale IP
+
+ssh_reachable() {
+  timeout 5 nc -z "$IP" 22 >/dev/null 2>&1
+}
+
+case "${1:-connect}" in
+status)
+  echo "aura: ssh到達 $(ssh_reachable && echo OK || echo NG)"
+  ;;
+
+connect)
+  # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
+  while :; do
+    if ssh_reachable; then
+      ssh "$HOST"
+      code=$?
+      echo ""
+      if [ "$code" -eq 0 ]; then
+        echo "aura (PowerShell) との接続を終了しました。"
+      else
+        echo "aura (PowerShell) との接続が切れました (exit $code)。PC のスリープや再起動でもここに来ます。"
+      fi
+    else
+      echo ""
+      echo "aura に届きません (PC が停止中か Tailscale が切れています)。"
+    fi
+    printf 'Enter で再接続 / Ctrl-C で抜ける > '
+    read -r _ || exit 0
+  done
+  ;;
+
+*)
+  echo "usage: aura [connect|status]" >&2
+  exit 1
+  ;;
+esac

@@ -144,7 +144,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 |--------------|------|------|
 | `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
 | `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。PowerShell は `<leader> →Shift+P` と同じくローカル mux 配下で開く。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
-| `<leader> →Shift+P` | ローカル PowerShell タブを開く。Windows 上に常駐する wezterm-mux-server 配下 (`local-mux` ドメイン) で動くので、**WezTerm を閉じても pwsh も中の Claude Code も残り、次に開くと devbox と同じウィンドウのタブとして戻る**（Claude は再開ではなく継続。分割していたペインはタブ 1 つずつにばらける）。mux サーバーは起動時に pwsh を 1 つ用意するので、WezTerm を開くと devbox タブの隣に pwsh タブが常に 1 つある。Windows の再起動や mux サーバー自体が落ちた場合は戻らないので `claude --resume` で拾う | **P**owerShell |
+| `<leader> →Shift+P` | PowerShell を開く。devbox の tmux 上では **Windows PC (aura) の pwsh を tmux の窓 `pwsh` として開く**（devbox から Tailscale 経由で Windows の OpenSSH Server に ssh。他の窓と同じく `Ctrl+Tab` / `Alt+,` が効き、WezTerm を閉じても tmux が持ち、resurrect で窓ごと戻る。pwsh は新規起動なので中の Claude Code は `claude --resume` で拾う。ssh が切れても窓は残り Enter で再接続）。tmux 外（devbox 停止中の切り分け）ではローカル mux 配下の pwsh タブを開く（WezTerm を閉じても残る） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |
 

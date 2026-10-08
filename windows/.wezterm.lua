@@ -1352,14 +1352,16 @@ config.keys = {
   -- 画面に見えているペイン全体をまるごとコピー (tmux の prefix+Y にブリッジ)
   { key = "y", mods = "LEADER", action = tmux_bridge("Y", act.Nop) },
   {
-    -- PowerShell を新規タブで開く。ローカル mux (wezterm-mux-server) 配下なので
-    -- WezTerm を閉じても pwsh も中の claude も残り、次に開くと戻る (#251)
+    -- PowerShell を開く。devbox の tmux 上なら prefix+P で Windows PC (aura) の pwsh を
+    -- tmux の窓として開く (#253。ssh で戻るので他の窓と同じキー・復元が効く)。
+    -- tmux 外 (devbox 停止中の切り分け等) ではローカル mux (wezterm-mux-server) 配下の
+    -- pwsh タブを開く (#251。WezTerm を閉じても残る)
     key = "P",
     mods = "LEADER|SHIFT",
-    action = act.SpawnCommandInNewTab({
+    action = tmux_bridge("P", act.SpawnCommandInNewTab({
       domain = { DomainName = LOCAL_MUX_DOMAIN },
       args = { "pwsh.exe", "-NoLogo" },
-    }),
+    })),
   },
   {
     -- Azure devbox を新規タブで開く（停止中なら自動起動してから ssh + tmux main に attach）
