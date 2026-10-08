@@ -553,44 +553,12 @@ local TMUX_TAB_TEXT_MAX_WIDTH = 12
 local TMUX_TAB_CHROME_WIDTH = 5
 -- "+N " インジケータ 1 個ぶんのセル幅（N が 2 桁でも収まるよう気持ち多め）
 local TMUX_TAB_INDICATOR_WIDTH = 4
--- ローカルタブ (PowerShell 等) 1 つの装飾ぶん: 左三角(1) + パディング(3+3) + 右三角(1)
-local LOCAL_TAB_CHROME_WIDTH = 8
--- タブバー右端 ("+" ボタン・右ステータスの一時表示) のために空けておくセル数
-local TAB_BAR_RESERVED_CELLS = 30
-
--- devbox タブの tmux ウィンドウ帯に使ってよい幅。WezTerm が渡す max_width は
--- tab_max_width (999) そのままで、PowerShell タブが並ぶと帯が他タブに重なって潰れる。
--- update-right-status が記録したタブバー幅から、他のローカルタブの実幅と右端の予約を
--- 引いた残りを、tmux 帯を持つタブの数で割って返す
-local function tmux_ribbon_budget(tab, tabs, store, max_width)
-  local cols = wezterm.GLOBAL.tab_bar_cols
-  if not cols then
-    return max_width
-  end
-  local avail = cols - TAB_BAR_RESERVED_CELLS
-  local ribbon_tabs = 1
-  for _, other in ipairs(tabs) do
-    if other.tab_id ~= tab.tab_id then
-      local d = other.active_pane and store[tostring(other.active_pane.pane_id)] or nil
-      if d and d ~= "" then
-        ribbon_tabs = ribbon_tabs + 1
-      else
-        local raw = (other.tab_title and #other.tab_title > 0) and other.tab_title
-          or (other.active_pane and other.active_pane.title or "")
-        avail = avail - (wezterm.column_width(raw) + LOCAL_TAB_CHROME_WIDTH)
-      end
-    end
-  end
-  return math.max(math.min(max_width, math.floor(avail / ribbon_tabs)), 20)
-end
-
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
   -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
   -- 通知）をタブ風セグメントで並べる。切り替えは Ctrl+Tab / Ctrl+数字（表示専用）
   local store = wezterm.GLOBAL.tmux_windows or {}
   local data = tab.active_pane and store[tostring(tab.active_pane.pane_id)] or nil
   if data and data ~= "" then
-    max_width = tmux_ribbon_budget(tab, tabs, store, max_width)
     -- ウィンドウ数が多いとタブバー幅に収まらず後ろのウィンドウ（アクティブな
     -- ウィンドウが番号の大きい方にあると特に）が見えなくなるため、アクティブな
     -- ウィンドウを中心に収まる本数だけ選び、溢れた分は "+N" で示す
@@ -690,21 +658,6 @@ end)
 -- (.tmux.conf の status-left。音声入力の録音状態だけは Windows 側にしか無いためここに残る)
 wezterm.on("update-right-status", function(window, pane)
   move_front_tab_if_pending(window)
-  -- タブバーの幅 (セル数) を format-tab-title に渡す。format-tab-title には
-  -- ウィンドウ幅が渡ってこないため、ここで定期的に記録しておく
-  local ok_size, size = pcall(function()
-    return window:active_tab():get_size()
-  end)
-  if ok_size and size and size.cols then
-    wezterm.GLOBAL.tab_bar_cols = size.cols
-  else
-    local ok_dim, dim = pcall(function()
-      return pane:get_dimensions()
-    end)
-    if ok_dim and dim and dim.cols then
-      wezterm.GLOBAL.tab_bar_cols = dim.cols
-    end
-  end
   local items = {}
   local key_table = window:active_key_table()
   if key_table then
@@ -1242,8 +1195,10 @@ config.keys = {
   { key = "Tab", mods = "LEADER|CTRL", action = act.ActivateTabRelative(1) },
   { key = "Tab", mods = "LEADER|SHIFT", action = act.ActivateTabRelative(-1) },
   { key = "Tab", mods = "LEADER|CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
-  { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
-  { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
+  -- ローカルペイン (PowerShell) では WezTerm タブ自体を左右へ動かす (#251)。
+  -- pwsh タブを devbox の窓列の前に置きたいときは pwsh 上で Alt+, を押す
+  { key = ",", mods = "ALT", action = tmux_bridge("<", act.MoveTabRelative(-1)) }, -- 左へ入れ替え
+  { key = ".", mods = "ALT", action = tmux_bridge(">", act.MoveTabRelative(1)) }, -- 右へ入れ替え
   { key = "t", mods = "LEADER", action = tmux_bridge(",", act.Nop) }, -- 名前変更
   { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
   -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
