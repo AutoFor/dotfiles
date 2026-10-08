@@ -108,7 +108,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | `<leader> →Tab` / `<leader> →Shift+Tab` | **WezTerm タブ**（devbox ⇔ PowerShell 等）の次/前へ移動。tmux 内からでも必ず WezTerm タブが切り替わるので、tmux ⇔ ローカル PowerShell の行き来はこれ。Ctrl を押しっぱなしにした `Ctrl+q → Ctrl+Tab` でも効く | タブ切り替えの WezTerm 版 |
 | `Alt+1`〜`Alt+9` | タブ番号で切り替え（プレフィックス不要。Termius 等 WezTerm 以外の端末でも効く） | 番号＝タブ位置 |
 | `Shift+←` / `Shift+→` | 前/次のタブへ移動（プレフィックス不要。どの端末でも効く。代償としてペイン内アプリに Shift+矢印は届かない） | 矢印＝方向 |
-| `Alt+,` | タブを左に移動 | `,` = `<`（左向き）と同キー |
+| `Alt+,` | タブを左に移動（PowerShell タブ上では WezTerm タブ自体が動く。pwsh を devbox の窓列の前に置くなら pwsh 上で押す） | `,` = `<`（左向き）と同キー |
 | `Alt+.` | タブを右に移動 | `.` = `>`（右向き）と同キー |
 | `<leader> →t` | 現在のタブ名を変更 | **t**ab の名前 |
 | `<leader> →w` | タブ一覧から選択 | **w**indow |
