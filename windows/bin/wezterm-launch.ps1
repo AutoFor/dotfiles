@@ -29,6 +29,9 @@ $muxServer = Join-Path $env:ProgramFiles "WezTerm\wezterm-mux-server.exe"
 
 # mux サーバーが居なければ hidden で起動する。Start-Process は独立したプロセスを作るので、
 # このランチャーのコンソールが閉じても (WezTerm を閉じても) 生き続ける。
+# --daemonize を付けると Windows では自分自身を DETACHED_PROCESS として再起動し、
+# stdout/stderr を %USERPROFILE%\.local\share\wezterm\wezterm-mux-server-log-*.txt に
+# 残してくれるので、復元の切り分けができる (無いとログがどこにも残らない)
 # 既に動いていれば何もしない (二重起動すると 2 つ目がソケット取得に失敗して終わるだけだが、
 # 無駄なログを残さないため)
 function Ensure-MuxServer {
@@ -38,7 +41,7 @@ function Ensure-MuxServer {
         return
     }
     Write-Host "ローカル mux サーバーを起動しています..."
-    Start-Process $muxServer -WindowStyle Hidden
+    Start-Process $muxServer -ArgumentList '--daemonize' -WindowStyle Hidden
 }
 
 # 前面化まわりの Win32 API (wezterm-jump.ps1 と同じ手口)

@@ -10,6 +10,12 @@ local DEVBOX_USER = "azureuser"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
 -- ローカル PowerShell タブを載せる Windows 上の wezterm-mux-server のドメイン (#251)
 local LOCAL_MUX_DOMAIN = "local-mux"
+-- 起動時のウィンドウが属する workspace (#234)。config.default_workspace と、
+-- local-mux から復元したタブをまとめる先の判定で使う
+local DEFAULT_WORKSPACE = "main"
+-- wezterm-mux-server が「空だと終了する」のを防ぐ番人ペインを置く workspace (#251)。
+-- アクティブ workspace ではないので GUI にはウィンドウとして現れない
+local MUX_KEEPALIVE_WORKSPACE = "local-mux-keepalive"
 -- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
 -- 注意: 候補テーブルに os.getenv() を直接並べると、未設定時に nil が混ざって
 -- ipairs がそこで走査を打ち切り、後続の候補が一切見られなくなる (Lua の配列は
@@ -180,17 +186,76 @@ local function cycle_tabs(direction, tmux_key)
   end)
 end
 
+-- wezterm-mux-server (local-mux) の起動時に呼ばれる (GUI では発火しない)。
+-- サーバーは mux が空になると終了するため、既定では起動直後に cmd.exe のウィンドウを
+-- 1 つ作る。それが GUI 側に「cmd.exe の謎ウィンドウ」として復元されてしまうので、
+-- 代わりに番人ペインを非アクティブな workspace に置き、既定ウィンドウの生成を抑える
+-- (mux-startup で default domain にペインがあれば既定ウィンドウは作られない)。
+-- 番人が居るので、ユーザーが最後の PowerShell タブを閉じてもサーバーは生き続ける
+wezterm.on("mux-startup", function()
+  wezterm.mux.spawn_window({
+    workspace = MUX_KEEPALIVE_WORKSPACE,
+    args = { "cmd.exe" },
+  })
+end)
+
+-- local-mux から復元されたタブを 1 つのウィンドウにまとめる (#251)。
+-- GUI 起動時の connect_automatically は、サーバーに残っていたウィンドウを「別々の
+-- GUI ウィンドウ」として開き直す。devbox ウィンドウと同サイズで真後ろに重なるため
+-- 「タブが消えた」ように見える。ここで devbox タブを先頭にしたウィンドウを 1 つ作り、
+-- 復元されたペインを全部そこへタブとして移す。devbox のペインがこの時点で存在するため、
+-- WezTerm 側の既定ウィンドウ生成 (default_domain にペインが無いときだけ) はスキップされる。
+-- 分割されていたペインはタブ 1 つずつにばらける (move-pane-to-new-tab の仕様)
+local function gather_restored_tabs()
+  local restored = {}
+  for _, w in ipairs(wezterm.mux.all_windows()) do
+    if w:get_workspace() == DEFAULT_WORKSPACE then
+      table.insert(restored, w)
+    end
+  end
+  if #restored == 0 then
+    return false
+  end
+  local tab, _, win = wezterm.mux.spawn_window({
+    domain = { DomainName = DEVBOX_TMUX_DOMAIN },
+    workspace = DEFAULT_WORKSPACE,
+  })
+  local cli = wezterm.executable_dir .. "\\wezterm.exe"
+  for _, w in ipairs(restored) do
+    for _, t in ipairs(w:tabs()) do
+      for _, p in ipairs(t:panes()) do
+        -- WEZTERM_UNIX_SOCKET は GUI 自身のソケットを指しているので、cli はこの GUI の mux に届く
+        local ok, _, stderr = wezterm.run_child_process({
+          cli, "cli", "move-pane-to-new-tab",
+          "--pane-id", tostring(p:pane_id()),
+          "--window-id", tostring(win:window_id()),
+        })
+        if not ok then
+          wezterm.log_error("local-mux の復元タブの移動に失敗: " .. tostring(stderr))
+        end
+      end
+    end
+  end
+  -- 移動のたびに移動先タブがアクティブになるので、devbox タブに戻す
+  tab:activate()
+  return true
+end
+
 -- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
--- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
--- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
--- 二重に開くレースがあるため、gui-startup では VM の起動担保だけ行う。
+-- 通常は実際のウィンドウ生成を default_domain (devbox-tmux) に任せる。
+-- 以前ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
+-- 二重に開くレースがあったため、gui-startup では VM の起動担保だけ行っていた。
+-- local-mux に復元タブがあるときだけ例外で、devbox タブを含むウィンドウをここで作って
+-- 復元タブをまとめる (gather_restored_tabs 参照)。
 -- 接続前に devbox.ps1 ensure で VM の起動を担保する（接続は Tailscale 経由なので NSG 操作は不要）。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
   if cmd then
     -- CLI から明示的にコマンド指定された場合 (wezterm start -- ...) はそれを尊重
     wezterm.mux.spawn_window(cmd)
+    return
   end
+  gather_restored_tabs()
 end)
 
 
@@ -320,8 +385,10 @@ config.ssh_domains = {
 --   経由せず起動した場合は connect_automatically の接続失敗時に既定の serve_command
 --   (wezterm-mux-server --daemonize) が走る。こちらはコンソールが一瞬出るだけで同じ結果
 -- - connect_automatically で GUI 起動時に attach し、サーバーに残っているタブを
---   別ウィンドウとして開き直す。残っていなければ何も開かない (attach はウィンドウを
+--   開き直す (素のままだと別ウィンドウになるので gui-startup の gather_restored_tabs が
+--   devbox ウィンドウにまとめる)。残っていなければ何も開かない (attach はウィンドウを
 --   生成しない)。Shift+P 等で未 attach のまま spawn しても mux 側が自動 attach する
+-- - サーバー起動直後の既定ウィンドウ (cmd.exe) は mux-startup で番人ペインに置き換える
 -- - skip_permissions_check: ソケットの所有者/権限チェックは NTFS では意味を持たないため外す
 config.unix_domains = {
   {
@@ -339,7 +406,7 @@ config.default_domain = DEVBOX_TMUX_DOMAIN
 -- 起動時のウィンドウが属する workspace (#234)。tmux セッションごとに workspace を
 -- 分けるため、既定の "default" ではなく main セッションの論理名に合わせる。
 -- これを揃えないと、LEADER+l から main に入ったときに別 workspace が増えてしまう。
-config.default_workspace = "main"
+config.default_workspace = DEFAULT_WORKSPACE
 
 -- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示）。
 -- LEADER+l の show_session_launcher と同じ 3 つに揃える (#238)。
