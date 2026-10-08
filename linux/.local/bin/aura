@@ -24,12 +24,23 @@ ssh_reachable() {
   timeout 5 nc -z "$IP" 22 >/dev/null 2>&1
 }
 
+# tmux の窓に印を付ける。ステータス行 (status-left) は @host を見て
+# 「devbox + cwd + ブランチ」の代わりに「pwsh @aura」を出す (中身は Windows なので
+# devbox 側の cwd やブランチを出しても意味が無い)。窓名も pwsh に固定する
+setup_tmux_window() {
+  [ -n "${TMUX:-}" ] || return 0
+  tmux set-option -p @host aura 2>/dev/null || true
+  tmux set-option -w allow-rename off 2>/dev/null || true
+  tmux rename-window pwsh 2>/dev/null || true
+}
+
 case "${1:-connect}" in
 status)
   echo "aura: ssh到達 $(ssh_reachable && echo OK || echo NG)"
   ;;
 
 connect)
+  setup_tmux_window
   # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
   while :; do
     if ssh_reachable; then
