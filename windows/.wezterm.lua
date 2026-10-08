@@ -476,17 +476,15 @@ config.show_tabs_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 -- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
 config.tab_max_width = 999
--- レトロ (テキスト描画) のタブバーを使う (#251)。
--- fancy タブバーは各タブの最大幅を「ウィンドウ幅 ÷ タブ数」に固定する
+-- falseにするとタブバーの透過が効かなくなる
+-- config.use_fancy_tab_bar = false
+-- 注意: fancy タブバーは各タブの最大幅を「ウィンドウ幅 ÷ タブ数」に固定する
 -- (wezterm-gui/src/termwindow/render/fancy_tab_bar.rs の max_tab_width。設定不可)。
--- ローカル PowerShell タブが常に 1 つある構成だと devbox タブは画面の半分までしか
--- 使えず、tmux ウィンドウ帯が途中で切れて "+N" になる。レトロは幅に収まる限り各タブを
--- 実幅で描くので、帯を全部出せる。× (閉じるボタン) も無い。
--- 以前「false にするとタブバーの透過が効かなくなる」と避けていたが、今は
--- window_background_opacity = 1.0 で透過していないので問題ない。
--- 背景色は下の colors.tab_bar.background で本体の黒に合わせる
-config.use_fancy_tab_bar = false
--- fancy に戻したときのために残す (Nightly 限定。安定版では警告になるので版で判定)
+-- WezTerm タブが 2 つ以上あると devbox タブの tmux ウィンドウ帯は半分で切れて "+N" になる。
+-- レトロ (use_fancy_tab_bar = false) なら全部出るが、見た目の好みで fancy を使う (#251)。
+-- WezTerm タブごとの × (閉じるボタン) は消す。この設定は 20240203 安定版には無く
+-- Nightly 限定なので、Windows の WezTerm は Nightly を入れる。安定版に戻しても
+-- 警告が出ないようバージョン文字列 (日付始まり) で判定する
 if wezterm.version > "20240203-110809-5046fc22" then
   config.show_close_tab_button_in_tabs = false
 end
@@ -508,8 +506,6 @@ config.show_new_tab_button_in_tab_bar = false
 -- タブ同士の境界線を非表示
 config.colors = {
   tab_bar = {
-    -- レトロタブバーの地色。本体の背景 (#000000) と揃えて一続きに見せる
-    background = "#000000",
     inactive_tab_edge = "none",
   },
 }
