@@ -390,19 +390,22 @@ config.ssh_domains = {
 --
 -- - socket_path は既定 (%USERPROFILE%\.local\share\wezterm\sock)。GUI もサーバーも
 --   同じユーザーで動くので揃う
--- - mux サーバーの起動担保は wezterm-launch.ps1 が行う (hidden で起動)。ランチャーを
---   経由せず起動した場合は connect_automatically の接続失敗時に既定の serve_command
---   (wezterm-mux-server --daemonize) が走る。こちらはコンソールが一瞬出るだけで同じ結果
--- - connect_automatically で GUI 起動時に attach し、サーバーに残っているタブを
---   開き直す (素のままだと別ウィンドウになるので gui-startup の gather_restored_tabs が
---   devbox ウィンドウにまとめる)。残っていなければ何も開かない (attach はウィンドウを
---   生成しない)。Shift+P 等で未 attach のまま spawn しても mux 側が自動 attach する
+-- - 本線は devbox の tmux から Windows へ ssh で戻る pwsh 窓 (#253) になったので、
+--   local-mux は「devbox 停止中などで tmux に入れないとき」のフォールバック専用。
+--   GUI 起動時には attach せず (connect_automatically = false)、サーバーも起動しない。
+--   フォールバックの Shift+P で spawn したときに mux 側が自動 attach し、サーバーが
+--   無ければ既定の serve_command (wezterm-mux-server --daemonize) が起こす
+--   (Windows ではコンソールが一瞬出る)。そのとき残っていたタブも一緒に戻る
+--   (素のままだと別ウィンドウになるので gui-startup の gather_restored_tabs が
+--   devbox ウィンドウにまとめるのは、attach 済みで起動した場合のみ働く)。
+--   自動接続していた頃は、サーバーの初期ウィンドウ (pwsh) が毎回タブとして現れ、
+--   タブ数 2 で fancy タブバーが devbox タブを半分幅に切っていた
 -- - サーバー起動直後の既定ウィンドウ (cmd.exe) は mux-startup で pwsh に置き換える
 -- - skip_permissions_check: ソケットの所有者/権限チェックは NTFS では意味を持たないため外す
 config.unix_domains = {
   {
     name = LOCAL_MUX_DOMAIN,
-    connect_automatically = true,
+    connect_automatically = false,
     skip_permissions_check = true,
   },
 }
@@ -597,7 +600,11 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
     -- 全部が幅に収まるならそのまま全表示。収まらないときだけ、アクティブを起点に
     -- 実幅を積みながら左右へ広げ、溢れは "+N" で示す。一律 17 セル見積りをやめ
     -- 実際の名前幅で数えるので、短い名前のタブが場所を取らず同じ幅でより多く見える。
-    local total = 0
+    -- 末尾の隙間は trim_trailing_gap で落とすので、実際の描画幅は合計より 1 セル短い。
+    -- fancy タブバーはタイトルを 2 回計算し、2 回目は 1 回目の実長を max_width として
+    -- 渡してくる。ここを合計のままにすると 1 セル分「収まらない」と誤判定して
+    -- 1 窓隠し "+1" を出してしまう
+    local total = -1
     for _, w in ipairs(windows) do
       total = total + w.cells
     end
