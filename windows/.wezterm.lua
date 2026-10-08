@@ -530,6 +530,16 @@ local function tmux_tab_segment(items, text, is_active, color)
   table.insert(items, { Text = " " })
 end
 
+-- タブの末尾の隙間 (tmux_tab_segment が付ける " ") を取り除く。fancy タブバーが
+-- タブ同士の間に自前の余白を入れるため、残すと PowerShell タブとの間だけ広く空く (#251)
+local function trim_trailing_gap(items)
+  local last = items[#items]
+  if last and last.Text == " " then
+    table.remove(items)
+  end
+  return items
+end
+
 -- 表示しきれなかったウィンドウ数を示す控えめなインジケータ
 local function tmux_overflow_segment(items, text)
   table.insert(items, { Foreground = { Color = "#565f89" } })
@@ -658,7 +668,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
     if hidden_right > 0 then
       tmux_overflow_segment(items, "+" .. hidden_right)
     end
-    return items
+    return trim_trailing_gap(items)
   end
 
   -- ローカルタブ (PowerShell 等) は tmux ウィンドウ帯と同じセグメントで描き、
@@ -666,7 +676,7 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
   local raw = (tab.tab_title and #tab.tab_title > 0) and tab.tab_title or tab.active_pane.title
   local items = {}
   tmux_tab_segment(items, wezterm.truncate_right(raw, TMUX_TAB_TEXT_MAX_WIDTH), tab.is_active)
-  return items
+  return trim_trailing_gap(items)
 end)
 
 
