@@ -26,7 +26,7 @@ Windows の WezTerm からクラウド開発サーバー（Azure devbox）の tm
 
 ## 環境
 
-- **ターミナル**: WezTerm（Windows。表示器 + SSH クライアント）
+- **ターミナル**: WezTerm **Nightly**（Windows。表示器 + SSH クライアント。タブの × を消す `show_close_tab_button_in_tabs` が安定版 20240203 に無いため Nightly を使う。更新は https://github.com/wezterm/wezterm/releases/tag/nightly の `WezTerm-nightly-setup.exe` を上書きインストール。GUI と `wezterm-mux-server` は同じ版でないと繋がらないので、更新後は両方を止めてランチャーから起動し直す）
 - **開発サーバー**: Azure VM (devbox, Ubuntu 24.04)。セッション層は tmux（`ssh devbox` → `tm` でどの端末からも同じセッションに入れる）
 - **シェル**: Zsh on devbox
 - **プラグイン**: zoxide, fzf, ghq
@@ -108,7 +108,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | `<leader> →Tab` / `<leader> →Shift+Tab` | **WezTerm タブ**（devbox ⇔ PowerShell 等）の次/前へ移動。tmux 内からでも必ず WezTerm タブが切り替わるので、tmux ⇔ ローカル PowerShell の行き来はこれ。Ctrl を押しっぱなしにした `Ctrl+q → Ctrl+Tab` でも効く | タブ切り替えの WezTerm 版 |
 | `Alt+1`〜`Alt+9` | タブ番号で切り替え（プレフィックス不要。Termius 等 WezTerm 以外の端末でも効く） | 番号＝タブ位置 |
 | `Shift+←` / `Shift+→` | 前/次のタブへ移動（プレフィックス不要。どの端末でも効く。代償としてペイン内アプリに Shift+矢印は届かない） | 矢印＝方向 |
-| `Alt+,` | タブを左に移動 | `,` = `<`（左向き）と同キー |
+| `Alt+,` | タブを左に移動（PowerShell タブ上では WezTerm タブ自体が動く。pwsh を devbox の窓列の前に置くなら pwsh 上で押す） | `,` = `<`（左向き）と同キー |
 | `Alt+.` | タブを右に移動 | `.` = `>`（右向き）と同キー |
 | `<leader> →t` | 現在のタブ名を変更 | **t**ab の名前 |
 | `<leader> →w` | タブ一覧から選択 | **w**indow |
@@ -143,8 +143,8 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
 | `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
-| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
-| `<leader> →Shift+P` | ローカル PowerShell タブを開く（切り分け用） | **P**owerShell |
+| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。PowerShell は `<leader> →Shift+P` と同じくローカル mux 配下で開く。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
+| `<leader> →Shift+P` | PowerShell を開く。devbox の tmux 上では **Windows PC (aura) の pwsh を tmux の窓 `pwsh` として開く**（devbox から Tailscale 経由で Windows の OpenSSH Server に ssh。他の窓と同じく `Ctrl+Tab` / `Alt+,` が効き、WezTerm を閉じても tmux が持ち、resurrect で窓ごと戻る。pwsh は新規起動なので中の Claude Code は `claude --resume` で拾う。ssh が切れても窓は残り Enter で再接続）。tmux 外（devbox 停止中の切り分け）ではローカル mux 配下の pwsh タブを開く（WezTerm を閉じても残る） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |
 
