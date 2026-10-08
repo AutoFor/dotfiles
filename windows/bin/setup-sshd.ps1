@@ -15,7 +15,8 @@
 #   5) ログインシェルを pwsh にする。ストア版 pwsh は sshd から起動できない
 #      (実行エイリアス WindowsApps\pwsh.exe も、版数入りの実体パスも "exec request
 #      failed" になる) ため、MSI 版 (C:\Program Files\PowerShell\7\pwsh.exe) を
-#      winget で入れてそれを指す。ストア版とは共存する
+#      GitHub から落として入れ、それを指す。ストア版とは共存する。
+#      winget install Microsoft.PowerShell はストア版の「更新」扱いになり MSI が入らなかった
 $ErrorActionPreference = "Stop"
 
 $devboxKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOUiZ6RmlUXUT3GTJ5HLfqpchV4P7/oDVEHFQjIvIr69 devbox->rpa"
@@ -56,8 +57,15 @@ icacls $ak /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F" | Out-Null
 # --- 5) ログインシェル (MSI 版 pwsh) ---
 $shell = Join-Path $env:ProgramFiles "PowerShell\7\pwsh.exe"
 if (-not (Test-Path $shell)) {
-    Write-Host "MSI 版 PowerShell 7 を winget で入れています (sshd のログインシェル用。ストア版とは別物)..."
-    winget install --id Microsoft.PowerShell --scope machine --accept-source-agreements --accept-package-agreements
+    $pwshVersion = "7.6.6"
+    $msiUrl = "https://github.com/PowerShell/PowerShell/releases/download/v$pwshVersion/PowerShell-$pwshVersion-win-x64.msi"
+    $msi = Join-Path $env:TEMP "PowerShell-$pwshVersion-win-x64.msi"
+    Write-Host "MSI 版 PowerShell $pwshVersion を入れています (sshd のログインシェル用。ストア版とは別物)..."
+    Invoke-WebRequest -Uri $msiUrl -OutFile $msi -UseBasicParsing
+    # ADD_PATH=0: PATH は触らない (普段使うのはストア版のまま)。REGISTER_MANIFEST=0 も同様に最小構成
+    $proc = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /quiet /norestart ADD_PATH=0 REGISTER_MANIFEST=0 ENABLE_PSREMOTING=0" -Wait -PassThru
+    if ($proc.ExitCode -ne 0) { Write-Error "msiexec が失敗しました (exit $($proc.ExitCode))" }
+    Remove-Item $msi -ErrorAction SilentlyContinue
     if (-not (Test-Path $shell)) {
         Write-Error "MSI 版 pwsh が見つかりません: $shell"
     }
