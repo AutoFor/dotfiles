@@ -476,14 +476,15 @@ config.show_tabs_in_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 -- tmux ウィンドウ一覧を1つのタブ枠に並べて描画するため、タブ幅の上限を実質撤廃
 config.tab_max_width = 999
--- レトロ (テキスト描画) のタブバーを使う (#251)。
--- fancy タブバーは WezTerm タブごとに × (閉じるボタン) を描き、20240203 安定版では
--- それを消す設定が無い (show_close_tab_button_in_tabs は Nightly 限定)。ローカル
--- PowerShell タブを tmux ウィンドウ帯と同じ見た目で並べたいので、× の無いレトロにする。
--- 以前「false にするとタブバーの透過が効かなくなる」と避けていたが、今は
--- window_background_opacity = 1.0 で透過していないので問題ない。
--- 背景色は下の colors.tab_bar.background で本体の黒に合わせる
-config.use_fancy_tab_bar = false
+-- falseにするとタブバーの透過が効かなくなる
+-- config.use_fancy_tab_bar = false
+-- WezTerm タブごとの × (閉じるボタン) を消す (#251)。ローカル PowerShell タブを
+-- tmux ウィンドウ帯の続きに見せるため。この設定は 20240203 安定版には無く Nightly 限定
+-- なので、Windows の WezTerm は Nightly を入れる。安定版に戻しても警告が出ないよう
+-- バージョン文字列 (日付始まり) で判定する
+if wezterm.version > "20240203-110809-5046fc22" then
+  config.show_close_tab_button_in_tabs = false
+end
 
 -- タブバーの透過
 config.window_frame = {
@@ -502,8 +503,6 @@ config.show_new_tab_button_in_tab_bar = false
 -- タブ同士の境界線を非表示
 config.colors = {
   tab_bar = {
-    -- レトロタブバーの地色。本体の背景 (#000000) と揃えて一続きに見せる
-    background = "#000000",
     inactive_tab_edge = "none",
   },
 }

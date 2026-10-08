@@ -26,7 +26,7 @@ Windows の WezTerm からクラウド開発サーバー（Azure devbox）の tm
 
 ## 環境
 
-- **ターミナル**: WezTerm（Windows。表示器 + SSH クライアント）
+- **ターミナル**: WezTerm **Nightly**（Windows。表示器 + SSH クライアント。タブの × を消す `show_close_tab_button_in_tabs` が安定版 20240203 に無いため Nightly を使う。更新は https://github.com/wezterm/wezterm/releases/tag/nightly の `WezTerm-nightly-setup.exe` を上書きインストール。GUI と `wezterm-mux-server` は同じ版でないと繋がらないので、更新後は両方を止めてランチャーから起動し直す）
 - **開発サーバー**: Azure VM (devbox, Ubuntu 24.04)。セッション層は tmux（`ssh devbox` → `tm` でどの端末からも同じセッションに入れる）
 - **シェル**: Zsh on devbox
 - **プラグイン**: zoxide, fzf, ghq
