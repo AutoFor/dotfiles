@@ -13,9 +13,6 @@ local LOCAL_MUX_DOMAIN = "local-mux"
 -- 起動時のウィンドウが属する workspace (#234)。config.default_workspace と、
 -- local-mux から復元したタブをまとめる先の判定で使う
 local DEFAULT_WORKSPACE = "main"
--- wezterm-mux-server が「空だと終了する」のを防ぐ番人ペインを置く workspace (#251)。
--- アクティブ workspace ではないので GUI にはウィンドウとして現れない
-local MUX_KEEPALIVE_WORKSPACE = "local-mux-keepalive"
 -- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
 -- 注意: 候補テーブルに os.getenv() を直接並べると、未設定時に nil が混ざって
 -- ipairs がそこで走査を打ち切り、後続の候補が一切見られなくなる (Lua の配列は
@@ -187,15 +184,17 @@ local function cycle_tabs(direction, tmux_key)
 end
 
 -- wezterm-mux-server (local-mux) の起動時に呼ばれる (GUI では発火しない)。
--- サーバーは mux が空になると終了するため、既定では起動直後に cmd.exe のウィンドウを
--- 1 つ作る。それが GUI 側に「cmd.exe の謎ウィンドウ」として復元されてしまうので、
--- 代わりに番人ペインを非アクティブな workspace に置き、既定ウィンドウの生成を抑える
+-- サーバーは起動直後に初期ウィンドウを 1 つ作る (既定は cmd.exe)。それが GUI 側に
+-- 「cmd.exe の謎タブ」として現れるので、初期ウィンドウを PowerShell にしておく
 -- (mux-startup で default domain にペインがあれば既定ウィンドウは作られない)。
--- 番人が居るので、ユーザーが最後の PowerShell タブを閉じてもサーバーは生き続ける
+-- 結果として WezTerm を開くと pwsh タブが常に 1 つ用意される。
+-- 番人ペインを別 workspace に隠す案は不採用: GUI 起動直後は main が空なので、WezTerm が
+-- 「空でない workspace を代わりにアクティブにする」動きをし、その後のタブの行き先が狂う。
+-- 最後の pwsh タブを閉じるとサーバーは空になって終了するが、次回ランチャーが起こし直す
 wezterm.on("mux-startup", function()
   wezterm.mux.spawn_window({
-    workspace = MUX_KEEPALIVE_WORKSPACE,
-    args = { "cmd.exe" },
+    workspace = DEFAULT_WORKSPACE,
+    args = { "pwsh.exe", "-NoLogo" },
   })
 end)
 
@@ -388,7 +387,7 @@ config.ssh_domains = {
 --   開き直す (素のままだと別ウィンドウになるので gui-startup の gather_restored_tabs が
 --   devbox ウィンドウにまとめる)。残っていなければ何も開かない (attach はウィンドウを
 --   生成しない)。Shift+P 等で未 attach のまま spawn しても mux 側が自動 attach する
--- - サーバー起動直後の既定ウィンドウ (cmd.exe) は mux-startup で番人ペインに置き換える
+-- - サーバー起動直後の既定ウィンドウ (cmd.exe) は mux-startup で pwsh に置き換える
 -- - skip_permissions_check: ソケットの所有者/権限チェックは NTFS では意味を持たないため外す
 config.unix_domains = {
   {
