@@ -19,6 +19,13 @@ set -u
 
 HOST=${AURA_HOST:-aura}        # ~/.ssh/config の Host 名
 IP=${AURA_IP:-100.119.138.119} # Tailscale IP
+# Windows 側の dotfiles。ssh セッション用の初期化 (文字コード UTF-8、プロンプトごとに
+# cwd を端末タイトルへ → tmux のステータス行に出る) を windows/bin/tmux-shell.ps1 が行う。
+# 無ければ (pull 前など) 素の pwsh で入る
+WIN_DOTFILES=${AURA_DOTFILES:-'C:\Users\saint\ghq\github.com\AutoFor\dotfiles'}
+TMUX_SHELL="$WIN_DOTFILES\windows\bin\tmux-shell.ps1"
+# sshd は DefaultShell (pwsh) に -c で渡すので、リモートコマンドは pwsh 構文で書く
+REMOTE_CMD="if (Test-Path '$TMUX_SHELL') { pwsh -NoLogo -NoExit -File '$TMUX_SHELL' } else { pwsh -NoLogo }"
 
 ssh_reachable() {
   timeout 5 nc -z "$IP" 22 >/dev/null 2>&1
@@ -44,7 +51,7 @@ connect)
   # ペインを終わらせないための無限ループ。resurrect が復元したときもここに戻る
   while :; do
     if ssh_reachable; then
-      ssh "$HOST"
+      ssh -t "$HOST" "$REMOTE_CMD"
       code=$?
       echo ""
       if [ "$code" -eq 0 ]; then
