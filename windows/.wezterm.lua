@@ -2,11 +2,12 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
--- Azure 開発サーバー (devbox) 関連の定数
-local DEVBOX_DOMAIN = "azure"
+-- 開発サーバー (devbox) 関連の定数。
+-- devbox は自宅 Windows 機 (desktop) 上の Hyper-V Ubuntu VM (AUT-551。旧 Azure VM 100.126.96.27)
+local DEVBOX_DOMAIN = "azure"         -- 旧 mux ドメインの名前。切り分け用に残す
 local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
-local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
-local DEVBOX_USER = "azureuser"
+local DEVBOX_HOST = "100.124.128.55"  -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
+local DEVBOX_USER = "seiya"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
 -- ローカル PowerShell タブを載せる Windows 上の wezterm-mux-server のドメイン (#251)
 local LOCAL_MUX_DOMAIN = "local-mux"
@@ -59,15 +60,11 @@ local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
--- devbox の VM 起動を担保する。22番に届く場合は az を呼ばず即 return するため、
--- VM 起動中の普段は 1 秒程度で終わる（詳細は devbox.ps1 ensure）。
+-- devbox の VM 起動を担保する。Azure 時代は devbox.ps1 ensure が az で VM を起動していたが、
+-- Hyper-V の devbox はホスト起動時に自動開始する (AUT-551) ため何もしない。
+-- 呼び出し箇所は残してあるので、起動担保が再び必要になったらここに実装する。
 local function ensure_devbox()
-  local ok = pcall(function()
-    wezterm.run_child_process({
-      "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", DEVBOX_PS1, "ensure",
-    })
-  end)
-  return ok
+  return true
 end
 
 -- ペインの cwd（azure ドメインならリモート側のパス）を返す

@@ -32,7 +32,7 @@ $IdleTicksRequired = 6
 $RG = "AUTOFOR-RG"
 $VM = "rpa"
 # devbox の Tailscale IP。ここからの SSH は tmux の常駐接続なので稼働中と数えない
-$DevboxIP = "100.126.96.27"
+$DevboxIP = "100.124.128.55"
 # devbox の rpa-activity-heartbeat が touch する「使用中」シグナル
 $HeartbeatPath = "$env:ProgramData\rpa-activity.heartbeat"
 $LogPath = "$env:ProgramData\rpa-idle-shutdown.log"

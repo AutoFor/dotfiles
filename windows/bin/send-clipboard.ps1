@@ -17,7 +17,7 @@
 param(
   [string]$RemoteHost = 'devbox',
   [string]$RemoteDir  = '.cache/clipboard',  # リモートホームからの相対パス
-  [string]$RemoteHome = '/home/azureuser',
+  [string]$RemoteHome = '/home/seiya',
   [int]$MaxTotalMB    = 100                  # うっかり巨大フォルダを送って GUI が長時間固まるのを防ぐ
 )
 
