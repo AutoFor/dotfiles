@@ -477,3 +477,6 @@ export NVM_DIR="$HOME/.nvm"
 if command -v nvm >/dev/null 2>&1 && [[ "$(nvm current)" == "system" ]]; then
   echo "⚠ nvm が system node にフォールバックしています。'nvm alias default <installed-version>' で固定してください" >&2
 fi
+
+# kimi (Kimi Code CLI) は ~/.kimi-code/bin に入る。ユーザー名に依存しない形で PATH に通す
+export PATH="$HOME/.kimi-code/bin:$PATH"
