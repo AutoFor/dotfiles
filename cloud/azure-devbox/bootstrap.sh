@@ -38,7 +38,9 @@ if ! /opt/nvim/bin/nvim --version >/dev/null 2>&1; then
     url="https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz"
     curl -fsSL -o "$tmp_nvim/nvim.tar.gz" "$url"
   fi
-  extracted="$(tar -tzf "$tmp_nvim/nvim.tar.gz" | head -1 | cut -d/ -f1)"
+  # head で先頭だけ読むと tar が SIGPIPE で落ち、pipefail のせいで bootstrap ごと止まる
+  # (Ubuntu 26.04 の tar で exit 141 を踏んだ)。sed は最後まで読むので安全
+  extracted="$(tar -tzf "$tmp_nvim/nvim.tar.gz" | sed -n '1{s|/.*||;p}')"
   sudo rm -rf /opt/nvim "/opt/$extracted"
   sudo tar -C /opt -xzf "$tmp_nvim/nvim.tar.gz"
   sudo mv "/opt/$extracted" /opt/nvim
