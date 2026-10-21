@@ -168,7 +168,10 @@ fi
 if [ ! -d "$HOME/.tmux/plugins/tmux-resurrect" ]; then
   # install_plugins は tmux サーバーが設定を読んでいる必要がある。
   # 一時セッションを作って読み込ませる (既存セッションには触れない)。
+  # サーバーが .tmux.conf 配置より前から動いていると TMUX_PLUGIN_MANAGER_PATH が無くて
+  # "Tmux Plugin Manager not configured" で落ちるため、先に設定を読み直させる
   tmux new-session -d -s _bootstrap 2>/dev/null || true
+  tmux source-file "$HOME/.tmux.conf" 2>/dev/null || true
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
   tmux kill-session -t _bootstrap 2>/dev/null || true
 fi
