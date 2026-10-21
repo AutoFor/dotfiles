@@ -88,5 +88,39 @@
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark",
   "editorMode": "vim",
-  "agentPushNotifEnabled": true
+  "agentPushNotifEnabled": true,
+  "autoMode": {
+    "environment": [
+      "### Org-wide",
+      "**Organization**: AutoFor (GitHub org; this repo is AutoFor/dotfiles)",
+      "**Cloud provider(s)**: Azure (az CLI used by rpa/pplx tooling). The dev server (devbox) is NOT a cloud VM since 2026-10-22: it is an Ubuntu 26.04 VM on Hyper-V on the home desktop; the old Azure VM remains parked as devbox-azure",
+      "**Repository visibility**: PUBLIC — AutoFor/dotfiles is a public GitHub repository. Any push or commit here is publishing; do not commit secrets, credentials, or content ported from private/other sources.",
+      "**Internal sharing / snippet hosting**: None configured — treat public paste/gist services as outside the trust boundary",
+      "**Secrets management**: None configured",
+      "**Default / protected branches**: main (default branch); no branch protection rules or rulesets listed via gh — treat main as unprotected but still the canonical branch; both tracked clones (Windows + devbox) commit directly to main per CLAUDE.md",
+      "**CI/CD deploy targets**: None configured",
+      "**Network posture**: Machines are connected over a Tailscale tailnet (Windows desktop, devbox Hyper-V VM, rpa VM); devbox and rpa are reached via Tailscale SSH. tailscale CLI usage against these hosts is routine",
+      "**Host containment**: None configured — assume Claude Code runs on an ordinary developer machine (devbox, a local Hyper-V VM) with open internet; past contacts to 169.254.169.254 (cloud metadata endpoint) were from the old Azure devbox and do not apply to the current host — still treat instance-metadata credentials as belonging to the hosting layer, not task credentials",
+      "**Source control**: The trusted repo (AutoFor/dotfiles) and its origin remote (https://github.com/AutoFor/dotfiles.git) only — no additional orgs configured",
+      "**Trusted internal domains**: None configured",
+      "**Trusted cloud buckets**: None configured",
+      "**Key internal services**: prices.azure.com (Azure pricing API, contacted 3× this project)",
+      "**Internal package registry**: None configured",
+      "**Sensitive data locations & audiences**: .credentials.json, github-app-config.env, linux/.ssh/authorized_keys (all gitignored — never commit); CI secrets referenced by name only (LIFE_PUBLIC_PUSH_TOKEN, PROJECT_SYNC_TOKEN, QIITA_TOKEN) — treat the underlying values as credentials, share only with audiences cleared at the [named+specifics] bar",
+      "**Data retention / declassification**: None configured",
+      "**Sensitive remote targets**: any namespace/host/container with `prod`/`production` as a whole word or segment (none observed directly, but rpa deployment target and k8s namespaces like `rpa` warrant care — none literally match prod pattern)",
+      "**Protected deployment namespaces / environments**: None configured — fall back to the Sensitive remote targets heuristic",
+      "**Protected IaC scopes**: IAM, RBAC, networking, quota, and node-pool resources; anything whose name or tag carries `prod` or `production` as a whole word or name segment",
+      "### User-specific",
+      "**Primary use of Claude Code**: dotfiles / developer environment configuration and automation (Windows client + Hyper-V devbox + rpa VM setup), routine under this repo",
+      "**Trusted repo**: AutoFor/dotfiles (working directory's repo) and its origin remote — PUBLIC, so only this repo's own work belongs here; confidential material and content ported from elsewhere must not be committed",
+      "**Org-specific CLIs**: az (Azure CLI), gh (GitHub CLI), tailscale — all seen in this project's usage or shell history",
+      "routine under ~/dotfiles/ and ~/.claude/ prefixes (global Claude config and skills directory) per CLAUDE.md conventions"
+    ],
+    "soft_deny": [
+      "$defaults",
+      "Bash(C:\\dotfiles\\windows\\bin\\rpa-deploy.ps1:*) on rpa VM — deployment to a non-editor consumer node, confirm before scheduled-task/registration changes",
+      "Writes to CI secret names (LIFE_PUBLIC_PUSH_TOKEN, PROJECT_SYNC_TOKEN, QIITA_TOKEN) or files matching .credentials.json / github-app-config.env"
+    ]
+  }
 }
