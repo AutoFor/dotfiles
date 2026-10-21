@@ -36,6 +36,23 @@ track)
   [ -n "$SID" ] || exit 0
   mkdir -p "$PANE_DIR"
   printf '%s\n' "$SID" > "$PANE_DIR/${TMUX_PANE#%}"
+  # セッション名を tmux の「ウィンドウ名 - ペイン名 (@name)」にする (AUT-553)。
+  # Claude アプリや --resume の一覧は既定だと要約の自動生成タイトルで、どのペインの
+  # 会話か分からない。SessionStart hook が hookSpecificOutput.sessionTitle を返すと
+  # /rename と同じ効果になる (startup / resume / fork のときだけ効く。clear / compact は無視)。
+  # 起動後にウィンドウ名やペイン名を変えても追従はしない (外から改名する CLI が無い)。
+  # 次の再起動・復元で付け直される。手で直すなら /rename
+  WIN=$(tmux display-message -p -t "$TMUX_PANE" '#{window_name}' 2>/dev/null || true)
+  PNAME=$(tmux display-message -p -t "$TMUX_PANE" '#{@name}' 2>/dev/null || true)
+  TITLE=$WIN
+  [ -n "$PNAME" ] && TITLE="$WIN - $PNAME"
+  [ -n "$TITLE" ] || exit 0
+  if command -v jq >/dev/null 2>&1; then
+    jq -cn --arg t "$TITLE" '{hookSpecificOutput:{hookEventName:"SessionStart",sessionTitle:$t}}'
+  else
+    ESC=$(printf '%s' "$TITLE" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    printf '{"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":"%s"}}\n' "$ESC"
+  fi
   ;;
 save)
   mkdir -p "$(dirname "$FILE")" "$PANE_DIR"
