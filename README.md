@@ -141,14 +141,14 @@ Install-Module BurntToast -Scope CurrentUser
 pwsh -File windows\bin\register-wezterm-jump.ps1   # クリックでペインへジャンプする URI スキーム登録 (HKCU)
 ```
 
-### 2. Azure devbox（開発サーバー）
+### 2. devbox（開発サーバー）
 
-VM の作成から開発環境の流し込みまでは [cloud/azure-devbox/README.md](cloud/azure-devbox/README.md) を参照。
-要点は次の 2 コマンド。
+devbox は自宅 Windows 機 `desktop` 上の Hyper-V Ubuntu VM（Tailscale `devbox`、ユーザー `seiya`）。
+Azure VM からの移行は AUT-551。開発環境の流し込みは Azure 時代と同じ bootstrap を使う
+（Azure VM の作成手順は [cloud/azure-devbox/README.md](cloud/azure-devbox/README.md) に残してある）。
 
 ```bash
-bash cloud/azure-devbox/create-vm.sh
-ssh azureuser@<IP> 'bash -s' < cloud/azure-devbox/bootstrap.sh
+ssh seiya@devbox 'bash -s' < cloud/azure-devbox/bootstrap.sh
 ```
 
 `bootstrap.sh` が dotfiles の clone と `install.sh` の実行、wezterm-mux-server の導入
