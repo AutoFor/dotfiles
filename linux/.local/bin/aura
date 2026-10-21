@@ -61,13 +61,13 @@ connect)
       code=$?
       echo ""
       if [ "$code" -eq 0 ]; then
-        echo "aura (PowerShell) との接続を終了しました。"
+        echo "$HOST (PowerShell) との接続を終了しました。"
       else
-        echo "aura (PowerShell) との接続が切れました (exit $code)。PC のスリープや再起動でもここに来ます。"
+        echo "$HOST (PowerShell) との接続が切れました (exit $code)。PC のスリープや再起動でもここに来ます。"
       fi
     else
       echo ""
-      echo "aura に届きません (PC が停止中か Tailscale が切れています)。"
+      echo "$HOST に届きません (PC が停止中か Tailscale が切れています)。"
     fi
     printf 'Enter で再接続 / Ctrl-C で抜ける > '
     read -r _ || exit 0
