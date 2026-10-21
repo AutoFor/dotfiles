@@ -1,12 +1,33 @@
 #!/bin/sh
-# tmux のウィンドウ一覧を SetUserVar (OSC 1337) で全クライアントの tty に通知する。
+# tmux のウィンドウ一覧を SetUserVar (OSC 1337) で全クライアントに通知する。
 # .wezterm.lua の format-tab-title がタブバー描画に使う (#214)。
-# クライアント tty へ直接書くため tmux passthrough は不要。
 # 呼び出し元: .tmux.conf の set-hook (ウィンドウの増減・切替・改名・入替時)
+#
+# 送信経路は 2 つ:
+# - client tty へ直接書く (OpenSSH は pty をログインユーザーへ chown するので書ける)
+# - Tailscale SSH の pty は root 所有のままで直接書けない (2026-10-22 の Hyper-V devbox
+#   移行で発覚)。その場合はクライアントのアクティブペインの tty へ tmux passthrough
+#   (ESC Ptmux; 〜 ESC \ で包み、中の ESC は二重化。allow-passthrough all 前提) で書き、
+#   tmux にクライアントへ中継させる。ペイン tty は tmux サーバー所有なので常に書ける
 
-tmux list-clients -F '#{client_tty}|#{session_name}' 2>/dev/null |
-while IFS='|' read -r tty sess; do
-  [ -n "$tty" ] && [ -w "$tty" ] || continue
+# $1=宛先 tty  $2=変数名  $3=base64 ペイロード  $4=direct|passthrough
+send_var() {
+  if [ "$4" = direct ]; then
+    printf '\033]1337;SetUserVar=%s=%s\007' "$2" "$3" > "$1" 2>/dev/null
+  else
+    printf '\033Ptmux;\033\033]1337;SetUserVar=%s=%s\007\033\\' "$2" "$3" > "$1" 2>/dev/null
+  fi
+}
+
+tmux list-clients -F '#{client_tty}|#{session_name}|#{pane_tty}' 2>/dev/null |
+while IFS='|' read -r tty sess ptty; do
+  if [ -n "$tty" ] && [ -w "$tty" ]; then
+    out=$tty mode=direct
+  elif [ -n "$ptty" ] && [ -w "$ptty" ]; then
+    out=$ptty mode=passthrough
+  else
+    continue
+  fi
   # ウィンドウ名のみ (番号プレフィックスは付けない)。末尾 * はアクティブ印で
   # .wezterm.lua の format-tab-title が読む。タブは番号順に並ぶので Ctrl+数字 は位置で対応
   # ペインが 1 つの窓は、ペイン名 (@name。Alt+p / prefix+T) があればそれをタブ名にする。
@@ -15,9 +36,9 @@ while IFS='|' read -r tty sess; do
   # 各ペインの名前はボーダーに出る
   list=$(tmux list-windows -t "$sess" -F '#{?#{&&:#{==:#{window_panes},1},#{@name}},#{@name},#{window_name}}#{?window_active,*,}' 2>/dev/null | tr '\n' '\t')
   payload=$(printf '%s' "$list" | base64 | tr -d '\n')
-  printf '\033]1337;SetUserVar=tmux_windows=%s\007' "$payload" > "$tty" 2>/dev/null
+  send_var "$out" tmux_windows "$payload" "$mode"
   # セッション名も通知する。.wezterm.lua が左ステータス (タブバー左端) に常時表示する
   sess_payload=$(printf '%s' "$sess" | base64 | tr -d '\n')
-  printf '\033]1337;SetUserVar=tmux_session=%s\007' "$sess_payload" > "$tty" 2>/dev/null
+  send_var "$out" tmux_session "$sess_payload" "$mode"
 done
 exit 0
