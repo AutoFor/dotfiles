@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Bash(uip --version)",
       "Bash(uip login status)",
@@ -89,6 +90,7 @@
   "theme": "dark",
   "editorMode": "vim",
   "agentPushNotifEnabled": true,
+  "remoteControlAtStartup": true,
   "autoMode": {
     "environment": [
       "### Org-wide",
