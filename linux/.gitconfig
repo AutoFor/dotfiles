@@ -5,8 +5,8 @@
 	helper =
 	helper = !/usr/bin/env sh -c 'exec gh auth git-credential "$@"' --
 [user]
-	name = your-name
-	email = your-id+your-name@users.noreply.github.com
+	name = 川島誠也
+	email = 145828201+seiya-kawashima@users.noreply.github.com
 
 [ghq]
 	user = ai-foo

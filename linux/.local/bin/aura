@@ -1,7 +1,10 @@
 #!/bin/sh
-# Windows PC (aura) の PowerShell を devbox の tmux ウィンドウとして開く (#253)。
-# Tailscale 経由で Windows の OpenSSH Server に入る (linux/.ssh/config の Host aura、
+# Windows PC の PowerShell を devbox の tmux ウィンドウとして開く (#253)。
+# Tailscale 経由で Windows の OpenSSH Server に入る (linux/.ssh/config の Host desktop / aura、
 # Windows 側は windows/bin/setup-sshd.ps1 で構築)。
+# 既定の接続先は devbox (Hyper-V VM) を載せている desktop (AUT-552)。以前の既定 aura へは
+# AURA_HOST=aura AURA_IP=100.119.138.119 で切り替えられる。スクリプト名は歴史的に aura のまま
+# (.tmux.conf の @resurrect-processes が "~aura" で復元対象を判定しているため変えない)。
 #
 # なぜ WezTerm のタブではなく tmux の窓にするか:
 #   ローカル PowerShell を WezTerm のタブにすると、セッション層が Windows と Linux で
@@ -17,8 +20,8 @@
 #   status  : ssh 到達性を表示
 set -u
 
-HOST=${AURA_HOST:-aura}        # ~/.ssh/config の Host 名
-IP=${AURA_IP:-100.119.138.119} # Tailscale IP
+HOST=${AURA_HOST:-desktop}     # ~/.ssh/config の Host 名
+IP=${AURA_IP:-100.64.114.45}   # Tailscale IP (desktop)
 # Windows 側の dotfiles。ssh セッション用の初期化 (文字コード UTF-8、プロンプトごとに
 # cwd を端末タイトルへ → tmux のステータス行に出る) を windows/bin/tmux-shell.ps1 が行う。
 # 無ければ (pull 前など) 素の pwsh で入る
@@ -39,14 +42,14 @@ ssh_reachable() {
 # 別の窓に印が付いたり別の窓が pwsh に改名されたりする
 setup_tmux_window() {
   [ -n "${TMUX:-}" ] && [ -n "${TMUX_PANE:-}" ] || return 0
-  tmux set-option -p -t "$TMUX_PANE" @host aura 2>/dev/null || true
+  tmux set-option -p -t "$TMUX_PANE" @host "$HOST" 2>/dev/null || true
   tmux set-option -w -t "$TMUX_PANE" allow-rename off 2>/dev/null || true
   tmux rename-window -t "$TMUX_PANE" pwsh 2>/dev/null || true
 }
 
 case "${1:-connect}" in
 status)
-  echo "aura: ssh到達 $(ssh_reachable && echo OK || echo NG)"
+  echo "$HOST ($IP): ssh到達 $(ssh_reachable && echo OK || echo NG)"
   ;;
 
 connect)
