@@ -75,10 +75,14 @@ export NVM_DIR="$HOME/.nvm"
 if [ ! -d "$NVM_DIR" ]; then
   curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 fi
+# nvm.sh は set -u に対応していない (未定義変数参照で "PROVIDED_VERSION: unbound variable" になる。
+# Ubuntu 26.04 + nvm 0.40.1 で発生) ため、この区間だけ -u を外す
+set +u
 # shellcheck disable=SC1091
 . "$NVM_DIR/nvm.sh"
 nvm install --lts >/dev/null
 nvm use --lts >/dev/null
+set -u
 echo "node: $(node -v) / npm: $(npm -v)"
 npm install -g @anthropic-ai/claude-code
 echo "claude: $(claude --version 2>/dev/null || echo 'installed (要ログイン)')"
