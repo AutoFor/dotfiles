@@ -103,6 +103,15 @@ if ! /usr/bin/wezterm --version 2>/dev/null | grep -q "$WEZTERM_VERSION"; then
 fi
 echo "wezterm: $(/usr/bin/wezterm --version 2>/dev/null || echo 未導入)"
 
+echo "########## 4.6) Azure CLI (az) ##########"
+# rpa VM の起動/停止 (linux/.local/bin/rpa) と Key Vault からのキー取得 (pplx) が使う。
+# Microsoft の apt リポジトリ導入スクリプト (Ubuntu 26.04 "resolute" も提供あり)。
+if ! command -v az >/dev/null 2>&1; then
+  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash >/dev/null \
+    || echo "az: インストール失敗 (rpa / pplx を使うときに手動で導入する)"
+fi
+echo "az: $(az version --query '"azure-cli"' -o tsv 2>/dev/null || echo 未導入)"
+
 echo "########## 4.7) Tailscale ##########"
 # iPad / iPhone / 外出先クライアントから NSG の許可 IP に依存せず SSH するための VPN (#214 Phase 4)。
 # モバイル回線は IP が頻繁に変わり NSG の許可 IP 運用が破綻するため。
