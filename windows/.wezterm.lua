@@ -1077,8 +1077,14 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     -- tmux-open-url (prefix+o) からの「この URL を既定ブラウザで開いて」通知。
     -- ペイン内の任意の出力が偽装できる経路なので、http(s) 以外の URI
     -- (file: や ms-settings: 等) は開かない
+    -- 届いた/開いたかをデバッグオーバーレイ (Ctrl+Shift+L) で追えるようログに残す
+    -- (2026-10-22 Hyper-V 移行後に「開かない」ことが増えた調査用。tmux 側は
+    --  クライアント tty まで書き出せていることを strace で確認済み)
     if value:match("^https?://") then
+      wezterm.log_info("open_url: " .. value)
       wezterm.open_with(value)
+    else
+      wezterm.log_warn("open_url: http(s) 以外なので無視: " .. value)
     end
     return
   end
