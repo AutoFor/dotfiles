@@ -11,7 +11,7 @@ published: true
 
 # GUIをぐいぐい使ってた人間がVimmerになるためのショートカット＆操作メモ
 
-Windows の WezTerm からクラウド開発サーバー（Azure devbox）の tmux + Zsh に接続する構成で使っている、自分がよく忘れるショートカット・コマンド・操作手順をまとめたメモです。
+Windows の WezTerm から自宅 PC 上の Linux 開発サーバー（Hyper-V VM の devbox）の tmux + Zsh に接続する構成で使っている、自分がよく忘れるショートカット・コマンド・操作手順をまとめたメモです。
 
 ---
 
@@ -27,7 +27,7 @@ Windows の WezTerm からクラウド開発サーバー（Azure devbox）の tm
 ## 環境
 
 - **ターミナル**: WezTerm **Nightly**（Windows。表示器 + SSH クライアント。タブの × を消す `show_close_tab_button_in_tabs` が安定版 20240203 に無いため Nightly を使う。更新は https://github.com/wezterm/wezterm/releases/tag/nightly の `WezTerm-nightly-setup.exe` を上書きインストール。GUI と `wezterm-mux-server` は同じ版でないと繋がらないので、更新後は両方を止めてランチャーから起動し直す）
-- **開発サーバー**: Azure VM (devbox, Ubuntu 24.04)。セッション層は tmux（`ssh devbox` → `tm` でどの端末からも同じセッションに入れる）
+- **開発サーバー**: Windows PC `desktop` 上の Hyper-V VM (devbox, Ubuntu 26.04)。2026-10-22 に Azure VM から移行（旧 VM は `devbox-azure` として残置）。接続は Tailscale SSH（tailscaled が sshd を兼ねるため OpenSSH は動いていない）。セッション層は tmux（`ssh devbox` → `tm` でどの端末からも同じセッションに入れる）
 - **シェル**: Zsh on devbox
 - **プラグイン**: zoxide, fzf, ghq
 
@@ -143,8 +143,8 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
-| `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
-| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。PowerShell は `<leader> →Shift+P` と同じくローカル mux 配下で開く。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
+| `<leader> →a` | devbox の tmux main セッションを新規タブで開く（休止/切断後の復帰はこれ。Azure 時代にあった「VM を起こしてから attach」は Hyper-V 移行で不要になり、接続だけ行う） | **a**zure（Azure 時代の名残） |
+| `<leader> →l` | ランチャーを表示。入り先は **devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。PowerShell は `<leader> →Shift+P` と同じくローカル mux 配下で開く。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
 | `<leader> →Shift+P` | PowerShell を開く。devbox の tmux 上では **Windows PC (desktop) の pwsh を tmux の窓 `pwsh` として開く**（devbox から Tailscale 経由で Windows の OpenSSH Server に ssh。他の窓と同じく `Ctrl+Tab` / `Alt+,` が効き、WezTerm を閉じても tmux が持ち、resurrect で窓ごと戻る。pwsh は新規起動なので中の Claude Code は `claude --resume` で拾う。ssh が切れても窓は残り Enter で再接続）。tmux 外（devbox 停止中の切り分け）ではローカル mux (wezterm-mux-server) 配下の pwsh タブを開く（WezTerm を閉じても残り、次に `Shift+P` したとき一緒に戻る。mux サーバーはこのとき初めて起動する） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |
@@ -152,13 +152,13 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 ### iPad / iPhone からの接続（Tailscale + Termius）
 
 前提: **Tailscale アプリ**（VPN トグル ON、devbox と同じアカウント）と **Termius**（無料版で十分）。
-SSH 鍵は端末ごとに Termius の Keychain で生成（ED25519）し、公開鍵を devbox の `~/.ssh/authorized_keys` に登録する（端末ごとに別鍵にすると紛失時にその端末だけ無効化できる）。
+devbox への接続は Tailscale SSH（tailscaled が sshd を兼ねる）なので、認証は Tailscale のログインで済み **SSH 鍵の登録は不要**（Termius 側で鍵を指定しても使われない。Tailscale ACL の check mode は accept にしてあるので、ブラウザでの再認証も求められない）。
 
 | 項目 | 値 |
 |---|---|
-| Address | `100.126.96.27`（devbox の Tailscale IP。不変） |
-| Username | `azureuser`（タイプミス注意） |
-| Key | その端末で生成した鍵 |
+| Address | `devbox.tail7bb5be.ts.net`（Tailscale の MagicDNS 名。IP なら `100.124.128.55`） |
+| Username | `seiya`（旧 Azure devbox は `azureuser` だった。タイプミス注意） |
+| Key | 不要（Tailscale SSH。旧 `devbox-azure` に入るときだけ端末ごとの ED25519 鍵を `~/.ssh/authorized_keys` に登録） |
 
 接続したら `tm` で main セッションに入る。`tm` は**グループセッション**（ウィンドウ共有・ビュー独立）で attach するため:
 
@@ -210,9 +210,10 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | ペイン番号を表示して選択 | `q` → 番号 |
 | ペインサイズ調整 | `H/J/K/L`（連打可） |
 | ペインサイズを均等に整える | `E`（Shift+e） |
-| ズーム（1ペイン全画面をトグル） | `z` |
+| ズーム（1ペイン全画面をトグル） | `z`（prefix なしなら `Alt+z`） |
 | ペインに名前を付ける | `T`（Shift+t。空 Enter で解除） |
-| ペインを閉じる | `x`（確認なし） |
+| ペインを閉じる | `x` → `x`（2 連打。1 回目は「閉じるモード」に入るだけで、他のキーで取消） |
+| 閉じたペインを開き直す | `X`（Shift+x。cwd・ペイン名・claude の会話ごと元の位置に戻る。連打で閉じた順に遡る） |
 | セッション/ウィンドウ一覧から選択 | `s` |
 | 新しいセッションを作る（名前を聞かれる） | `N`（Shift+n） |
 | このペインを別のウィンドウ/セッションへ移動 | `m`（小文字）→ 一覧から選択 |
@@ -222,9 +223,13 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 | 履歴を半ページ上/下にスクロール（`[` 不要） | `Ctrl+u` / `Ctrl+d`（Ctrl を押しっぱなしで OK。prefix なしなら `Alt+i` / `Alt+u`） |
 | 切断（セッションは残る） | `d` |
 
-#### iPhone のショートカットで起動から接続まで（1 タップ）
+#### iPhone からの接続
 
-devbox は毎日 22:00 に自動停止する。停止中に iPhone/iPad から入るには VM を起こす必要があるが、
+devbox は常時稼働の Windows PC `desktop` 上の Hyper-V VM なので、Azure 時代の「22:00 自動停止 → GitHub Actions で起こす」手順は不要になった。Tailscale を ON にして Termius で `devbox` に接続するだけでよい（desktop の再起動後は Hyper-V の自動開始で VM も戻る）。
+
+<details><summary>旧 Azure devbox（devbox-azure）時代の「1 タップ起動」ショートカット（参考・現在は不要）</summary>
+
+旧 devbox は毎日 22:00 に自動停止していた。停止中に iPhone/iPad から入るには VM を起こす必要があるが、
 Termius は接続先ホスト上のコマンドしか実行できないので、VM の起動は **iOS の「ショートカット」アプリ**に
 任せる。WezTerm 起動時の `devbox.ps1 ensure`（VM 起動担保 → Tailscale 経由で SSH）と同じ流れを
 ショートカット 1 本で再現する:
@@ -272,6 +277,8 @@ VM の起動は private リポジトリ `AutoFor/devbox-ops` の `start-devbox.y
 
 > **設計メモ**: devbox-ops のサービスプリンシパル `sp-devbox-disk-resize` は rg-devbox 限定 Contributor
 > （OS ディスク拡張 2026-08-22 の流用）。VM の start だけに絞るならカスタムロールに差し替える。
+
+</details>
 
 ### コピーモード（tmux copy-mode / vi ライク）
 
