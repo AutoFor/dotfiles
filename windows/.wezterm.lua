@@ -2,12 +2,18 @@ local wezterm = require("wezterm")
 local act = wezterm.action
 local config = wezterm.config_builder()
 
--- Azure 開発サーバー (devbox) 関連の定数
-local DEVBOX_DOMAIN = "azure"
+-- 開発サーバー (devbox) 関連の定数。
+-- devbox は自宅 Windows 機 (desktop) 上の Hyper-V Ubuntu VM (AUT-551。旧 Azure VM 100.126.96.27)
+local DEVBOX_DOMAIN = "azure"         -- 旧 mux ドメインの名前。切り分け用に残す
 local DEVBOX_TMUX_DOMAIN = "devbox-tmux"
-local DEVBOX_HOST = "100.126.96.27"   -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
-local DEVBOX_USER = "azureuser"
+local DEVBOX_HOST = "100.124.128.55"  -- Tailscale IP（ノード固有で不変。MagicDNS: devbox.tail7bb5be.ts.net）
+local DEVBOX_USER = "seiya"
 local DEVBOX_HOSTNAME = "devbox"      -- ステータス表示でネスト SSH と区別するために使う
+-- ローカル PowerShell タブを載せる Windows 上の wezterm-mux-server のドメイン (#251)
+local LOCAL_MUX_DOMAIN = "local-mux"
+-- 起動時のウィンドウが属する workspace (#234)。config.default_workspace と、
+-- local-mux から復元したタブをまとめる先の判定で使う
+local DEFAULT_WORKSPACE = "main"
 -- dotfiles のパスを探す。環境変数 DOTFILES_DIR > ghq 既定パス > ~/dotfiles の順。
 -- 注意: 候補テーブルに os.getenv() を直接並べると、未設定時に nil が混ざって
 -- ipairs がそこで走査を打ち切り、後続の候補が一切見られなくなる (Lua の配列は
@@ -54,15 +60,11 @@ local function sh_quote(value)
   return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
 end
 
--- devbox の VM 起動を担保する。22番に届く場合は az を呼ばず即 return するため、
--- VM 起動中の普段は 1 秒程度で終わる（詳細は devbox.ps1 ensure）。
+-- devbox の VM 起動を担保する。Azure 時代は devbox.ps1 ensure が az で VM を起動していたが、
+-- Hyper-V の devbox はホスト起動時に自動開始する (AUT-551) ため何もしない。
+-- 呼び出し箇所は残してあるので、起動担保が再び必要になったらここに実装する。
 local function ensure_devbox()
-  local ok = pcall(function()
-    wezterm.run_child_process({
-      "pwsh.exe", "-NoProfile", "-NonInteractive", "-File", DEVBOX_PS1, "ensure",
-    })
-  end)
-  return ok
+  return true
 end
 
 -- ペインの cwd（azure ドメインならリモート側のパス）を返す
@@ -85,6 +87,7 @@ local function is_tmux_client_pane(pane)
   if ok_domain and domain == DEVBOX_TMUX_DOMAIN then
     return true
   end
+  -- local 以外 (devbox-tmux 以外の ssh ドメイン、ローカル mux の local-mux 等) は tmux ではない
   if ok_domain and domain ~= "local" then
     return false
   end
@@ -177,17 +180,88 @@ local function cycle_tabs(direction, tmux_key)
   end)
 end
 
+-- wezterm-mux-server (local-mux) の起動時に呼ばれる (GUI では発火しない)。
+-- サーバーは起動直後に初期ウィンドウを 1 つ作る (既定は cmd.exe)。それが GUI 側に
+-- 「cmd.exe の謎タブ」として現れるので、初期ウィンドウを PowerShell にしておく
+-- (mux-startup で default domain にペインがあれば既定ウィンドウは作られない)。
+-- 結果として WezTerm を開くと pwsh タブが常に 1 つ用意される。
+-- 番人ペインを別 workspace に隠す案は不採用: GUI 起動直後は main が空なので、WezTerm が
+-- 「空でない workspace を代わりにアクティブにする」動きをし、その後のタブの行き先が狂う。
+-- 最後の pwsh タブを閉じるとサーバーは空になって終了するが、次回ランチャーが起こし直す
+wezterm.on("mux-startup", function()
+  wezterm.mux.spawn_window({
+    workspace = DEFAULT_WORKSPACE,
+    args = { "pwsh.exe", "-NoLogo" },
+  })
+end)
+
+-- local-mux から復元されたタブを devbox と同じウィンドウにまとめる (#251)。
+-- GUI 起動時の connect_automatically は、サーバーに残っていたウィンドウを「別々の
+-- GUI ウィンドウ」として開き直す。devbox ウィンドウと同サイズで真後ろに重なるため
+-- 「タブが消えた」ように見える。そこで復元されたウィンドウの中へ devbox タブを spawn し、
+-- 復元ペインを同じウィンドウ内の新しいタブへ移して devbox タブの後ろに並べる。
+-- devbox のペインがこの時点で存在するため、WezTerm 側の既定ウィンドウ生成
+-- (default_domain にペインが無いときだけ) はスキップされる。
+--
+-- 注意: 逆向き (devbox ウィンドウを新規に作って復元ペインをそこへ移す) は駄目。
+-- リモート (mux) のペインの移動はサーバー側で行われ、移動先のローカルウィンドウに
+-- 対応するリモートウィンドウが無いとサーバーが新しいウィンドウを作ってしまい、
+-- 結果として別ウィンドウが増える。復元ウィンドウは対応付けを持っているので、
+-- その中で完結させる。分割されていたペインはタブ 1 つずつにばらける
+local function gather_restored_tabs()
+  local restored = {}
+  for _, w in ipairs(wezterm.mux.all_windows()) do
+    if w:get_workspace() == DEFAULT_WORKSPACE then
+      table.insert(restored, w)
+    end
+  end
+  if #restored == 0 then
+    return false
+  end
+  -- 複数残っていた場合は先頭だけ devbox と同居させ、残りは別ウィンドウのまま
+  local primary = restored[1]
+  local tab = primary:spawn_tab({ domain = { DomainName = DEVBOX_TMUX_DOMAIN } })
+  tab:activate()
+  -- devbox タブを先頭に並べ替えたいが、mux 越しのペインを move_to_new_tab で動かすと
+  -- WezTerm (20240203) が古いタブを消さず同じペインが 2 タブに見える。並べ替えは
+  -- リモートに触れない GUI 側の MoveTab で行う。GUI ウィンドウはこの時点ではまだ
+  -- 無いので、印だけ残して update-right-status の初回で実行する
+  wezterm.GLOBAL.front_tab_window_id = primary:window_id()
+  wezterm.GLOBAL.front_tab_id = tab:tab_id()
+  return true
+end
+
+-- gather_restored_tabs が残した印を見て、devbox タブを先頭 (index 0) へ動かす。
+-- update-right-status (250ms ごと) から呼ばれ、GUI ウィンドウが出来た最初の 1 回だけ働く
+local function move_front_tab_if_pending(window)
+  local tab_id = wezterm.GLOBAL.front_tab_id
+  if not tab_id or window:window_id() ~= wezterm.GLOBAL.front_tab_window_id then
+    return
+  end
+  wezterm.GLOBAL.front_tab_id = nil
+  wezterm.GLOBAL.front_tab_window_id = nil
+  local active = window:active_tab()
+  if not active or active:tab_id() ~= tab_id then
+    return -- 既にユーザーが別タブへ移っていたら触らない
+  end
+  window:perform_action(act.MoveTab(0), window:active_pane())
+end
+
 -- WezTerm 起動時は devbox に SSH して tmux の main セッションに attach する (#214)。
--- 実際のウィンドウ生成は default_domain (devbox-tmux) に任せる。
--- ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
--- 二重に開くレースがあるため、gui-startup では VM の起動担保だけ行う。
+-- 通常は実際のウィンドウ生成を default_domain (devbox-tmux) に任せる。
+-- 以前ここで spawn_window すると SSH 接続の非同期性でデフォルトウィンドウ (cmd) が
+-- 二重に開くレースがあったため、gui-startup では VM の起動担保だけ行っていた。
+-- local-mux に復元タブがあるときだけ例外で、復元ウィンドウの中に devbox タブを spawn して
+-- まとめる (gather_restored_tabs 参照)。
 -- 接続前に devbox.ps1 ensure で VM の起動を担保する（接続は Tailscale 経由なので NSG 操作は不要）。
 wezterm.on("gui-startup", function(cmd)
   ensure_devbox()
   if cmd then
     -- CLI から明示的にコマンド指定された場合 (wezterm start -- ...) はそれを尊重
     wezterm.mux.spawn_window(cmd)
+    return
   end
+  gather_restored_tabs()
 end)
 
 
@@ -196,8 +270,8 @@ config.automatically_reload_config = true
 -- 実際の声にほぼリアルタイムで追従させるため短めにする
 config.status_update_interval = 250
 -- ウィンドウを閉じるときの確認を出さない。
--- セッションの実体は devbox の tmux が保持しているので (#214)、
--- WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
+-- セッションの実体は devbox の tmux (#214) とローカルの wezterm-mux-server (#251) が
+-- 保持しているので、WezTerm を閉じてもプロセスは失われない (tm で即復帰できる)
 config.window_close_confirmation = "NeverPrompt"
 -- フォーカス中のペインからの通知（OSC 777 等）はトーストにしない
 -- ※ WezTerm 20240127 より古い場合は未対応の設定キー警告が出るので、この行を削除する
@@ -304,6 +378,35 @@ config.ssh_domains = {
   },
 }
 
+-- ローカル PowerShell 用の mux ドメイン (#251)。
+-- ローカルタブを素の "local" ドメインで開くと pwsh もその中の claude も wezterm-gui の
+-- 子プロセスになり、WezTerm を閉じた時点で全部消える。Windows 上で wezterm-mux-server
+-- を常駐させ、ローカルタブはその配下に生成することで、devbox の tmux と同じく
+-- 「閉じても残る・次に開くと戻る」にする (claude は --resume ではなくそのまま継続)。
+-- Windows 再起動や mux サーバー自体の落ちには効かないので、その場合は claude --resume。
+--
+-- - socket_path は既定 (%USERPROFILE%\.local\share\wezterm\sock)。GUI もサーバーも
+--   同じユーザーで動くので揃う
+-- - 本線は devbox の tmux から Windows へ ssh で戻る pwsh 窓 (#253) になったので、
+--   local-mux は「devbox 停止中などで tmux に入れないとき」のフォールバック専用。
+--   GUI 起動時には attach せず (connect_automatically = false)、サーバーも起動しない。
+--   フォールバックの Shift+P で spawn したときに mux 側が自動 attach し、サーバーが
+--   無ければ既定の serve_command (wezterm-mux-server --daemonize) が起こす
+--   (Windows ではコンソールが一瞬出る)。そのとき残っていたタブも一緒に戻る
+--   (素のままだと別ウィンドウになるので gui-startup の gather_restored_tabs が
+--   devbox ウィンドウにまとめるのは、attach 済みで起動した場合のみ働く)。
+--   自動接続していた頃は、サーバーの初期ウィンドウ (pwsh) が毎回タブとして現れ、
+--   タブ数 2 で fancy タブバーが devbox タブを半分幅に切っていた
+-- - サーバー起動直後の既定ウィンドウ (cmd.exe) は mux-startup で pwsh に置き換える
+-- - skip_permissions_check: ソケットの所有者/権限チェックは NTFS では意味を持たないため外す
+config.unix_domains = {
+  {
+    name = LOCAL_MUX_DOMAIN,
+    connect_automatically = false,
+    skip_permissions_check = true,
+  },
+}
+
 -- 既定ドメインはネイティブ SSH + tmux (#214)。起動時のウィンドウはここに生成される。
 -- VM 停止中に接続失敗した場合はウィンドウにエラーが表示されるので、
 -- LEADER+l のランチャーから PowerShell を開いて切り分けする。
@@ -312,7 +415,7 @@ config.default_domain = DEVBOX_TMUX_DOMAIN
 -- 起動時のウィンドウが属する workspace (#234)。tmux セッションごとに workspace を
 -- 分けるため、既定の "default" ではなく main セッションの論理名に合わせる。
 -- これを揃えないと、LEADER+l から main に入ったときに別 workspace が増えてしまう。
-config.default_workspace = "main"
+config.default_workspace = DEFAULT_WORKSPACE
 
 -- 静的ランチャーメニュー（新規タブ「+」ボタンの右クリック等で表示）。
 -- LEADER+l の show_session_launcher と同じ 3 つに揃える (#238)。
@@ -337,8 +440,10 @@ config.launch_menu = {
     },
   },
   {
+    -- ローカル PowerShell。wezterm-mux-server 配下 (local-mux) で動かし、
+    -- WezTerm を閉じても残す (#251)
     label = "PowerShell",
-    domain = { DomainName = "local" },
+    domain = { DomainName = LOCAL_MUX_DOMAIN },
     args = { "pwsh.exe", "-NoLogo" },
   },
 }
@@ -373,6 +478,16 @@ config.hide_tab_bar_if_only_one_tab = false
 config.tab_max_width = 999
 -- falseにするとタブバーの透過が効かなくなる
 -- config.use_fancy_tab_bar = false
+-- 注意: fancy タブバーは各タブの最大幅を「ウィンドウ幅 ÷ タブ数」に固定する
+-- (wezterm-gui/src/termwindow/render/fancy_tab_bar.rs の max_tab_width。設定不可)。
+-- WezTerm タブが 2 つ以上あると devbox タブの tmux ウィンドウ帯は半分で切れて "+N" になる。
+-- レトロ (use_fancy_tab_bar = false) なら全部出るが、見た目の好みで fancy を使う (#251)。
+-- WezTerm タブごとの × (閉じるボタン) は消す。この設定は 20240203 安定版には無く
+-- Nightly 限定なので、Windows の WezTerm は Nightly を入れる。安定版に戻しても
+-- 警告が出ないようバージョン文字列 (日付始まり) で判定する
+if wezterm.version > "20240203-110809-5046fc22" then
+  config.show_close_tab_button_in_tabs = false
+end
 
 -- タブバーの透過
 config.window_frame = {
@@ -418,6 +533,16 @@ local function tmux_tab_segment(items, text, is_active, color)
   table.insert(items, { Text = " " })
 end
 
+-- タブの末尾の隙間 (tmux_tab_segment が付ける " ") を取り除く。タブバーが
+-- タブ同士の間に自前の余白を入れるため、残すと PowerShell タブとの間だけ広く空く (#251)
+local function trim_trailing_gap(items)
+  local last = items[#items]
+  if last and last.Text == " " then
+    table.remove(items)
+  end
+  return items
+end
+
 -- 表示しきれなかったウィンドウ数を示す控えめなインジケータ
 local function tmux_overflow_segment(items, text)
   table.insert(items, { Foreground = { Color = "#565f89" } })
@@ -431,7 +556,6 @@ local TMUX_TAB_TEXT_MAX_WIDTH = 12
 local TMUX_TAB_CHROME_WIDTH = 5
 -- "+N " インジケータ 1 個ぶんのセル幅（N が 2 桁でも収まるよう気持ち多め）
 local TMUX_TAB_INDICATOR_WIDTH = 4
-
 wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_width)
   -- devbox-tmux ペイン: tmux のウィンドウ一覧（wezterm-tabs-sync が SetUserVar で
   -- 通知）をタブ風セグメントで並べる。切り替えは Ctrl+Tab / Ctrl+数字（表示専用）
@@ -473,7 +597,11 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
     -- 全部が幅に収まるならそのまま全表示。収まらないときだけ、アクティブを起点に
     -- 実幅を積みながら左右へ広げ、溢れは "+N" で示す。一律 17 セル見積りをやめ
     -- 実際の名前幅で数えるので、短い名前のタブが場所を取らず同じ幅でより多く見える。
-    local total = 0
+    -- 末尾の隙間は trim_trailing_gap で落とすので、実際の描画幅は合計より 1 セル短い。
+    -- fancy タブバーはタイトルを 2 回計算し、2 回目は 1 回目の実長を max_width として
+    -- 渡してくる。ここを合計のままにすると 1 セル分「収まらない」と誤判定して
+    -- 1 窓隠し "+1" を出してしまう
+    local total = -1
     for _, w in ipairs(windows) do
       total = total + w.cells
     end
@@ -507,35 +635,23 @@ wezterm.on("format-tab-title", function(tab, tabs, panes, config, hover, max_wid
       tmux_overflow_segment(items, "+" .. hidden_left)
     end
     for i = first, last do
-      tmux_tab_segment(items, windows[i].disp, windows[i].is_active)
+      -- WezTerm タブとして非アクティブ (PowerShell 側を見ている) なら、tmux 側の
+      -- アクティブ窓の金色を落として「今どこを見ているか」を 1 か所にする
+      local color = (windows[i].is_active and not tab.is_active) and "#7d6a2b" or nil
+      tmux_tab_segment(items, windows[i].disp, windows[i].is_active, color)
     end
     if hidden_right > 0 then
       tmux_overflow_segment(items, "+" .. hidden_right)
     end
-    return items
+    return trim_trailing_gap(items)
   end
 
-  local background = "#5c6d74"
-  local foreground = "#FFFFFF"
-  local edge_background = "none"
-  if tab.is_active then
-    background = "#ae8b2d"
-    foreground = "#FFFFFF"
-  end
-  local edge_foreground = background
+  -- ローカルタブ (PowerShell 等) は tmux ウィンドウ帯と同じセグメントで描き、
+  -- devbox のウィンドウ列の続きに見せる (#251)。幅も同じ上限で切る
   local raw = (tab.tab_title and #tab.tab_title > 0) and tab.tab_title or tab.active_pane.title
-  local title = "   " .. wezterm.truncate_right(raw, max_width - 1) .. "   "
-  return {
-    { Background = { Color = edge_background } },
-    { Foreground = { Color = edge_foreground } },
-    { Text = SOLID_LEFT_ARROW },
-    { Background = { Color = background } },
-    { Foreground = { Color = foreground } },
-    { Text = title },
-    { Background = { Color = edge_background } },
-    { Foreground = { Color = edge_foreground } },
-    { Text = SOLID_RIGHT_ARROW },
-  }
+  local items = {}
+  tmux_tab_segment(items, wezterm.truncate_right(raw, TMUX_TAB_TEXT_MAX_WIDTH), tab.is_active)
+  return trim_trailing_gap(items)
 end)
 
 
@@ -548,6 +664,7 @@ end)
 -- 常設の接続ラベル (devbox 等) は tmux の下部ステータスバー左下に移設した
 -- (.tmux.conf の status-left。音声入力の録音状態だけは Windows 側にしか無いためここに残る)
 wezterm.on("update-right-status", function(window, pane)
+  move_front_tab_if_pending(window)
   local items = {}
   local key_table = window:active_key_table()
   if key_table then
@@ -760,9 +877,10 @@ local function show_session_launcher()
             ensure_devbox()
             win:perform_action(switch_to_tmux_session("rpa"), p)
           elseif id == "pwsh" then
+            -- ローカル mux 配下で開く (#251)。WezTerm を閉じても残る
             win:perform_action(
               act.SpawnCommandInNewTab({
-                domain = { DomainName = "local" },
+                domain = { DomainName = LOCAL_MUX_DOMAIN },
                 args = { "pwsh.exe", "-NoLogo" },
               }),
               p
@@ -959,8 +1077,14 @@ wezterm.on("user-var-changed", function(window, pane, name, value)
     -- tmux-open-url (prefix+o) からの「この URL を既定ブラウザで開いて」通知。
     -- ペイン内の任意の出力が偽装できる経路なので、http(s) 以外の URI
     -- (file: や ms-settings: 等) は開かない
+    -- 届いた/開いたかをデバッグオーバーレイ (Ctrl+Shift+L) で追えるようログに残す
+    -- (2026-10-22 Hyper-V 移行後に「開かない」ことが増えた調査用。tmux 側は
+    --  クライアント tty まで書き出せていることを strace で確認済み)
     if value:match("^https?://") then
+      wezterm.log_info("open_url: " .. value)
       wezterm.open_with(value)
+    else
+      wezterm.log_warn("open_url: http(s) 以外なので無視: " .. value)
     end
     return
   end
@@ -1084,8 +1208,10 @@ config.keys = {
   { key = "Tab", mods = "LEADER|CTRL", action = act.ActivateTabRelative(1) },
   { key = "Tab", mods = "LEADER|SHIFT", action = act.ActivateTabRelative(-1) },
   { key = "Tab", mods = "LEADER|CTRL|SHIFT", action = act.ActivateTabRelative(-1) },
-  { key = ",", mods = "ALT", action = tmux_bridge("<", act.Nop) }, -- 左へ入れ替え
-  { key = ".", mods = "ALT", action = tmux_bridge(">", act.Nop) }, -- 右へ入れ替え
+  -- ローカルペイン (PowerShell) では WezTerm タブ自体を左右へ動かす (#251)。
+  -- pwsh タブを devbox の窓列の前に置きたいときは pwsh 上で Alt+, を押す
+  { key = ",", mods = "ALT", action = tmux_bridge("<", act.MoveTabRelative(-1)) }, -- 左へ入れ替え
+  { key = ".", mods = "ALT", action = tmux_bridge(">", act.MoveTabRelative(1)) }, -- 右へ入れ替え
   { key = "t", mods = "LEADER", action = tmux_bridge(",", act.Nop) }, -- 名前変更
   { key = "w", mods = "LEADER", action = tmux_bridge("w", act.Nop) }, -- ウィンドウ一覧から選択
   -- タブ切替 Ctrl + 数字 (tmux ウィンドウ番号。base-index 1)
@@ -1241,13 +1367,16 @@ config.keys = {
   -- 画面に見えているペイン全体をまるごとコピー (tmux の prefix+Y にブリッジ)
   { key = "y", mods = "LEADER", action = tmux_bridge("Y", act.Nop) },
   {
-    -- PowerShell を新規タブで開く
+    -- PowerShell を開く。devbox の tmux 上なら prefix+P で Windows PC (aura) の pwsh を
+    -- tmux の窓として開く (#253。ssh で戻るので他の窓と同じキー・復元が効く)。
+    -- tmux 外 (devbox 停止中の切り分け等) ではローカル mux (wezterm-mux-server) 配下の
+    -- pwsh タブを開く (#251。WezTerm を閉じても残る)
     key = "P",
     mods = "LEADER|SHIFT",
-    action = act.SpawnCommandInNewTab({
-      domain = { DomainName = "local" },
+    action = tmux_bridge("P", act.SpawnCommandInNewTab({
+      domain = { DomainName = LOCAL_MUX_DOMAIN },
       args = { "pwsh.exe", "-NoLogo" },
-    }),
+    })),
   },
   {
     -- Azure devbox を新規タブで開く（停止中なら自動起動してから ssh + tmux main に attach）

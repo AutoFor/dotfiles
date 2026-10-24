@@ -3,12 +3,15 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 # =============================================================
-# Azure 開発サーバー (Ubuntu 24.04) に開発環境を流し込む。
+# 開発サーバー devbox (Ubuntu 24.04 / 26.04) に開発環境を流し込む。
 #   必要パッケージ → ghq / Node(nvm) / Claude Code → dotfiles 適用 → zsh
 # 冪等: 何度実行しても安全。
+# Azure VM でも自宅 Windows 機 (desktop) 上の Hyper-V VM でも同じものを使う (AUT-551)。
+# Azure 固有の処理 (idle-shutdown の cron) は IMDS に応答があるときだけ登録する。
 #
 # 使い方 (ローカルから VM へ):
-#   ssh azureuser@<IP> 'bash -s' < bootstrap.sh
+#   ssh <user>@<IP> 'bash -s' < bootstrap.sh
+#   DOTFILES_BRANCH=<branch> を付けると dotfiles をそのブランチで checkout する (移行作業中用)
 # =============================================================
 
 echo "########## 0) タイムゾーン (JST) ##########"
@@ -35,7 +38,9 @@ if ! /opt/nvim/bin/nvim --version >/dev/null 2>&1; then
     url="https://github.com/neovim/neovim/releases/download/stable/nvim-linux64.tar.gz"
     curl -fsSL -o "$tmp_nvim/nvim.tar.gz" "$url"
   fi
-  extracted="$(tar -tzf "$tmp_nvim/nvim.tar.gz" | head -1 | cut -d/ -f1)"
+  # head で先頭だけ読むと tar が SIGPIPE で落ち、pipefail のせいで bootstrap ごと止まる
+  # (Ubuntu 26.04 の tar で exit 141 を踏んだ)。sed は最後まで読むので安全
+  extracted="$(tar -tzf "$tmp_nvim/nvim.tar.gz" | sed -n '1{s|/.*||;p}')"
   sudo rm -rf /opt/nvim "/opt/$extracted"
   sudo tar -C /opt -xzf "$tmp_nvim/nvim.tar.gz"
   sudo mv "/opt/$extracted" /opt/nvim
@@ -70,10 +75,14 @@ export NVM_DIR="$HOME/.nvm"
 if [ ! -d "$NVM_DIR" ]; then
   curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
 fi
+# nvm.sh は set -u に対応していない (未定義変数参照で "PROVIDED_VERSION: unbound variable" になる。
+# Ubuntu 26.04 + nvm 0.40.1 で発生) ため、この区間だけ -u を外す
+set +u
 # shellcheck disable=SC1091
 . "$NVM_DIR/nvm.sh"
 nvm install --lts >/dev/null
 nvm use --lts >/dev/null
+set -u
 echo "node: $(node -v) / npm: $(npm -v)"
 npm install -g @anthropic-ai/claude-code
 echo "claude: $(claude --version 2>/dev/null || echo 'installed (要ログイン)')"
@@ -86,10 +95,22 @@ if ! /usr/bin/wezterm --version 2>/dev/null | grep -q "$WEZTERM_VERSION"; then
   tmp_wez="$(mktemp -d)"
   curl -fsSL -o "$tmp_wez/wezterm.deb" \
     "https://github.com/wez/wezterm/releases/download/${WEZTERM_VERSION}/wezterm-${WEZTERM_VERSION}.Ubuntu22.04.deb"
-  sudo apt-get install -y -qq "$tmp_wez/wezterm.deb"
+  # 旧版の .deb は新しい Ubuntu で依存関係が解決できないことがある。mux ドメインは
+  # 切り分け用のフォールバックなので、失敗しても bootstrap は止めない
+  sudo apt-get install -y -qq "$tmp_wez/wezterm.deb" \
+    || echo "wezterm: インストール失敗 (mux ドメインのフォールバックのみ影響。本線の SSH ドメインは無関係)"
   rm -rf "$tmp_wez"
 fi
-echo "wezterm: $(/usr/bin/wezterm --version)"
+echo "wezterm: $(/usr/bin/wezterm --version 2>/dev/null || echo 未導入)"
+
+echo "########## 4.6) Azure CLI (az) ##########"
+# rpa VM の起動/停止 (linux/.local/bin/rpa) と Key Vault からのキー取得 (pplx) が使う。
+# Microsoft の apt リポジトリ導入スクリプト (Ubuntu 26.04 "resolute" も提供あり)。
+if ! command -v az >/dev/null 2>&1; then
+  curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash >/dev/null \
+    || echo "az: インストール失敗 (rpa / pplx を使うときに手動で導入する)"
+fi
+echo "az: $(az version --query '"azure-cli"' -o tsv 2>/dev/null || echo 未導入)"
 
 echo "########## 4.7) Tailscale ##########"
 # iPad / iPhone / 外出先クライアントから NSG の許可 IP に依存せず SSH するための VPN (#214 Phase 4)。
@@ -108,13 +129,16 @@ echo "########## 4.8) swap + earlyoom (メモリ枯渇ハング対策) #########
 # 4GB RAM + スワップ無しだと、暴走プロセス 1 つで OOM killer が動く前に
 # システム全体が窒息して SSH ごと応答不能になる (2026-07-10 の障害)。
 # スワップで即死を防ぎ、earlyoom が限界前に最大プロセスだけを kill する。
-if ! swapon --show | grep -q /swapfile; then
+# 既にスワップがある環境 (Ubuntu Server 標準の /swap.img 等) では作らない
+if ! swapon --show --noheadings | grep -q .; then
   sudo fallocate -l 4G /swapfile
   sudo chmod 600 /swapfile
   sudo mkswap /swapfile >/dev/null
   sudo swapon /swapfile
 fi
-grep -q "^/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab >/dev/null
+if [ -f /swapfile ]; then
+  grep -q "^/swapfile" /etc/fstab || echo "/swapfile none swap sw 0 0" | sudo tee -a /etc/fstab >/dev/null
+fi
 echo "swap: $(swapon --show=SIZE --noheadings | head -1)"
 
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq earlyoom >/dev/null
@@ -125,12 +149,23 @@ sudo systemctl restart earlyoom
 echo "earlyoom: $(systemctl is-active earlyoom)"
 
 echo "########## 5) dotfiles clone & install ##########"
-if [ ! -d "$HOME/dotfiles" ]; then
-  git clone https://github.com/AutoFor/dotfiles.git "$HOME/dotfiles"
-else
-  git -C "$HOME/dotfiles" pull --ff-only || true
+# 実体は ghq の配置 (~/ghq/github.com/AutoFor/dotfiles) に置き、~/dotfiles はそこへの symlink。
+# post-commit フック (.githooks) でコミット即 push するため hooksPath も有効化する。
+DOTFILES_REPO="$HOME/ghq/github.com/AutoFor/dotfiles"
+if [ ! -d "$DOTFILES_REPO/.git" ]; then
+  if [ -d "$HOME/dotfiles/.git" ] && [ ! -L "$HOME/dotfiles" ]; then
+    mkdir -p "$(dirname "$DOTFILES_REPO")" && mv "$HOME/dotfiles" "$DOTFILES_REPO"   # 旧配置からの移動
+  else
+    git clone https://github.com/AutoFor/dotfiles.git "$DOTFILES_REPO"
+  fi
 fi
-bash "$HOME/dotfiles/install.sh"
+[ -e "$HOME/dotfiles" ] || ln -s "$DOTFILES_REPO" "$HOME/dotfiles"
+git -C "$DOTFILES_REPO" config core.hooksPath .githooks
+if [ -n "${DOTFILES_BRANCH:-}" ]; then
+  git -C "$DOTFILES_REPO" fetch -q origin "$DOTFILES_BRANCH" && git -C "$DOTFILES_REPO" checkout -q "$DOTFILES_BRANCH"
+fi
+git -C "$DOTFILES_REPO" pull --ff-only || true
+bash "$DOTFILES_REPO/install.sh"
 
 echo "########## 5.5) tmux プラグイン (TPM + resurrect) ##########"
 # VM 再起動で tmux セッションが消えるため、構成を定期保存して起動時に自動復元する。
@@ -142,23 +177,31 @@ fi
 if [ ! -d "$HOME/.tmux/plugins/tmux-resurrect" ]; then
   # install_plugins は tmux サーバーが設定を読んでいる必要がある。
   # 一時セッションを作って読み込ませる (既存セッションには触れない)。
+  # サーバーが .tmux.conf 配置より前から動いていると TMUX_PLUGIN_MANAGER_PATH が無くて
+  # "Tmux Plugin Manager not configured" で落ちるため、先に設定を読み直させる
   tmux new-session -d -s _bootstrap 2>/dev/null || true
+  tmux source-file "$HOME/.tmux.conf" 2>/dev/null || true
   "$HOME/.tmux/plugins/tpm/bin/install_plugins" || true
   tmux kill-session -t _bootstrap 2>/dev/null || true
 fi
 # 保存は cron で tmux-resurrect-autosave (linux/.local/bin) を叩く。
 # 起動直後の自動復元が完了するまで保存を保留するラッパー (復元素材の上書き防止)。
-# 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存。
+# 21:59 は 22:00 の Azure 自動シャットダウン直前の駆け込み保存 (Hyper-V でも無害なので残す)。
 # idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
 # linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
+# Azure VM でだけ意味があるので、IMDS (169.254.169.254) に応答がある場合のみ登録する。
 # cron-with-pull は実行前に dotfiles を pull するラッパー。Windows 側で直した
 # 修正が pull されないまま古いスクリプトが動き続けるのを防ぐ。
 # 注意: 既存エントリが全部フィルタされると grep が exit 1 になり、set -e で
 # サブシェルが echo 前に中断して crontab が空で登録されてしまう。|| true で防ぐ
+IDLE_CRON=""
+if curl -s -m 2 -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2021-02-01" >/dev/null 2>&1; then
+  IDLE_CRON='*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1'
+fi
 ( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown -e rpa-activity-heartbeat || true; \
   echo '*/15 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
   echo '59 21 * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
-  echo '*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1'; \
+  [ -n "$IDLE_CRON" ] && echo "$IDLE_CRON"; \
   echo '*/5 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/rpa-activity-heartbeat >/dev/null 2>&1' ) | crontab -
 echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 

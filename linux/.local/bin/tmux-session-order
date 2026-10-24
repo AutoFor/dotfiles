@@ -203,6 +203,14 @@ resolve)
   ;;
 
 attach)
+  # Tailscale SSH は PAM (pam_env) を通らず LANG が来ない。LANG 無し (= ロケール "C")
+  # のまま tmux client を起動すると非 UTF-8 端末扱いになり、罫線・アイコン等の
+  # 非 ASCII 文字が全部 "_" で描かれる (2026-10-22 Hyper-V devbox 移行で発覚)。
+  # システムのロケールを読んで補い、読めなければ UTF-8 を明示する
+  if [ -z "${LANG:-}" ]; then
+    [ -r /etc/default/locale ] && . /etc/default/locale
+    export LANG="${LANG:-C.UTF-8}"
+  fi
   want="${2:-main}"
   found=$(sh "$0" resolve "$want" || true)
   [ -n "$found" ] || found="$want"

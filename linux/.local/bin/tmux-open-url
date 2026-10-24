@@ -142,10 +142,16 @@ payload=$(printf '%s' "$url" | base64 | tr -d '\n')
 send_to() {
   [ -n "$1" ] && [ -w "$1" ] && printf '\033]1337;SetUserVar=open_url=%s\007' "$payload" > "$1"
 }
+# Tailscale SSH の client tty は root 所有で直接書けない (wezterm-tabs-sync と同じ事情)。
+# その場合はアクティブペインの tty へ tmux passthrough で包んで書き、tmux に中継させる
+send_passthrough() {
+  [ -n "$1" ] && [ -w "$1" ] &&
+    printf '\033Ptmux;\033\033]1337;SetUserVar=open_url=%s\007\033\\' "$payload" > "$1"
+}
 if ! send_to "$client_tty"; then
   # client_tty が渡らない/書けないときは全クライアントへ (通常は WezTerm 1 つ)
-  tmux list-clients -F '#{client_tty}' 2>/dev/null | while read -r tty; do
-    send_to "$tty"
+  tmux list-clients -F '#{client_tty}|#{pane_tty}' 2>/dev/null | while IFS='|' read -r tty ptty; do
+    send_to "$tty" || send_passthrough "$ptty"
   done
 fi
 exit 0

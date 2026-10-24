@@ -26,7 +26,7 @@ Windows の WezTerm からクラウド開発サーバー（Azure devbox）の tm
 
 ## 環境
 
-- **ターミナル**: WezTerm（Windows。表示器 + SSH クライアント）
+- **ターミナル**: WezTerm **Nightly**（Windows。表示器 + SSH クライアント。タブの × を消す `show_close_tab_button_in_tabs` が安定版 20240203 に無いため Nightly を使う。更新は https://github.com/wezterm/wezterm/releases/tag/nightly の `WezTerm-nightly-setup.exe` を上書きインストール。GUI と `wezterm-mux-server` は同じ版でないと繋がらないので、更新後は両方を止めてランチャーから起動し直す）
 - **開発サーバー**: Azure VM (devbox, Ubuntu 24.04)。セッション層は tmux（`ssh devbox` → `tm` でどの端末からも同じセッションに入れる）
 - **シェル**: Zsh on devbox
 - **プラグイン**: zoxide, fzf, ghq
@@ -108,7 +108,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | `<leader> →Tab` / `<leader> →Shift+Tab` | **WezTerm タブ**（devbox ⇔ PowerShell 等）の次/前へ移動。tmux 内からでも必ず WezTerm タブが切り替わるので、tmux ⇔ ローカル PowerShell の行き来はこれ。Ctrl を押しっぱなしにした `Ctrl+q → Ctrl+Tab` でも効く | タブ切り替えの WezTerm 版 |
 | `Alt+1`〜`Alt+9` | タブ番号で切り替え（プレフィックス不要。Termius 等 WezTerm 以外の端末でも効く） | 番号＝タブ位置 |
 | `Shift+←` / `Shift+→` | 前/次のタブへ移動（プレフィックス不要。どの端末でも効く。代償としてペイン内アプリに Shift+矢印は届かない） | 矢印＝方向 |
-| `Alt+,` | タブを左に移動 | `,` = `<`（左向き）と同キー |
+| `Alt+,` | タブを左に移動（PowerShell タブ上では WezTerm タブ自体が動く。pwsh を devbox の窓列の前に置くなら pwsh 上で押す） | `,` = `<`（左向き）と同キー |
 | `Alt+.` | タブを右に移動 | `.` = `>`（右向き）と同キー |
 | `<leader> →t` | 現在のタブ名を変更 | **t**ab の名前 |
 | `<leader> →w` | タブ一覧から選択 | **w**indow |
@@ -128,7 +128,7 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | `Alt+h/j/k/l` | ペイン移動（vim の hjkl）。**端で止まらず、横はタブ・縦はセッションを跨ぐ**: 一番左で `Alt+h` → 前のタブの一番右のペイン / 一番右で `Alt+l` → 次のタブの一番左のペイン / 一番上で `Alt+k` → 前のセッションの一番下のペイン / 一番下で `Alt+j` → 次のセッションの一番上のペイン。タブもセッションも端で巻き戻るので、押し続ければ全部を一周できる。**横軸＝タブ、縦軸＝セッション**と覚える。右列が上下分割されたタブに左から入ると下側のペインに着く（tmux が指定できる角が `{bottom-right}` のため） | vim の hjkl |
 | `Alt+u` / `Alt+i` | 履歴を半ページ**下 / 上**にスクロール（prefix も `[` も不要）。copy-mode に入った後もそのまま連打できる。下へ戻して最下行に着くと自動で抜ける（見るだけ用。選択・コピーするなら `<leader> →[` から入る） | j/k と同じ空間配置（左のキー=下、右のキー=上） |
 | `Ctrl+←/→/↑/↓` | 同じ挙動（Termius 等 Alt が届かないクライアント用）。**WezTerm では `Alt+矢印` は tmux まで届かない**ので、WezTerm からは `Alt+h/j/k/l` を使う | 矢印キー = 方向 |
-| `Alt+p` | 現在のペインに名前を付ける（空 Enter で解除して自動表示に戻る。`<leader> →p` / `Ctrl+b → Shift+T` でも可。名前は 15 分ごとに保存され、VM 再起動後も tmux-resurrect の復元と一緒に戻る） | **p**ane name |
+| `Alt+p` | 現在のペインに名前を付ける（分割した窓では各ペインの上辺ボーダーに出る。**ペインが 1 つの窓ではその名前がそのままタブ名＝ヘッダーに出る**。空 Enter で解除して自動表示に戻る。`<leader> →p` / `Ctrl+b → Shift+T` でも可。名前は 15 分ごとに保存され、VM 再起動後も tmux-resurrect の復元と一緒に戻る） | **p**ane name |
 | `Alt+y` | **このペインの識別子をクリップボードへコピー**（AI に「このペインだよ」と渡す用）。中身は `%22 (01-InProgress:5.1 scraper / claude)` のように、先頭が tmux サーバー全体で一意な**ペイン ID**（`%22`）、括弧内が人が読む位置情報。ペイン番号（`1.1`）はウィンドウ内でしか一意でなく、`セッション:ウィンドウ.ペイン` 形式は `<leader> →m` で動かすとずれるが、ペイン ID はペインが生きている間変わらず、AI 側はそのまま `tmux send-keys -t %22` 等の `-t` に渡せる。VM 再起動（resurrect 復元）で振り直されるので再起動をまたぐ指示には使わない | **y**ank |
 | `Alt+r` / `Alt+Shift+r` | ペインを次/前に回転して入れ替え | **r**otate |
 | `Alt+z`（`<leader> →z`） | 現在のペインをズーム（トグル）。`Alt+z` はプレフィックス不要の 1 打鍵版 | **z**oom |
@@ -144,8 +144,8 @@ tmux はセッションを名前の昇順でしか並べない（`Alt+k/j` で�
 | ショートカット | 動作 | 由来 |
 |--------------|------|------|
 | `<leader> →a` | devbox の tmux main セッションを新規タブで開く（VM 停止中でも自動起動してから attach。休止/切断後の復帰はこれ） | **a**zure |
-| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
-| `<leader> →Shift+P` | ローカル PowerShell タブを開く（切り分け用） | **P**owerShell |
+| `<leader> →l` | ランチャーを表示。入り先は **Azure devbox (tmux) / Windows Server rpa (SSH) / PowerShell** の 3 つ。devbox と rpa はそれぞれ専用 workspace の tmux セッションに入る。PowerShell は `<leader> →Shift+P` と同じくローカル mux 配下で開く。以前あった tmux セッションの個別列挙は workspace 切り替えで足りるためやめ、切り分け専用の「mux フォールバック」「素の SSH」も外した（mux は `<leader> →Shift+A`） | **l**aunch |
+| `<leader> →Shift+P` | PowerShell を開く。devbox の tmux 上では **Windows PC (desktop) の pwsh を tmux の窓 `pwsh` として開く**（devbox から Tailscale 経由で Windows の OpenSSH Server に ssh。他の窓と同じく `Ctrl+Tab` / `Alt+,` が効き、WezTerm を閉じても tmux が持ち、resurrect で窓ごと戻る。pwsh は新規起動なので中の Claude Code は `claude --resume` で拾う。ssh が切れても窓は残り Enter で再接続）。tmux 外（devbox 停止中の切り分け）ではローカル mux (wezterm-mux-server) 配下の pwsh タブを開く（WezTerm を閉じても残り、次に `Shift+P` したとき一緒に戻る。mux サーバーはこのとき初めて起動する） | **P**owerShell |
 | `<leader> →Shift+A` | 旧 wezterm mux ドメインに attach（切り分け用フォールバック。通常は使わない） | **A**ttach |
 | `<leader> →Shift+D` | 旧 wezterm mux ドメインから detach（切り分け用フォールバック） | **D**etach |
 
@@ -1202,6 +1202,7 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
 | `claude -y` / `claude da` | 権限確認をスキップして起動（`--dangerously-skip-permissions`） | **y**es（`codex -y` と統一）/ **da**nger の略 |
+| `glm` / `glm -y` | Z.ai の **GLM-5.3-Flash** で Claude Code を起動（`ANTHROPIC_BASE_URL` を Z.ai に向ける。API キーは起動のたびに Azure Key Vault `autofor-kv/zai-api-key` から取得。`GLM_MODEL=glm-5.3` でモデル変更可） | モデル名そのまま |
 
 #### トークン使用量・コスト集計（ccusage）
 

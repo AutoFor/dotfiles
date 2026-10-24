@@ -21,7 +21,6 @@ if (-not (Test-Path $wezterm)) {
     Start-Sleep -Seconds 5
     exit 1
 }
-
 # 前面化まわりの Win32 API (wezterm-jump.ps1 と同じ手口)
 Add-Type @"
 using System;

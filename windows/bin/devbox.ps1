@@ -1,5 +1,8 @@
-﻿# ===== Azure 開発サーバー (devbox) の起動・接続 CLI（Windows 用） =====
+﻿# ===== 開発サーバー (devbox) の起動・接続 CLI（Windows 用） =====
 # 旧 WSL 版 ~/.local/bin/devbox の移植。az CLI は Windows 側に導入して使う。
+# 注意 (AUT-551): devbox は自宅 Windows 機 (desktop) 上の Hyper-V VM に移った。
+#   up/down/status/nsg は旧 Azure VM (rg-devbox) を操作するため、Azure 撤去までの暫定。
+#   WezTerm の gui-startup からの ensure 呼び出しは廃止済み (.wezterm.lua の ensure_devbox)。
 #
 # 使い方: pwsh -File devbox.ps1 [connect|ensure|up|down|status|nsg|nsg-close]
 #   connect  : VM 起動を担保してから ssh で接続する（既定。Tailscale 経由）
@@ -21,8 +24,8 @@ param(
 
 $RG      = if ($env:DEVBOX_RG)       { $env:DEVBOX_RG }       else { "rg-devbox" }
 $VM      = if ($env:DEVBOX_VM)       { $env:DEVBOX_VM }       else { "devbox" }
-$User    = if ($env:DEVBOX_USER)     { $env:DEVBOX_USER }     else { "azureuser" }
-$IP      = if ($env:DEVBOX_IP)       { $env:DEVBOX_IP }       else { "100.126.96.27" }  # Tailscale IP（ノード固有で不変）
+$User    = if ($env:DEVBOX_USER)     { $env:DEVBOX_USER }     else { "seiya" }
+$IP      = if ($env:DEVBOX_IP)       { $env:DEVBOX_IP }       else { "100.124.128.55" }  # Tailscale IP（ノード固有で不変）
 $PublicIP = if ($env:DEVBOX_PUBLIC_IP) { $env:DEVBOX_PUBLIC_IP } else { "20.46.165.130" }  # Standard SKU の静的公開 IP（フォールバック用）
 $NsgRg   = if ($env:DEVBOX_NSG_RG)   { $env:DEVBOX_NSG_RG }   else { $RG }
 $Nsg     = if ($env:DEVBOX_NSG)      { $env:DEVBOX_NSG }      else { "devboxNSG" }

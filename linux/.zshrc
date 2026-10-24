@@ -307,6 +307,49 @@ codex() {
   fi
 }
 
+# glm: Z.ai の GLM-5.3-Flash で Claude Code を起動する (Anthropic 互換エンドポイント経由)。
+# API キーは起動のたびに Azure Key Vault (autofor-kv / zai-api-key) から取得する (pplx と同じ方式)。
+# ZAI_API_KEY 環境変数があればそちらを優先し Key Vault 取得はスキップする。
+# glm -y / glm da は claude -y / claude da と同じ。settings.json の model (fable 等) は
+# Z.ai に無いので --model を明示して上書きする。モデルは GLM_MODEL で変更可 (例: glm-5.3)
+glm() {
+  local key="$ZAI_API_KEY"
+  local vault="${ZAI_KEYVAULT_NAME:-autofor-kv}" secret="${ZAI_KEYVAULT_SECRET_NAME:-zai-api-key}"
+  if [[ -z "$key" ]]; then
+    if ! command -v az >/dev/null 2>&1; then
+      echo "az (Azure CLI) が見つかりません。Key Vault から API キーを取得できません" >&2
+      return 1
+    fi
+    local err
+    if ! key="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv 2>&1)"; then
+      err="$key"; key=""
+      case "$err" in
+        *"az login"*|*AADSTS*|*"Please run"*)
+          echo "Azure にログインしていません。\`az login\` を実行してください" >&2 ;;
+        *Forbidden*|*"does not have secrets"*)
+          echo "Key Vault '${vault}' へのアクセス権がありません: ${err}" >&2 ;;
+        *SecretNotFound*)
+          echo "シークレット '${secret}' が Key Vault '${vault}' にありません。登録例:" >&2
+          echo "  az keyvault secret set --vault-name ${vault} --name ${secret} --value '<API キー>'" >&2 ;;
+        *) echo "Key Vault からの取得に失敗しました: ${err}" >&2 ;;
+      esac
+      return 1
+    fi
+    [[ -n "$key" ]] || { echo "Key Vault から取得した API キーが空でした" >&2; return 1; }
+  fi
+  local model="${GLM_MODEL:-glm-5.3-flash}"
+  local -a mode=()
+  if [[ "$1" == "-y" || "$1" == "da" ]]; then mode=("$1"); shift; fi
+  ANTHROPIC_AUTH_TOKEN="$key" \
+  ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="$model" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="$model" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-5.3-flash" \
+  API_TIMEOUT_MS=3000000 \
+  CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+  claude "${mode[@]}" --model "$model" "$@"
+}
+
 # ccusage: Claude Code / Codex のトークン使用量・コストを集計
 # ccusage daily / weekly / monthly / session / blocks --live など
 alias ccusage='npx ccusage@latest'
@@ -434,3 +477,6 @@ export NVM_DIR="$HOME/.nvm"
 if command -v nvm >/dev/null 2>&1 && [[ "$(nvm current)" == "system" ]]; then
   echo "⚠ nvm が system node にフォールバックしています。'nvm alias default <installed-version>' で固定してください" >&2
 fi
+
+# kimi (Kimi Code CLI) は ~/.kimi-code/bin に入る。ユーザー名に依存しない形で PATH に通す
+export PATH="$HOME/.kimi-code/bin:$PATH"

@@ -35,11 +35,11 @@ WezTerm の設定が参照するフォントを入れる (ユーザーローカ�
 
 ```powershell
 gh auth login        # GitHub
-az login             # Azure (devbox の起動権限があるアカウント)
+az login             # Azure (rpa VM の起動権限があるアカウント。devbox の起動には不要)
 tailscale up         # devbox と同じ tailnet に参加
 ```
 
-参加後、`tailscale status` に devbox (100.126.96.27) が見えることを確認する。
+参加後、`tailscale status` に devbox (100.124.128.55) が見えることを確認する。
 
 ## 4. dotfiles の取得とリンク
 
