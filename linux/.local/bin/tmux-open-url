@@ -144,14 +144,38 @@ send_to() {
 }
 # Tailscale SSH の client tty は root 所有で直接書けない (wezterm-tabs-sync と同じ事情)。
 # その場合はアクティブペインの tty へ tmux passthrough で包んで書き、tmux に中継させる
+#
+# ただしペインが copy-mode (Alt+i / prefix C-u でスクロール中) だと tmux はペインの
+# 出力を tty に流さない (モード中は画面バッファにだけ書き、クライアントへの転送を
+# 切る) ので passthrough も捨てられ、URL を選んでも何も起きない (#256)。
+# popup 自身の tty から書く手も tmux がペイン無しの passthrough を無視するので使えない。
+# そこで送る直前に copy-mode を抜け、送った後で同じスクロール位置へ戻す。
+# 抜けた直後はペイン全体の再描画待ちで出力が捨てられるので、一拍おいてから書く
 send_passthrough() {
-  [ -n "$1" ] && [ -w "$1" ] &&
-    printf '\033Ptmux;\033\033]1337;SetUserVar=open_url=%s\007\033\\' "$payload" > "$1"
+  ptty=$1; pid=$2
+  [ -n "$ptty" ] && [ -w "$ptty" ] || return 1
+  mode=""; pos=0
+  if [ -n "$pid" ]; then
+    mode=$(tmux display-message -p -t "$pid" '#{?pane_in_mode,#{pane_mode},}' 2>/dev/null)
+    if [ -n "$mode" ]; then
+      pos=$(tmux display-message -p -t "$pid" '#{scroll_position}' 2>/dev/null)
+      tmux send-keys -t "$pid" -X cancel 2>/dev/null
+      sleep 0.15
+    fi
+  fi
+  printf '\033Ptmux;\033\033]1337;SetUserVar=open_url=%s\007\033\\' "$payload" > "$ptty"
+  if [ "$mode" = "copy-mode" ]; then
+    # 送った分が tty に流れてから戻す。-e は Alt+i / prefix C-u と同じ (最下行で自動解除)
+    sleep 0.15
+    tmux copy-mode -e -t "$pid" 2>/dev/null
+    [ "${pos:-0}" -gt 0 ] && tmux send-keys -t "$pid" -X -N "$pos" scroll-up 2>/dev/null
+  fi
+  return 0
 }
 if ! send_to "$client_tty"; then
   # client_tty が渡らない/書けないときは全クライアントへ (通常は WezTerm 1 つ)
-  tmux list-clients -F '#{client_tty}|#{pane_tty}' 2>/dev/null | while IFS='|' read -r tty ptty; do
-    send_to "$tty" || send_passthrough "$ptty"
+  tmux list-clients -F '#{client_tty}|#{pane_tty}|#{pane_id}' 2>/dev/null | while IFS='|' read -r tty ptty ppid; do
+    send_to "$tty" || send_passthrough "$ptty" "$ppid"
   done
 fi
 exit 0
