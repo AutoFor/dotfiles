@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# op-mcp: 環境変数の op:// 参照を 1Password から解決してコマンドを起動する (MCP サーバーのラッパー)。
+# ~/.claude.json の env に op:// 参照を書き、command をこのスクリプトにして使う。設定は op-mcp-setup が行う。
+set -euo pipefail
+
+TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token}"
+
+if [[ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" && -r "$TOKEN_FILE" ]]; then
+  OP_SERVICE_ACCOUNT_TOKEN="$(<"$TOKEN_FILE")"
+  export OP_SERVICE_ACCOUNT_TOKEN
+fi
+
+# MCP の stdio (JSON-RPC) を書き換えないようマスキングを切る
+exec op run --no-masking -- "$@"

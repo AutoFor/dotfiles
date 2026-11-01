@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# op-mcp-setup: ~/.claude.json の MCP API キーを 1Password へ移し、op-mcp 経由の起動に書き換える。
+# 再実行しても安全 (登録済みの項目・書き換え済みのサーバーはスキップする)。
+#   op-mcp-setup               全手順を実行 (端末で 1Password へのサインインが必要)
+#   op-mcp-setup rewrite FILE  FILE の書き換えだけを行う
+set -euo pipefail
+
+VAULT="${OP_MCP_VAULT:-Claude-Code}"
+SERVICE_ACCOUNT="${OP_MCP_SERVICE_ACCOUNT:-devbox-claude-code}"
+TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token}"
+CLAUDE_JSON="$HOME/.claude.json"
+WRAPPER="$HOME/.local/bin/op-mcp"
+
+# 環境変数名 → 1Password の項目名
+declare -A ITEMS=(
+  [PERPLEXITY_API_KEY]=perplexity
+  [TODOIST_API_KEY]=todoist
+  [BACKLOG_API_KEY]=backlog
+)
+
+log() { printf '[INFO] %s\n' "$*"; }
+die() { printf '[ERROR] %s\n' "$*" >&2; exit 1; }
+
+ref() { printf 'op://%s/%s/credential' "$VAULT" "${ITEMS[$1]}"; }
+
+rewrite() {
+  local file="$1" refs="{}" name tmp
+  for name in "${!ITEMS[@]}"; do
+    refs="$(jq -c --arg k "$name" --arg v "$(ref "$name")" '.[$k]=$v' <<<"$refs")"
+  done
+  tmp="$(mktemp "$file.XXXXXX")"
+  chmod 600 "$tmp"
+  jq --argjson refs "$refs" --arg w "$WRAPPER" '
+    def conv: map_values(
+      if .command != $w and ((.env // {}) | keys | any(. as $k | $refs | has($k))) then
+        .args = [.command] + (.args // [])
+        | .command = $w
+        | .env |= with_entries(.value = ($refs[.key] // .value))
+      else . end);
+    (if .mcpServers then .mcpServers |= conv else . end)
+    | (if .projects then .projects |= map_values(if .mcpServers then .mcpServers |= conv else . end) else . end)
+  ' "$file" >"$tmp"
+  mv "$tmp" "$file"
+}
+
+import_item() {
+  local name="$1" title="${ITEMS[$1]}"
+  if op item get "$title" --vault "$VAULT" >/dev/null 2>&1; then
+    log "登録済み: $title"
+    return 0
+  fi
+  # キーをシェル変数や引数に載せず、jq から op へ直接パイプする
+  jq -ce --arg k "$name" --arg t "$title" '
+    [(.mcpServers // {}), (.projects // {} | .[].mcpServers // {}) | .[].env[$k]? // empty
+      | select(startswith("op://") | not)] | first
+    | {title: $t, category: "API_CREDENTIAL",
+       fields: [{id: "credential", type: "CONCEALED", value: .}]}
+  ' "$CLAUDE_JSON" | op item create --vault "$VAULT" --format json - >/dev/null \
+    || die "$title を登録できませんでした"
+  log "登録: $title"
+}
+
+if [[ "${1:-}" == "rewrite" ]]; then
+  rewrite "${2:?ファイルを指定してください}"
+  exit 0
+fi
+
+command -v op >/dev/null 2>&1 || die "op が見つかりません"
+[[ -t 0 ]] || die "サインインが必要なので端末で実行してください"
+[[ -x "$WRAPPER" ]] || die "$WRAPPER がありません"
+unset OP_SERVICE_ACCOUNT_TOKEN
+
+# 1. 個人アカウントでサインイン (キーの登録と Service Account の作成に使う)
+[[ -n "$(op account list 2>/dev/null)" ]] || op account add
+eval "$(op signin)"
+
+# 2. 専用 Vault を用意してキーを登録
+op vault get "$VAULT" >/dev/null 2>&1 || { op vault create "$VAULT" >/dev/null; log "Vault 作成: $VAULT"; }
+for name in "${!ITEMS[@]}"; do
+  import_item "$name"
+done
+
+# 3. その Vault だけを読める Service Account を作成 (トークンは作成時にしか取得できない)
+if [[ ! -s "$TOKEN_FILE" ]]; then
+  token="$(op service-account create "$SERVICE_ACCOUNT" --vault "$VAULT:read_items" --raw)" \
+    || die "Service Account を作成できませんでした"
+  mkdir -p "$(dirname "$TOKEN_FILE")"
+  chmod 700 "$(dirname "$TOKEN_FILE")"
+  (umask 077; printf '%s' "$token" >"$TOKEN_FILE")
+  unset token
+  log "トークン保存: $TOKEN_FILE"
+fi
+
+# 4. 書き換える前に、Service Account でキーを読めることを確かめる
+for name in "${!ITEMS[@]}"; do
+  [[ -n "$(OP_SERVICE_ACCOUNT_TOKEN="$(<"$TOKEN_FILE")" op read "$(ref "$name")")" ]] \
+    || die "$(ref "$name") を読めませんでした。~/.claude.json は変更していません"
+done
+log "Service Account での読み取りを確認"
+
+# 5. バックアップして書き換え
+backup="$CLAUDE_JSON.pre-op-$(date +%Y%m%d%H%M%S)"
+(umask 077; cp "$CLAUDE_JSON" "$backup")
+rewrite "$CLAUDE_JSON"
+log "書き換え完了。バックアップ (平文のキーを含む): $backup"

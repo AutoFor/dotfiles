@@ -72,6 +72,18 @@ cp mcp/mcp-config.json.example ~/.claude/mcp.json
 # ~/.claude/mcp.json を編集して GitHub PAT を設定
 ```
 
+#### API キーを 1Password で管理する（devbox）
+
+`~/.claude.json` の MCP API キーを Vault `Claude-Code` に移し、`op-mcp` が起動時に注入する。
+認証はこの Vault だけを読める Service Account（トークン: `~/.config/op/service-account-token`）。
+
+```bash
+# op の導入: https://developer.1password.com/docs/cli/get-started/
+op-mcp-setup   # 端末で実行。キー登録 → Service Account 作成 → ~/.claude.json 書き換え
+```
+
+新しいサーバーは `command` を `~/.local/bin/op-mcp`、`args` の先頭を元のコマンドにし、`env` に `op://Claude-Code/<項目>/credential` を書く。
+
 ### 3. GitHub App 設定（PR 自動承認用）
 
 ```bash
