@@ -75,7 +75,7 @@ cp mcp/mcp-config.json.example ~/.claude/mcp.json
 #### API キーを 1Password で管理する（devbox）
 
 `~/.claude.json` の MCP API キーを Vault `Claude-Code` に移し、`op-mcp` が起動時に注入する。
-認証はこの Vault だけを読める Service Account（トークン: `~/.config/op/service-account-token`）。
+認証はこの Vault だけを読める Service Account（トークン: `~/.config/op/service-account-token.cred`。`systemd-creds --user` で暗号化）。
 
 ```bash
 # op の導入: https://developer.1password.com/docs/cli/get-started/

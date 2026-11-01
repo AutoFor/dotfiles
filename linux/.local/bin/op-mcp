@@ -3,12 +3,13 @@
 # ~/.claude.json の env に op:// 参照を書き、command をこのスクリプトにして使う。設定は op-mcp-setup が行う。
 set -euo pipefail
 
-TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token}"
+TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token.cred}"
 
 if [[ -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" && -r "$TOKEN_FILE" ]]; then
-  OP_SERVICE_ACCOUNT_TOKEN="$(<"$TOKEN_FILE")"
+  OP_SERVICE_ACCOUNT_TOKEN="$(systemd-creds --user decrypt --name=op-mcp "$TOKEN_FILE" -)"
   export OP_SERVICE_ACCOUNT_TOKEN
 fi
 
 # MCP の stdio (JSON-RPC) を書き換えないようマスキングを切る
-exec op run --no-masking -- "$@"
+# Service Account のトークンは MCP サーバーへ渡さない
+exec op run --no-masking -- env -u OP_SERVICE_ACCOUNT_TOKEN "$@"

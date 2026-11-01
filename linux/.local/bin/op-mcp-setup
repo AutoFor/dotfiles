@@ -7,7 +7,7 @@ set -euo pipefail
 
 VAULT="${OP_MCP_VAULT:-Claude-Code}"
 SERVICE_ACCOUNT="${OP_MCP_SERVICE_ACCOUNT:-devbox-claude-code}"
-TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token}"
+TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token.cred}"
 CLAUDE_JSON="$HOME/.claude.json"
 WRAPPER="$HOME/.local/bin/op-mcp"
 
@@ -86,14 +86,14 @@ if [[ ! -s "$TOKEN_FILE" ]]; then
     || die "Service Account を作成できませんでした"
   mkdir -p "$(dirname "$TOKEN_FILE")"
   chmod 700 "$(dirname "$TOKEN_FILE")"
-  (umask 077; printf '%s' "$token" >"$TOKEN_FILE")
+  (umask 077; printf '%s' "$token" | systemd-creds --user encrypt --name=op-mcp - "$TOKEN_FILE")
   unset token
   log "トークン保存: $TOKEN_FILE"
 fi
 
 # 4. 書き換える前に、Service Account でキーを読めることを確かめる
 for name in "${!ITEMS[@]}"; do
-  [[ -n "$(OP_SERVICE_ACCOUNT_TOKEN="$(<"$TOKEN_FILE")" op read "$(ref "$name")")" ]] \
+  [[ -n "$(OP_SERVICE_ACCOUNT_TOKEN="$(systemd-creds --user decrypt --name=op-mcp "$TOKEN_FILE" -)" op read "$(ref "$name")")" ]] \
     || die "$(ref "$name") を読めませんでした。~/.claude.json は変更していません"
 done
 log "Service Account での読み取りを確認"
