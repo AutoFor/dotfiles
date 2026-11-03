@@ -139,5 +139,20 @@ else
 fi
 
 echo ""
+echo "=== 常設の仮の画面 :99 (Xvfb + VNC + noVNC) ==="
+
+# 実画面の Chrome が要るワーカーは DISPLAY=:99 で動かし、人は noVNC で覗く(RDP 不要)。
+# 要るパッケージ: xvfb x11vnc novnc websockify openbox
+for unit in devbox-display.service devbox-vnc.service devbox-novnc.service; do
+  link_file "$DOTFILES_DIR/linux/.config/systemd/user/$unit" "$HOME/.config/systemd/user/$unit"
+done
+if command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user daemon-reload
+  systemctl --user enable --now devbox-display.service devbox-vnc.service devbox-novnc.service
+else
+  echo "  スキップ: systemd --user が使えない"
+fi
+
+echo ""
 echo "=== 完了 ==="
 echo "新しいターミナルを開いて設定が反映されていることを確認してください。"

@@ -1,0 +1,14 @@
+# ブラウザから :99 を見る noVNC (127.0.0.1:6080)。
+# 手元で: ssh -L 6080:localhost:6080 devbox → http://localhost:6080/vnc.html
+[Unit]
+Description=:99 の noVNC (127.0.0.1:6080)
+Requires=devbox-vnc.service
+After=devbox-vnc.service
+
+[Service]
+ExecStart=/usr/bin/websockify --web /usr/share/novnc 127.0.0.1:6080 127.0.0.1:5999
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target

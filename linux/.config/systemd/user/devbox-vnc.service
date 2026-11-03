@@ -1,0 +1,13 @@
+# :99 を VNC で公開する。127.0.0.1 だけで待ち受け、外へは SSH のポート転送でだけ出す(パスワード無し)。
+[Unit]
+Description=:99 の VNC サーバー (127.0.0.1:5999)
+Requires=devbox-display.service
+After=devbox-display.service
+
+[Service]
+ExecStart=/usr/bin/x11vnc -display :99 -rfbport 5999 -localhost -forever -shared -nopw -quiet
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
