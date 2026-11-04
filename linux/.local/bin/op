@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# op: devbox では 1Password CLI を常に Service Account で動かすラッパー。
+# devbox には画面が無くデスクトップアプリ連携が使えないため、人も Claude Code も
+# Service Account (読める vault を絞った読み取り専用) を使い、ロック解除の入力をなくす。
+# 個人アカウントで使いたいときは OP_PERSONAL=1 op ... (従来どおり op signin が必要)。
+set -euo pipefail
+
+REAL_OP=/usr/bin/op
+TOKEN_FILE="${OP_MCP_TOKEN_FILE:-$HOME/.config/op/service-account-token.cred}"
+
+if [[ -z "${OP_PERSONAL:-}" && -z "${OP_SERVICE_ACCOUNT_TOKEN:-}" && -r "$TOKEN_FILE" ]]; then
+  OP_SERVICE_ACCOUNT_TOKEN="$(systemd-creds --user decrypt --name=op-mcp "$TOKEN_FILE" -)"
+  export OP_SERVICE_ACCOUNT_TOKEN
+fi
+
+exec "$REAL_OP" "$@"
