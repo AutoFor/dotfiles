@@ -522,7 +522,7 @@ Tailscale の IP（`100.x.x.x`）や MagicDNS 名がそのまま使える。
 | `pplx -m sonar-pro "質問文"` | モデルを指定（既定は `sonar`、`PPLX_MODEL` 環境変数でも上書き可） |
 
 Web 検索で根拠付けされた回答を返す Perplexity Sonar API（`/v1/sonar`）を呼び出す。
-APIキーはローカルに保存せず、起動のたびに Azure Key Vault（既定: `autofor-kv` / シークレット名: `perplexity-api-key`）から取得する。これにより毎回の起動時に Azure へのログイン状態・Key Vault への権限が正しいかを確認できる（`az login` が必要な場合はエラーで案内される）。テスト用に `PERPLEXITY_API_KEY` 環境変数を設定すると、その値が優先され Key Vault 取得はスキップされる。
+APIキーはローカルに保存せず、起動のたびに 1Password（既定: `op://Claude-Code/perplexity/credential`。`PPLX_OP_REF` で変更可）から取得する。devbox の `op` は Service Account で動くため、ロック解除の入力は不要。テスト用に `PERPLEXITY_API_KEY` 環境変数を設定すると、その値が優先され 1Password 取得はスキップされる。
 実体は `linux/.local/bin/pplx`（devbox 上で実行）。
 
 ---
@@ -1210,7 +1210,7 @@ Neovim 内の Claude Code は「閉じて再度開く」ことで再起動でき
 | `claude` | 新規セッションで Claude Code を起動 | コマンド名そのまま |
 | `claude -r <セッション名>` | 指定セッションで再開 | **r**esume |
 | `claude -y` / `claude da` | 権限確認をスキップして起動（`--dangerously-skip-permissions`） | **y**es（`codex -y` と統一）/ **da**nger の略 |
-| `glm` / `glm -y` | Z.ai の **GLM-5.3-Flash** で Claude Code を起動（`ANTHROPIC_BASE_URL` を Z.ai に向ける。API キーは起動のたびに Azure Key Vault `autofor-kv/zai-api-key` から取得。`GLM_MODEL=glm-5.3` でモデル変更可） | モデル名そのまま |
+| `glm` / `glm -y` | Z.ai の **GLM-5.3-Flash** で Claude Code を起動（`ANTHROPIC_BASE_URL` を Z.ai に向ける。API キーは起動のたびに 1Password `op://Claude-Code/zai-api-key/credential` から取得。`GLM_MODEL=glm-5.3` でモデル変更可） | モデル名そのまま |
 
 #### トークン使用量・コスト集計（ccusage）
 

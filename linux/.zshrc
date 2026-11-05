@@ -308,34 +308,23 @@ codex() {
 }
 
 # glm: Z.ai の GLM-5.3-Flash で Claude Code を起動する (Anthropic 互換エンドポイント経由)。
-# API キーは起動のたびに Azure Key Vault (autofor-kv / zai-api-key) から取得する (pplx と同じ方式)。
-# ZAI_API_KEY 環境変数があればそちらを優先し Key Vault 取得はスキップする。
+# API キーは起動のたびに 1Password (op://Claude-Code/zai-api-key/credential) から取得する (pplx と同じ方式)。
+# ZAI_API_KEY 環境変数があればそちらを優先し 1Password 取得はスキップする。
 # glm -y / glm da は claude -y / claude da と同じ。settings.json の model (fable 等) は
 # Z.ai に無いので --model を明示して上書きする。モデルは GLM_MODEL で変更可 (例: glm-5.3)
 glm() {
   local key="$ZAI_API_KEY"
-  local vault="${ZAI_KEYVAULT_NAME:-autofor-kv}" secret="${ZAI_KEYVAULT_SECRET_NAME:-zai-api-key}"
+  local ref="${ZAI_OP_REF:-op://Claude-Code/zai-api-key/credential}"
   if [[ -z "$key" ]]; then
-    if ! command -v az >/dev/null 2>&1; then
-      echo "az (Azure CLI) が見つかりません。Key Vault から API キーを取得できません" >&2
+    if ! command -v op >/dev/null 2>&1; then
+      echo "op (1Password CLI) が見つかりません。1Password から API キーを取得できません" >&2
       return 1
     fi
-    local err
-    if ! key="$(az keyvault secret show --vault-name "$vault" --name "$secret" --query value -o tsv 2>&1)"; then
-      err="$key"; key=""
-      case "$err" in
-        *"az login"*|*AADSTS*|*"Please run"*)
-          echo "Azure にログインしていません。\`az login\` を実行してください" >&2 ;;
-        *Forbidden*|*"does not have secrets"*)
-          echo "Key Vault '${vault}' へのアクセス権がありません: ${err}" >&2 ;;
-        *SecretNotFound*)
-          echo "シークレット '${secret}' が Key Vault '${vault}' にありません。登録例:" >&2
-          echo "  az keyvault secret set --vault-name ${vault} --name ${secret} --value '<API キー>'" >&2 ;;
-        *) echo "Key Vault からの取得に失敗しました: ${err}" >&2 ;;
-      esac
+    if ! key="$(op read --no-newline "$ref" 2>&1)"; then
+      echo "1Password からの取得に失敗しました (${ref}): ${key}" >&2
       return 1
     fi
-    [[ -n "$key" ]] || { echo "Key Vault から取得した API キーが空でした" >&2; return 1; }
+    [[ -n "$key" ]] || { echo "1Password から取得した API キーが空でした" >&2; return 1; }
   fi
   local model="${GLM_MODEL:-glm-5.3-flash}"
   local -a mode=()
