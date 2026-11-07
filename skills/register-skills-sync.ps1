@@ -10,7 +10,10 @@ param(
     [string]$UserId = "$env:USERDOMAIN\$env:USERNAME",
     [string]$HomeDir = $env:USERPROFILE,
     [string]$DotfilesDir = (Split-Path -Parent $PSScriptRoot),
-    [string]$TaskName = "dotfiles-skills-sync"
+    [string]$TaskName = "dotfiles-skills-sync",
+    # Interactive: そのユーザーがログオン中だけ動く (管理者権限不要)
+    # S4U: ログオフ中も動く (登録に管理者権限が要る。パスワードは保存しない)
+    [ValidateSet("Interactive", "S4U")][string]$LogonType = "Interactive"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,10 +28,10 @@ $action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\conhost.exe
 
 $logon = New-ScheduledTaskTrigger -AtLogOn -User $UserId
 $every = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 15)
-$principal = New-ScheduledTaskPrincipal -UserId $UserId -LogonType Interactive -RunLevel Limited
+$principal = New-ScheduledTaskPrincipal -UserId $UserId -LogonType $LogonType -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
     -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 5)
 
 Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger @($logon, $every) `
     -Principal $principal -Settings $settings -Force | Out-Null
-Write-Host "${TaskName}: $UserId 用に登録しました (ログオン時 + 15 分ごと) -> $sync"
+Write-Host "${TaskName}: $UserId 用に登録しました ($LogonType, ログオン時 + 15 分ごと) -> $sync"

@@ -13,7 +13,9 @@ $log = Join-Path $logDir "skills-sync.log"
 function Write-Log([string]$msg) { Add-Content -Path $log -Value ("{0} {1}" -f (Get-Date -Format "yyyy-MM-dd HH:mm:ss"), $msg) -Encoding utf8 }
 
 # pull は 60 秒で打ち切る (ネットワークが無いときに溜まらないように)
-$job = Start-Job -ScriptBlock { param($d) git -C $d pull -q 2>&1; $LASTEXITCODE } -ArgumentList $DotfilesDir
+$job = Start-Job -ScriptBlock { param($d)
+    # 別ユーザー (管理者) が触ったクローンでも "dubious ownership" で止まらないよう、このリポジトリだけ信頼する
+    git -c "safe.directory=$($d.Replace('\', '/'))" -C $d pull -q 2>&1; $LASTEXITCODE } -ArgumentList $DotfilesDir
 if (Wait-Job $job -Timeout 60) {
     $out = @(Receive-Job $job)
     $code = $out[-1]
