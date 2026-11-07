@@ -75,6 +75,13 @@ Link-File -Source "$DotfilesWindows\.wezterm.lua" -Destination "$WinHome\.wezter
 Link-File -Source "$DotfilesWindows\.gitconfig"   -Destination "$WinHome\.gitconfig"
 Link-File -Source "$DotfilesWindows\.bashrc"      -Destination "$WinHome\.bashrc"
 
+# pwsh プロファイル。ドキュメントは OneDrive にリダイレクトされることがあるので API で解決する
+$PwshProfileDir = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell"
+if (-not (Test-Path $PwshProfileDir)) {
+    New-Item -ItemType Directory -Path $PwshProfileDir -Force | Out-Null
+}
+Link-File -Source "$DotfilesWindows\powershell\Microsoft.PowerShell_profile.ps1" -Destination "$PwshProfileDir\Microsoft.PowerShell_profile.ps1"
+
 # SSH 設定 (#214 Phase 3: `ssh devbox` を全クライアント共通の入口にする)
 $SshDir = Join-Path $WinHome ".ssh"
 if (-not (Test-Path $SshDir)) {

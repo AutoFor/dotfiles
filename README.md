@@ -86,6 +86,8 @@ winget install --id wez.wezterm -e
 winget install --id Microsoft.PowerShell -e     # pwsh (devbox.ps1 / 通知スクリプトが使う)
 winget install --id Microsoft.AzureCLI -e
 winget install --id x-motemen.ghq -e
+winget install --id junegunn.fzf -e             # pwsh の Ctrl+G (ghq リポジトリ選択)
+winget install --id ajeetdsouza.zoxide -e       # z / zi (スマート cd)
 winget install --id tailscale.tailscale -e      # devbox への SSH 経路
 ```
 
