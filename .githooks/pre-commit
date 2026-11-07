@@ -1,0 +1,24 @@
+#!/bin/sh
+# pre-commit: Windows のクローン (ノート PC・desktop・rpa) でのコミットを拒否する。
+# dotfiles の編集・コミットは devbox (~/dotfiles) だけで行い、Windows は pull 専用の
+# 消費者にしている (docs/devbox-as-source-of-truth.md)。Linux では何もしない。
+# 有効化: git config core.hooksPath .githooks (Windows では skills/sync-skills.ps1 が毎回入れる)
+# どうしても Windows でコミットしたいとき (devbox が使えない等):
+#   DOTFILES_ALLOW_WINDOWS_COMMIT=1 git commit ...
+#   その後は devbox で git pull して、devbox 側に取り込まれたことを確かめる
+
+case "$(uname -s 2>/dev/null)" in
+  MINGW* | MSYS* | CYGWIN*) ;;
+  *) [ "$OS" = "Windows_NT" ] || exit 0 ;;
+esac
+
+[ -n "$DOTFILES_ALLOW_WINDOWS_COMMIT" ] && exit 0
+
+cat >&2 <<'EOF'
+[pre-commit] このクローンは pull 専用です (Windows では dotfiles をコミットしない運用)。
+  編集・コミットは devbox で行ってください:  ssh devbox  →  cd ~/dotfiles
+  変更を戻すには:  git restore <ファイル>  (15 分ごとの自動 pull で devbox の内容に追従します)
+  どうしても必要なら:  DOTFILES_ALLOW_WINDOWS_COMMIT=1 git commit ...
+  詳細: docs/devbox-as-source-of-truth.md
+EOF
+exit 1

@@ -1,7 +1,7 @@
 # ===== rpa VM 上で dotfiles を pull し、スクリプトを配備する (rpa VM 上で実行) =====
 #
-# rpa は「編集席」ではなく pull するだけの消費者。編集は Windows / devbox の
-# 2 クローンで行い、rpa はここで受け取って配備するだけ。
+# rpa は「編集席」ではなく pull するだけの消費者。編集・コミットは devbox だけで行い、
+# rpa はここで受け取って配備するだけ (docs/devbox-as-source-of-truth.md)。
 #
 # 使い方 (rpa の SSH セッション内で):
 #   pwsh -File C:\dotfiles\windows\bin\rpa-deploy.ps1
@@ -73,6 +73,11 @@ function Sync-Repo {
         & git clone $RepoUrl $RepoDir
         if ($LASTEXITCODE -ne 0) { throw "git clone に失敗しました" }
     }
+    # pull 専用の消費者としての設定 (pre-commit フックで rpa でのコミットを拒否する等)
+    & git -C $RepoDir config core.hooksPath .githooks
+    & git -C $RepoDir config pull.ff only
+    & git -C $RepoDir config pull.rebase false
+    & git -C $RepoDir config merge.autoStash true
 }
 
 # タスクが未登録なら作る。既にあれば触らない (手動調整を尊重する)。

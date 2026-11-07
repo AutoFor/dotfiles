@@ -190,7 +190,7 @@ fi
 # idle-shutdown は 1 時間アイドル (端末 I/O なし & 低負荷) で自動 deallocate (dotfiles の
 # linux/.local/bin/idle-shutdown。install.sh が ~/.local/bin にリンクする)。
 # Azure VM でだけ意味があるので、IMDS (169.254.169.254) に応答がある場合のみ登録する。
-# cron-with-pull は実行前に dotfiles を pull するラッパー。Windows 側で直した
+# cron-with-pull は実行前に dotfiles を pull するラッパー。別のクローン・GitHub 上で直した
 # 修正が pull されないまま古いスクリプトが動き続けるのを防ぐ。
 # 注意: 既存エントリが全部フィルタされると grep が exit 1 になり、set -e で
 # サブシェルが echo 前に中断して crontab が空で登録されてしまう。|| true で防ぐ

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # cron 用ラッパー: dotfiles を pull してから指定コマンドを実行する。
-# Windows 側でコミット・push した修正が devbox 側で pull されないまま、
+# 別のクローンや GitHub 上でコミットした修正が devbox 側で pull されないまま、
 # cron が古いスクリプトを動かし続けるのを防ぐ
 # (2026-07-31 に修正済みのはずの idle-shutdown が古いまま動いて
 #  tmux 保存データを飛ばした再発事故の対策)。

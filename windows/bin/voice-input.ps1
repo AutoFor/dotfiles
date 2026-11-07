@@ -458,11 +458,13 @@ function Send-Chunk([byte[]]$pcm, [int]$chunkNo) {
 # 「誤変換らしき表記 → 正しい表記」の辞書候補を自動提案させる。
 # 提案はコメント状態 (# 誤=正) で voice-dictionary.txt に追記してコミットするので、
 # 行頭の「# 」を外して採用するまでは置換に使われない (誤提案が入力を壊さない)。
+# 追記とコミットは devbox のクローンで行う (Windows のクローンは pull 専用。
+# docs/devbox-as-source-of-truth.md)。こちらへは直後の pull で戻ってくる。
 function Invoke-DictionarySuggestion {
   if (-not $SuggestModel) { return }
   if ($script:allText.Length -lt 40) { return }   # 材料が少なすぎるセッションはスキップ
   $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
-  # 最新の辞書に対して提案するため先に pull (rebase.autostash 設定済み。失敗しても続行)
+  # 最新の辞書に対して提案するため先に pull (ff-only + autostash。失敗しても続行)
   git -C $repo pull --quiet 2>&1 | Out-Null
   $dict = Get-Content -LiteralPath $DictionaryFile -Encoding utf8 -Raw
   $transcript = $script:allText
@@ -505,12 +507,25 @@ function Invoke-DictionarySuggestion {
     return
   }
   $stamp = Get-Date -Format 'yyyy-MM-dd HH:mm'
-  Add-Content -LiteralPath $DictionaryFile -Encoding utf8 -Value (
-    @('', "# --- 自動提案 $stamp (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---") + $news
-  )
-  # 両クローンで辞書がズレないよう、この 1 ファイルだけコミット (post-commit フックが push)
-  git -C $repo commit -m "add: 音声入力辞書の自動提案 $($news.Count) 件 (コメント状態)" -- windows/voice-dictionary.txt 2>&1 | Out-Null
-  if ($LASTEXITCODE -ne 0) { Write-Log 'dictionary suggestion: git commit 失敗 (ローカルには追記済み)' }
+  $lines = @('', "# --- 自動提案 $stamp (採用するなら行頭の「# 」を外す。不要なら行ごと削除) ---") + $news
+  $payload = ($lines -join "`n") + "`n"
+  # devbox のクローンに追記して、この 1 ファイルだけコミット (devbox の post-commit フックが push)。
+  # コミットメッセージは ssh の引数に日本語を載せないよう base64 で渡す
+  $msg = "add: 音声入力辞書の自動提案 $($news.Count) 件 (コメント状態)"
+  $msgB64 = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($msg))
+  $remote = "cd ~/dotfiles && cat >> windows/voice-dictionary.txt && echo $msgB64 | base64 -d | git commit -q -F - -- windows/voice-dictionary.txt"
+  $sshExe = Join-Path $env:SystemRoot 'System32\OpenSSH\ssh.exe'
+  $prevEnc = $OutputEncoding
+  $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+  try { $payload | & $sshExe -o BatchMode=yes -o ConnectTimeout=5 devbox $remote 2>&1 | Out-Null }
+  finally { $OutputEncoding = $prevEnc }
+  if ($LASTEXITCODE -ne 0) {
+    # devbox が止まっている等。文字起こしは devbox にもミラーしているので、この回の提案は捨てる
+    Write-Log ("dictionary suggestion: devbox への追記・コミットに失敗 (exit {0})。提案は破棄: {1}" -f $LASTEXITCODE, ($news -join ' / '))
+    return
+  }
+  # devbox が push した分をすぐ取り込む (次の提案で同じ組を出さないため)
+  git -C $repo pull --quiet 2>&1 | Out-Null
   Write-Log ('dictionary suggestion: ' + ($news -join ' / '))
   Show-Toast ("辞書候補 {0} 件を voice-dictionary.txt に追記した (コメント状態。採用は # を外す)" -f $news.Count)
 }
