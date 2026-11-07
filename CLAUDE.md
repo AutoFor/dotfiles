@@ -31,3 +31,9 @@
   未コミットの変更が残っていてもそのまま pull してよい
 - 自分が触っていないファイルの未コミット変更は他セッションの作業中 WIP。
   勝手にコミット・破棄せず、そのまま残す
+## スキル (Claude Code / Codex 共通)
+- 正本はリポジトリ直下の `skills/<name>/` だけ。`~/.claude/skills` (Claude Code) と `~/.agents/skills` (Codex) にはフォルダ単位のリンクを置く
+  (Linux はシンボリックリンク、Windows はジャンクション)。詳細は `skills/README.md`
+- スキルを追加・改名・削除したら、各マシンで pull 後に `skills/link-skills.sh` / `skills/link-skills.ps1` を再実行する
+  (desktop は Claude を使うユーザーが SeiyaKawashima なので `-HomeDir C:\Users\SeiyaKawashima -DotfilesDir <そのユーザーのクローン>` を付ける)
+- `~/.claude/skills/` で直接スキルを作らない。作ったら `skills/` に移して link し直す
