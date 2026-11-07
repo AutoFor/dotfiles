@@ -1,6 +1,6 @@
 [user]
-	name = your-name
-	email = your-email@example.com
+	name = 川島誠也
+	email = 145828201+seiya-kawashima@users.noreply.github.com
 [safe]
 	directory = C:/path/to/your/directory
 [color]
@@ -13,4 +13,9 @@
 [core]
 	quotepath = false
 [credential "https://github.com"]
-	username = AutoFor
+	username = seiya-kawashima
+	helper = 
+	helper = !'C:\\Program Files\\GitHub CLI\\gh.exe' auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !'C:\\Program Files\\GitHub CLI\\gh.exe' auth git-credential
