@@ -37,5 +37,6 @@
 - 各マシンは定期的に pull → リンク張り直しを自動で行う (devbox: cron 10 分 / Windows: タスク `dotfiles-skills-sync` ログオン時 + 15 分)。
   コミットすれば手動の配備は不要。新しいマシンでは install.sh / install-windows.ps1 を一度流せば登録される
 - desktop は Claude を使うユーザーが SeiyaKawashima (SSH 用の seiya とは別)。そのユーザーのクローン
-  `C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles` に対して `-UserId 'AzureAD\SeiyaKawashima' -HomeDir ... -DotfilesDir ...` を付けて登録してある
+  `C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles` を、ローカル管理者 seiya の S4U タスクが pull → link する
+  (Entra ID アカウントでは S4U が動かないため。登録コマンドは `skills/register-skills-sync.ps1` の先頭コメント)
 - `~/.claude/skills/` で直接スキルを作らない。作ったら `skills/` に移して link し直す

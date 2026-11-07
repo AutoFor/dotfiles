@@ -3,8 +3,11 @@
 # 窓を出さないよう conhost --headless 経由で pwsh を起動する。
 # 自分用なら管理者権限は不要:
 #   pwsh -File skills\register-skills-sync.ps1
-# 別ユーザー用 (desktop で SSH 用の seiya から、Claude を使う Entra ID ユーザーへ。要管理者):
-#   pwsh -File skills\register-skills-sync.ps1 -UserId 'AzureAD\SeiyaKawashima' -HomeDir C:\Users\SeiyaKawashima -DotfilesDir C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles
+# desktop (Claude を使うのは Entra ID ユーザー SeiyaKawashima、SSH はローカル管理者 seiya。要管理者):
+#   Entra ID アカウントでは S4U が起動しない (未ログオン時に 267011 のまま) ため、ローカルの seiya で
+#   S4U 実行し、SeiyaKawashima のクローンとホームを指定する。ログオフ中でも動く:
+#   pwsh -File skills\register-skills-sync.ps1 -LogonType S4U -UserId "$env:COMPUTERNAME\seiya" -HomeDir C:\Users\SeiyaKawashima -DotfilesDir C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles
+#   (ログは seiya 側の %LOCALAPPDATA%\dotfiles\skills-sync.log)
 # 解除: Unregister-ScheduledTask -TaskName dotfiles-skills-sync -Confirm:$false
 param(
     [string]$UserId = "$env:USERDOMAIN\$env:USERNAME",
