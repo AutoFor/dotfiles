@@ -34,6 +34,8 @@
 ## スキル (Claude Code / Codex 共通)
 - 正本はリポジトリ直下の `skills/<name>/` だけ。`~/.claude/skills` (Claude Code) と `~/.agents/skills` (Codex) にはフォルダ単位のリンクを置く
   (Linux はシンボリックリンク、Windows はジャンクション)。詳細は `skills/README.md`
-- スキルを追加・改名・削除したら、各マシンで pull 後に `skills/link-skills.sh` / `skills/link-skills.ps1` を再実行する
-  (desktop は Claude を使うユーザーが SeiyaKawashima なので `-HomeDir C:\Users\SeiyaKawashima -DotfilesDir <そのユーザーのクローン>` を付ける)
+- 各マシンは定期的に pull → リンク張り直しを自動で行う (devbox: cron 10 分 / Windows: タスク `dotfiles-skills-sync` ログオン時 + 15 分)。
+  コミットすれば手動の配備は不要。新しいマシンでは install.sh / install-windows.ps1 を一度流せば登録される
+- desktop は Claude を使うユーザーが SeiyaKawashima (SSH 用の seiya とは別)。そのユーザーのクローン
+  `C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles` に対して `-UserId 'AzureAD\SeiyaKawashima' -HomeDir ... -DotfilesDir ...` を付けて登録してある
 - `~/.claude/skills/` で直接スキルを作らない。作ったら `skills/` に移して link し直す

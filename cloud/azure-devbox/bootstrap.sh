@@ -198,11 +198,13 @@ IDLE_CRON=""
 if curl -s -m 2 -H Metadata:true "http://169.254.169.254/metadata/instance?api-version=2021-02-01" >/dev/null 2>&1; then
   IDLE_CRON='*/10 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/idle-shutdown >/dev/null 2>&1'
 fi
-( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown -e rpa-activity-heartbeat || true; \
+# link-skills: pull 後にスキルのリンク (~/.claude/skills, ~/.agents/skills) を張り直す。変化があった時だけログに出る
+( crontab -l 2>/dev/null | grep -v -e tmux-resurrect -e idle-shutdown -e rpa-activity-heartbeat -e link-skills || true; \
   echo '*/15 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
   echo '59 21 * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/tmux-resurrect-autosave >/dev/null 2>&1'; \
   [ -n "$IDLE_CRON" ] && echo "$IDLE_CRON"; \
-  echo '*/5 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/rpa-activity-heartbeat >/dev/null 2>&1' ) | crontab -
+  echo '*/5 * * * * $HOME/.local/bin/cron-with-pull $HOME/.local/bin/rpa-activity-heartbeat >/dev/null 2>&1'; \
+  echo '*/10 * * * * LINK_SKILLS_QUIET=1 $HOME/.local/bin/cron-with-pull bash $HOME/dotfiles/skills/link-skills.sh >>$HOME/.local/state/link-skills.log 2>&1' ) | crontab -
 echo "tmux plugins: $(ls "$HOME/.tmux/plugins" | tr '\n' ' ')"
 
 echo "########## 6) デフォルトシェルを zsh に ##########"

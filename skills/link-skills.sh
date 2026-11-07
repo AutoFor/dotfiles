@@ -7,6 +7,7 @@
 # スキルフォルダに .skill-scope を置くと対象を絞れる (無ければ全 OS・全エージェント):
 #   os: windows,linux
 #   agents: claude,codex
+# LINK_SKILLS_QUIET=1 で変化があった行だけ出す (cron 用)。
 # 冪等。dotfiles 管理外のスキル (synced/ や手で置いたもの) には触らない。
 # 同名の実フォルダがあれば ~/.claude/backups/skills-<日時>/ に退避してからリンクする
 # (skills/ 直下に退避すると重複スキルとして読まれてしまうため)。
@@ -47,7 +48,7 @@ prune_links() {
 link_skill() {
   local src="$1" dest="$2"
   if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
-    echo "  [skip] $dest"
+    [ -n "${LINK_SKILLS_QUIET:-}" ] || echo "  [skip] $dest"
     return
   fi
   if [ -e "$dest" ] || [ -L "$dest" ]; then
@@ -61,13 +62,13 @@ link_skill() {
 
 sync_agent() {
   local agent="$1" dest_root="$2" skill name
-  echo "--- $agent: $dest_root"
+  [ -n "${LINK_SKILLS_QUIET:-}" ] || echo "--- $agent: $dest_root"
   mkdir -p "$dest_root"
   prune_links "$dest_root" "$agent"
   for skill in "$SKILLS_SRC"/*/; do
     skill="${skill%/}"
     name="$(basename "$skill")"
-    in_scope "$skill" "$OS_NAME" "$agent" || { echo "  [scope] $name は $OS_NAME/$agent 対象外"; continue; }
+    in_scope "$skill" "$OS_NAME" "$agent" || { [ -n "${LINK_SKILLS_QUIET:-}" ] || echo "  [scope] $name は $OS_NAME/$agent 対象外"; continue; }
     link_skill "$skill" "$dest_root/$name"
   done
 }

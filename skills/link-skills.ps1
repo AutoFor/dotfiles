@@ -14,7 +14,8 @@
 #   pwsh -File link-skills.ps1 -HomeDir C:\Users\SeiyaKawashima -DotfilesDir C:\Users\SeiyaKawashima\ghq\github.com\AutoFor\dotfiles
 param(
     [string]$HomeDir = $env:USERPROFILE,
-    [string]$DotfilesDir = (Split-Path -Parent $PSScriptRoot)
+    [string]$DotfilesDir = (Split-Path -Parent $PSScriptRoot),
+    [switch]$Quiet   # 変化があった行だけ出す (定期実行用)
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,7 +44,7 @@ function Test-InScope([string]$SkillDir, [string]$Agent) {
 }
 
 function Sync-Agent([string]$Agent, [string]$DestRoot) {
-    Write-Host "--- ${Agent}: $DestRoot"
+    if (-not $Quiet) { Write-Host "--- ${Agent}: $DestRoot" }
     if (-not (Test-Path -LiteralPath $DestRoot)) { New-Item -ItemType Directory -Path $DestRoot -Force | Out-Null }
 
     # dotfiles を指すリンクのうち 先が消えた/対象外 になったものを外す
@@ -60,8 +61,8 @@ function Sync-Agent([string]$Agent, [string]$DestRoot) {
     Get-ChildItem -LiteralPath $SkillsSrc -Directory | ForEach-Object {
         $src = $_.FullName
         $dest = Join-Path $DestRoot $_.Name
-        if (-not (Test-InScope $src $Agent)) { Write-Host "  [scope] $($_.Name) は $OsName/$Agent 対象外"; return }
-        if ((Get-LinkTarget $dest) -eq $src) { Write-Host "  [skip] $dest"; return }
+        if (-not (Test-InScope $src $Agent)) { if (-not $Quiet) { Write-Host "  [scope] $($_.Name) は $OsName/$Agent 対象外" }; return }
+        if ((Get-LinkTarget $dest) -eq $src) { if (-not $Quiet) { Write-Host "  [skip] $dest" }; return }
         if (Test-Path -LiteralPath $dest) {
             if (-not (Test-Path -LiteralPath $BackupDir)) { New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null }
             Move-Item -LiteralPath $dest -Destination (Join-Path $BackupDir "$($_.Name).$Agent") -Force

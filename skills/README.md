@@ -21,8 +21,18 @@ bash ~/dotfiles/skills/link-skills.sh          # Linux (devbox)。install.sh か
 pwsh -File $HOME\ghq\github.com\AutoFor\dotfiles\skills\link-skills.ps1   # Windows。install-windows.ps1 からも呼ばれる
 ```
 
-スキルを追加・改名・削除したら、各マシンで `git pull` → 上のスクリプトを再実行する
-(SKILL.md の中身を変えただけならリンク先が同じなので pull だけでよい)。
+## 自動反映 (push すれば各マシンに勝手に届く)
+
+コミットは post-commit フックで即 push される。各マシンは定期的に pull → リンク張り直しを行うので、
+スキルの追加・改名・削除・編集はどのマシンでも最大 15 分ほどで反映される (手動の再実行は不要)。
+
+| マシン | 仕組み | 間隔 | ログ |
+| --- | --- | --- | --- |
+| devbox (Linux) | crontab: `cron-with-pull bash ~/dotfiles/skills/link-skills.sh` (`cloud/azure-devbox/bootstrap.sh` が登録) | 10 分 | `~/.local/state/link-skills.log` / `cron-with-pull.log` |
+| Windows (ノート PC / desktop) | タスク `dotfiles-skills-sync` → `skills/sync-skills.ps1` (`register-skills-sync.ps1` が登録。`install-windows.ps1` からも呼ばれる) | ログオン時 + 15 分 | `%LOCALAPPDATA%\dotfiles\skills-sync.log` |
+
+ログには変化があったとき (リンクの追加・撤去・pull 失敗) だけ行が増える。
+すぐ反映したいときは手で `link-skills.sh` / `sync-skills.ps1` を叩けばよい。
 
 ## 対象を絞る: `.skill-scope`
 

@@ -100,6 +100,8 @@ Write-Host "=== スキルのリンク (Claude Code: ~/.claude/skills / Codex: ~/
 # 正本は skills/ ひとつ。スキルフォルダ単位でリンクするので dotfiles 管理外のスキルには触らない。
 # 詳細は skills/README.md
 & (Join-Path $PSScriptRoot "skills\link-skills.ps1") -HomeDir $WinHome -DotfilesDir $PSScriptRoot
+# 以後はログオン時 + 15 分ごとに pull → リンク張り直しを自動実行する
+& (Join-Path $PSScriptRoot "skills\register-skills-sync.ps1")
 
 Write-Host ""
 Write-Host "=== Yamabuki R layout links ==="
