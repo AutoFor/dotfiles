@@ -26,7 +26,7 @@
 | `/im8-project-init` | im8 Power Platform プロジェクトの標準構成をセットアップ（新規はテンプレリポから作成、既存は差分適用） | 「im8 の新しいプロジェクトを作りたい」「標準構成にしたい」 |
 | `/backlog-document-sync` | Git を正本として Backlog ドキュメントへ自動同期する仕組みをセットアップ | 「Backlogドキュメント同期を設定して」 |
 
-スキルは `~/.claude/skills/` に保存されています。
+スキルの正本は dotfiles の `skills/` (Claude Code / Codex 共通)。`~/.claude/skills/` と `~/.agents/skills/` にはそこへのリンクが置かれる。編集は dotfiles 側で行う。
 
 ---
 

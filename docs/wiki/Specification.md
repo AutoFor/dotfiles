@@ -147,7 +147,7 @@ Git サブモジュールとして管理される外部リポジトリ。
 | `wsl/.local/bin/gf` | `~/.local/bin/gf` |
 | `claude/CLAUDE.md` | `~/.claude/CLAUDE.md` |
 | `claude/settings.json` | `~/.claude/settings.json` |
-| `claude/skills/*` | `~/.claude/skills/*` |
+| `skills/*` | `~/.claude/skills/*` と `~/.agents/skills/*` (Claude Code / Codex 共通。skills/README.md) |
 | `windows/.wezterm.lua` | Windows `~/.wezterm.lua` |
 | `windows/.gitconfig` | Windows `~/.gitconfig` |
 | `windows/.bashrc` | Windows `~/.bashrc` |

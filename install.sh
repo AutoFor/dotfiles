@@ -33,29 +33,6 @@ link_file() {
   echo "  [link] $dest → $src"
 }
 
-sync_dir_links() {
-  local src_root="$1"
-  local dest_root="$2"
-
-  mkdir -p "$dest_root"
-
-  for existing in "$dest_root"/*; do
-    [ -e "$existing" ] || [ -L "$existing" ] || continue
-    local name
-    name="$(basename "$existing")"
-    if [ ! -d "$src_root/$name" ]; then
-      echo "  [remove] $existing → ソースに存在しないため削除"
-      rm -rf "$existing"
-    fi
-  done
-
-  for src_dir in "$src_root"/*/; do
-    local name
-    name="$(basename "$src_dir")"
-    link_file "$src_root/$name" "$dest_root/$name"
-  done
-}
-
 echo "=== Linux 設定ファイルのリンク ==="
 
 # --- ホームディレクトリ直下 ---
@@ -90,8 +67,7 @@ link_file "$DOTFILES_DIR/claude/github-app-config.env.example"  "$CLAUDE_DIR/git
 # --- Claude mcp ---
 link_file "$DOTFILES_DIR/claude/mcp" "$CLAUDE_DIR/mcp"
 
-# --- Claude skills（ディレクトリ単位） ---
-sync_dir_links "$DOTFILES_DIR/claude/skills" "$CLAUDE_DIR/skills"
+# スキルは下の「スキルのリンク」で Claude Code / Codex にまとめて配る
 
 echo ""
 echo "=== ~/.local/bin スクリプトのリンク ==="
@@ -106,13 +82,17 @@ echo ""
 echo "=== Codex 設定ファイルのリンク ==="
 
 CODEX_DIR="$HOME/.codex"
-mkdir -p "$CODEX_DIR/skills"
+mkdir -p "$CODEX_DIR"
 
 link_file "$DOTFILES_DIR/codex/config.toml" "$CODEX_DIR/config.toml"
 # SessionStart hook: tmux ペイン → 会話 ID の記録 (tmux-claude-sessions track codex)
 link_file "$DOTFILES_DIR/codex/hooks.json" "$CODEX_DIR/hooks.json"
 
-sync_dir_links "$DOTFILES_DIR/codex/skills" "$CODEX_DIR/skills"
+echo ""
+echo "=== スキルのリンク (Claude Code: ~/.claude/skills / Codex: ~/.agents/skills) ==="
+
+# 正本は skills/ ひとつ。詳細は skills/README.md
+bash "$DOTFILES_DIR/skills/link-skills.sh"
 
 echo ""
 echo "=== Kimi Code の SessionStart hook ==="

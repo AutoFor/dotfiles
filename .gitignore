@@ -66,3 +66,6 @@ linux/.ssh/id_*
 !linux/.ssh/*.pub
 linux/.ssh/known_hosts*
 linux/.ssh/authorized_keys
+
+# スキル付属のプロンプトは管理対象 (上の prompts/ 除外の例外)
+!skills/*/prompts/

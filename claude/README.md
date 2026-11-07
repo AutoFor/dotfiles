@@ -62,7 +62,7 @@ Git Worktree を活用して**複数の課題を並走**させるワークフロ
 ln -sf $(pwd)/CLAUDE.md ~/.claude/CLAUDE.md
 ln -sf $(pwd)/settings.json ~/.claude/settings.json
 ln -sf $(pwd)/windows-notify.ps1 ~/.claude/windows-notify.ps1
-ln -sf $(pwd)/skills ~/.claude/skills
+bash ../skills/link-skills.sh   # スキルはリポジトリ直下の skills/ が正本 (Claude Code / Codex 共通)
 ```
 
 ### 2. MCP サーバー設定
