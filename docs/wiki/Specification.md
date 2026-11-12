@@ -69,7 +69,7 @@
 |------|------|
 | prefix | `Ctrl+q`（`Ctrl+b` も `prefix2` として有効） |
 | prefix を2つ持つ理由 | `.wezterm.lua` の `tmux_bridge` が `\x02`（= `Ctrl+b`）を送るため、`Ctrl+b` を外すと WezTerm 側のショートカットが全滅する。`Ctrl+q` は WezTerm が Leader として食うので、直接効くのは iPad / Termius / 素の `ssh` から入ったとき |
-| セッション永続化 | tmux-resurrect。cron が 15 分ごとに保存し、サーバー起動時に `tmux-autorestore` が一度だけ復元する |
+| セッション永続化 | tmux-resurrect。cron が 15 分ごとに保存し、サーバー起動時に `tmux-autorestore` が一度だけ復元する。VM 起動時は systemd のユーザーサービス `tmux-autostart.service` が attach を待たずにサーバーを起こす (#258) |
 | ペイン名 | `@name` をペイン上辺のボーダーに常時表示。`tmux-pane-names` が resurrect フックで別ファイルに保存・復元する |
 | Claude Code の会話復元 | `tmux-claude-sessions` がペインごとにセッション ID を記録し、復元時に `claude --resume` で個別に再開する |
 | 閉じたウィンドウの復活 | `tmux-close-window` が `prefix + &`（WezTerm の `Ctrl+w`）で閉じる直前に構成を記録し、`prefix + W`（`Ctrl+Shift+w`）で開き直す。記録は直近 20 件のスタックで、名前・レイアウト・各ペインの cwd / `@name` / claude 会話 ID を保持する。claude 以外のコマンドは自動実行しない |

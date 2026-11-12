@@ -134,5 +134,24 @@ else
 fi
 
 echo ""
+echo "=== 起動時の tmux 自動起動 (#258) ==="
+
+# VM が勝手に再起動しても、誰も attach しないうちに tmux サーバーを起こして
+# tmux-autorestore の復元 (claude の会話の --resume を含む) を走らせる。
+# ブート時に動かすには linger が要る (sudo loginctl enable-linger $USER)。
+link_file "$DOTFILES_DIR/linux/.config/systemd/user/tmux-autostart.service" "$HOME/.config/systemd/user/tmux-autostart.service"
+if command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user daemon-reload
+  # --now は付けない。稼働中に start してもサーバーがあれば何もしないが、
+  # 初回導入時に意図せず tmux サーバーを立ち上げないよう enable だけにする
+  systemctl --user enable tmux-autostart.service
+  if [ "$(loginctl show-user "$USER" -p Linger --value 2>/dev/null)" != yes ]; then
+    echo "  注意: linger が無効。ブート時に動かすには sudo loginctl enable-linger $USER"
+  fi
+else
+  echo "  スキップ: systemd --user が使えない"
+fi
+
+echo ""
 echo "=== 完了 ==="
 echo "新しいターミナルを開いて設定が反映されていることを確認してください。"

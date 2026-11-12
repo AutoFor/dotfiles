@@ -1,0 +1,23 @@
+# devbox の起動時に tmux サーバーを detached で起動し、tmux-autorestore に
+# resurrect の復元 (Claude Code の会話の --resume を含む) をさせる (#258)。
+# linger が有効なので、誰もログインしなくてもブート時に動く。
+# 中身は ~/.local/bin/tmux-autostart。サーバーが既にあれば何もしない。
+[Unit]
+Description=起動時に tmux サーバーを立ち上げて resurrect の復元を走らせる
+
+[Service]
+# 一度きり。失敗してもやり直さない (復元を何度も走らせて保存を壊さないため)
+Type=oneshot
+RemainAfterExit=yes
+# ExecStart が終わった後も tmux サーバーとペイン (claude 等) はこの unit の cgroup に残る。
+# unit を stop / restart しても道連れにしない (既定の control-group だと全部殺される)
+KillMode=process
+# systemd --user の PATH には ~/.local/bin が無い。サーバーの環境 = 復元される
+# ペインの初期環境になるので、ログインシェルと同じ並びにしておく
+Environment=PATH=%h/.local/bin:%h/.npm-global/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin
+WorkingDirectory=%h
+ExecStart=/bin/sh %h/.local/bin/tmux-autostart
+TimeoutStartSec=180
+
+[Install]
+WantedBy=default.target

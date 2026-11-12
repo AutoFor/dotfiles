@@ -1,0 +1,56 @@
+#!/bin/sh
+# devbox の起動時に tmux サーバーを detached で立ち上げる (#258)。
+# systemd のユーザーサービス tmux-autostart.service (linger 有効) から呼ばれる。
+#
+# 以前は誰かが SSH / WezTerm で attach して初めて tmux サーバーが起動し、そこで
+# .tmux.conf 末尾の tmux-autorestore が resurrect の復元を走らせていた。
+# VM が勝手に再起動したとき (2026-11-11 22:30 Windows 側の指示で電源オフ → 22:35 自動起動)
+# は誰も attach しないので復元されず、Claude Code の会話 (remoteControlAtStartup で
+# スマホから開く口) も戻らなかった。ここでサーバーだけ先に起こし、復元は従来どおり
+# tmux-autorestore に任せる。
+#
+# 復元を壊さないための約束:
+# - サーバーが既にあれば何もしない。tmux-autorestore の「サーバー起動から 60 秒以内」
+#   「サーバーごとに一度きり」の判定はサーバー起動時にしか意味を持たないので、
+#   稼働中のサーバーに対して何かを再実行することはしない
+# - 1 回きりで、失敗してもやり直さない (unit は Type=oneshot / Restart なし)。
+#   復元に失敗したときは tmux-autorestore が自動保存を止めたまま手動確認を待つ
+# - セッション名は既定の "0" のまま作る。resurrect の restore.sh は「ペイン 1 つだけの
+#   状態から復元した」ときに、復元対象に含まれない session "0" を最後に消す
+#   (restore.sh の is_restoring_from_scratch)。名前を変えると空のセッションが残る
+set -u
+
+LOG="$HOME/.cache/tmux-autorestore.log"
+mkdir -p "$(dirname "$LOG")"
+log() { printf '[%s] autostart: %s\n' "$(date '+%F %T')" "$*" >>"$LOG"; }
+
+if tmux has-session 2>/dev/null; then
+  log "tmux サーバーが既に動いているので何もしない"
+  exit 0
+fi
+
+# ネットワークを待つ。claude のリモートコントロール登録、rpa / aura への ssh
+# (復元時に standby / connect が走る) が起動直後に失敗しないように。
+# 最大 120 秒待って、間に合わなくても起動はする (復元しないよりは良い)。
+waited=0
+while [ "$waited" -lt 120 ]; do
+  ok=1
+  if command -v tailscale >/dev/null 2>&1; then
+    tailscale status >/dev/null 2>&1 || ok=0
+  fi
+  getent hosts api.anthropic.com >/dev/null 2>&1 || ok=0
+  [ "$ok" = 1 ] && break
+  sleep 2
+  waited=$((waited + 2))
+done
+log "ネットワーク待ち ${waited} 秒 (ok=$ok)。tmux サーバーを起動する"
+
+# 起動 → .tmux.conf 読み込み → 末尾の run-shell -b で tmux-autorestore が走る。
+# 復元の結果は tmux-autorestore が同じログに書く
+if tmux new-session -d -c "$HOME"; then
+  log "tmux サーバーを起動した"
+else
+  rc=$?
+  log "tmux サーバーの起動に失敗 (rc=$rc)"
+  exit "$rc"
+fi

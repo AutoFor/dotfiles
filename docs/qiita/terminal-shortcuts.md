@@ -228,6 +228,8 @@ Termius からはそもそも送信できない。代わりに標準シーケン
 
 devbox は常時稼働の Windows PC `desktop` 上の Hyper-V VM なので、Azure 時代の「22:00 自動停止 → GitHub Actions で起こす」手順は不要になった。Tailscale を ON にして Termius で `devbox` に接続するだけでよい（desktop の再起動後は Hyper-V の自動開始で VM も戻る）。
 
+VM が再起動したときは、誰も接続しなくても tmux と Claude Code の会話が自動で戻る。systemd のユーザーサービス `tmux-autostart.service`（linger 有効でブート時に動く）がネットワーク（Tailscale / DNS）を待ってから tmux サーバーを detached で起動し、`tmux-autorestore` が resurrect の復元と claude ペインの `--resume` を行う。Claude Code は `remoteControlAtStartup` で起動するので、**スマホの Claude アプリからそのままリモートコントロールで開ける**。状態は `systemctl --user status tmux-autostart`、経過は `~/.cache/tmux-autorestore.log` で見る。
+
 <details><summary>旧 Azure devbox（devbox-azure）時代の「1 タップ起動」ショートカット（参考・現在は不要）</summary>
 
 旧 devbox は毎日 22:00 に自動停止していた。停止中に iPhone/iPad から入るには VM を起こす必要があるが、
